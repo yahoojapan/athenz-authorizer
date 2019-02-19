@@ -1,1 +1,1 @@
-# Athenz N-Token Daemon library
+# Athenz policy updater
