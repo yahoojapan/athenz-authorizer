@@ -148,7 +148,7 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 		mux.Unlock()
 
 		for _, key := range pubKeys.PublicKeys {
-			glg.Debug("Decoding key, keyID: %v", key.ID)
+			glg.Debugf("Decoding key, keyID: %v", key.ID)
 			decKey, err := dec.DecodeString(key.Key)
 			if err != nil {
 				glg.Errorf("error decoding key, error: %v", err)
@@ -160,7 +160,7 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 				return errors.Wrap(err, "error initializing verifier")
 			}
 			cache.Store(key.ID, ver)
-			glg.Debug("Successfully decode key, keyID: %v", key.ID)
+			glg.Debugf("Successfully decode key, keyID: %v", key.ID)
 		}
 
 		return nil

@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
+	"github.com/yahoojapan/athenz-policy-updater/config"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -220,13 +220,13 @@ func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
 }
 
 func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy, bool, error) {
-	glg.Info("Fetching policy")
+	glg.Infof("Fetching policy for domain %s", domain)
 	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
 	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", p.athenzURL, domain)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		glg.Errorf("Fetch policy error: %v", err)
+		glg.Errorf("Fetch policy error, domain: %s, error: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error creating fetch policy request")
 	}
 
@@ -235,33 +235,33 @@ func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy,
 	if ok {
 		ec := t.(*etagCache)
 		if time.Now().Add(p.expireMargin).UnixNano() < ec.sp.SignedPolicyData.Expires.UnixNano() {
-			glg.Debugf("using etag: %s", ec.eTag)
+			glg.Debugf("domain : %s, using etag: %s", domain, ec.eTag)
 			req.Header.Set("If-None-Match", ec.eTag)
 		}
 	}
 
 	res, err := p.client.Do(req.WithContext(ctx))
 	if err != nil {
-		glg.Errorf("Error making HTTP request, error: %v", err)
+		glg.Errorf("Error making HTTP request, domain: %s, error: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error making request")
 	}
 
 	// if server return NotModified, return policy from cache
 	if res.StatusCode == http.StatusNotModified {
 		cache := t.(*etagCache)
-		glg.Debugf("Server return not modified, etag: ", cache.eTag)
+		glg.Debugf("Server return not modified, domain: %s, etag: %v", domain, cache.eTag)
 		return cache.sp, false, nil
 	}
 
 	if res.StatusCode != http.StatusOK {
-		glg.Error("Server return not OK")
+		glg.Errorf("Domain %s: Server return not OK", domain)
 		return nil, false, errors.Wrap(ErrFetchPolicy, "error fetching policy data")
 	}
 
 	// read and decode
 	sp := new(SignedPolicy)
 	if err = json.NewDecoder(res.Body).Decode(&sp); err != nil {
-		glg.Errorf("Error decoding policy, err: %v", err)
+		glg.Errorf("Error decoding policy, domain: %s, err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error decode response")
 	}
 
@@ -281,7 +281,7 @@ func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy,
 	// set eTag cache
 	eTag := res.Header.Get("ETag")
 	if eTag != "" {
-		glg.Debugf("Setting ETag %v", eTag)
+		glg.Debugf("Setting ETag %v for domain %s", eTag, domain)
 		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, p.etagExpTime)
 	}
 
