@@ -22,14 +22,14 @@ import (
 type AthenzConfd interface {
 	StartConfUpdator(ctx context.Context) <-chan error
 	UpdateAthenzConfig(context.Context) error
-	GetSysAuthConfig() map[AthenzEnv]*SysAuthConfig
 	GetPubKeyProvider() PubKeyProvider
 }
 
 type confd struct {
-	athenzURL       string
-	sysAuthDomain   string
-	refreshDuration time.Duration
+	athenzURL        string
+	sysAuthDomain    string
+	refreshDuration  time.Duration
+	errRetryInterval time.Duration
 
 	client *http.Client
 
@@ -39,7 +39,6 @@ type confd struct {
 
 	// cache
 	confCache *AthenzConfig
-	pubKeyMap map[AthenzEnv]*SysAuthConfig
 }
 
 type AthenzConfig struct {
@@ -109,8 +108,8 @@ func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 			case <-fch:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
 					ch <- errors.Wrap(err, "error update athenz config")
+					time.Sleep(c.errRetryInterval)
 					fch <- struct{}{}
-					time.Sleep(time.Second)
 				}
 			case <-ticker.C:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
@@ -128,9 +127,6 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 	glg.Info("Updating athenz config")
 	eg := errgroup.Group{}
 
-	pubKeyMap := make(map[AthenzEnv]*SysAuthConfig)
-	mux := new(sync.Mutex)
-
 	// this function decode and create verifier obj and store to corresponding cache map
 	updConf := func(env AthenzEnv, cache *sync.Map) error {
 		dec := new(authcore.YBase64)
@@ -143,9 +139,6 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 			glg.Infof("%v athenz config not updated", env)
 			return nil
 		}
-		mux.Lock()
-		pubKeyMap[env] = pubKeys
-		mux.Unlock()
 
 		for _, key := range pubKeys.PublicKeys {
 			glg.Debugf("Decoding key, keyID: %v", key.ID)
@@ -188,12 +181,7 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 		return errors.Wrap(err, "error when processing pub key")
 	}
 
-	c.pubKeyMap = pubKeyMap
 	return nil
-}
-
-func (c *confd) GetSysAuthConfig() map[AthenzEnv]*SysAuthConfig {
-	return c.pubKeyMap
 }
 
 func (c *confd) GetPubKeyProvider() PubKeyProvider {

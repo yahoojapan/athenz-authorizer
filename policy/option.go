@@ -4,16 +4,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-policy-updater/config"
 )
 
 var (
 	defaultOptions = []Option{
 		ExpireMargin("3h"),
-		EtagFlushDur("24h"),
+		EtagFlushDur("12h"),
 		EtagExpTime("24h"),
 		RefreshDuration("30m"),
+		ErrRetryInterval("1m"),
 		HttpClient(&http.Client{}),
 	}
 )
@@ -112,5 +113,19 @@ func PubKeyProvider(pkp config.PubKeyProvider) Option {
 			pol.pkp = pkp
 		}
 		return nil
+	}
+}
+
+func ErrRetryInterval(i string) Option {
+	return func(pol *policy) error {
+		if i == "" {
+			return nil
+		}
+		if ri, err := time.ParseDuration(i); err != nil {
+			return errors.Wrap(err, "invalid err retry interval")
+		} else {
+			pol.errRetryInterval = ri
+			return nil
+		}
 	}
 }

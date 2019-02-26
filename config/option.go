@@ -11,8 +11,9 @@ var (
 	defaultOptions = []Option{
 		SysAuthDomain("sys.auth"),
 		ETagExpTime("168h"), // 1 week
-		ETagFlushDur("168h"),
+		ETagFlushDur("84h"),
 		RefreshDuration("24h"),
+		ErrRetryInterval("1m"),
 		HttpClient(&http.Client{}),
 	}
 )
@@ -87,5 +88,19 @@ func HttpClient(cl *http.Client) Option {
 			c.client = cl
 		}
 		return nil
+	}
+}
+
+func ErrRetryInterval(i string) Option {
+	return func(c *confd) error {
+		if i == "" {
+			return nil
+		}
+		if ri, err := time.ParseDuration(i); err != nil {
+			return errors.Wrap(err, "invalid err retry interval")
+		} else {
+			c.errRetryInterval = ri
+			return nil
+		}
 	}
 }

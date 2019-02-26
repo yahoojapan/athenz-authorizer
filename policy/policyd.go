@@ -14,7 +14,6 @@ import (
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
-	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-policy-updater/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -23,14 +22,13 @@ type Policyd interface {
 	StartPolicyUpdator(context.Context) <-chan error
 	UpdatePolicy(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
-	GetRawPolicies() map[string]*util.PolicyData // map[Domain]map[Role][]Assertion
 }
 
 type policy struct {
-	expireMargin    time.Duration // expire margin force update policy when the policy expire time hit the margin
-	rolePolicies    gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
-	policies        map[string]*util.PolicyData
-	refreshDuration time.Duration
+	expireMargin     time.Duration // expire margin force update policy when the policy expire time hit the margin
+	rolePolicies     gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
+	refreshDuration  time.Duration
+	errRetryInterval time.Duration
 
 	pkp config.PubKeyProvider
 
@@ -52,10 +50,8 @@ type etagCache struct {
 
 func NewPolicyd(opts ...Option) (Policyd, error) {
 	p := &policy{
-		policies:     make(map[string]*util.PolicyData),
 		rolePolicies: gache.New(), //new(sync.Map),
 		etagCache:    gache.New(),
-		etagExpTime:  3 * time.Hour, // TODO
 		client:       &http.Client{},
 	}
 
@@ -102,7 +98,7 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 			case <-fch:
 				if err := p.UpdatePolicy(ctx); err != nil {
 					ch <- errors.Wrap(err, "error update policy")
-					time.Sleep(time.Minute)
+					time.Sleep(p.errRetryInterval)
 					fch <- struct{}{}
 				}
 			case <-ticker.C:
@@ -194,10 +190,6 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 	return err
 }
 
-func (p *policy) GetRawPolicies() map[string]*util.PolicyData {
-	return p.policies
-}
-
 func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 
@@ -212,8 +204,6 @@ func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
 		if err = p.simplifyAndCache(ctx, spd); err != nil {
 			return errors.Wrap(err, "error simplify and cache")
 		}
-
-		p.policies[dom] = spd.DomainSignedPolicyData.SignedPolicyData.PolicyData
 	}
 
 	return nil
