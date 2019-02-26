@@ -3,8 +3,8 @@ package policy
 import (
 	"encoding/json"
 
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-policy-updater/config"
 
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
 )
