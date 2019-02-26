@@ -81,10 +81,10 @@ func RefreshDuration(t string) Option {
 	}
 }
 
-func HttpClient(c *http.Client) Option {
+func HttpClient(cl *http.Client) Option {
 	return func(c *confd) error {
 		if c != nil {
-			c.client = c
+			c.client = cl
 		}
 		return nil
 	}
