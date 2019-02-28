@@ -3,8 +3,8 @@ package role
 import (
 	"strings"
 
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-policy-updater/config"
 )
 
 type RoleTokenParser interface {
