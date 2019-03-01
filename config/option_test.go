@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 )
