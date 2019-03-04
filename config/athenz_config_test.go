@@ -65,43 +65,44 @@ func TestNewAthenzConfd(t *testing.T) {
 	}
 }
 
-//func Test_GetPubKeu(t *testing.T) {
-//	c := &confd{
-//		confCache: &AthenzConfig{
-//			ZMSPubKeys: new(sync.Map),
-//			ZTSPubKeys: new(sync.Map),
-//		},
-//	}
-//	zmsVer := &VerifierMock{}
-//	ztsVer := &VerifierMock{}
-//	c.confCache.ZMSPubKeys.Store("0",zmsVer)
-//	c.confCache.ZTSPubKeys.Store("0",ztsVer)
-//	type args struct {
-//		env AthenzEnv
-//		keyID string
-//	}
-//	type test struct {
-//		name string
-//		args args
-//		want VerifierMock
-//	}
-//	tests := []test{
-//		test{
-//			name: "success",
-//			args: args{
-//				env: "zms",
-//				keyID: "0",
-//			},
-//			want: zmsVer,
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got, err := c.getPubKey(tt.args.env, tt.args.keyID)
-//			if err != nil {
-//				t.Errorf("getPubKey() =  %v", err)
-//			}
-//		})
-//	}
-//
-//}
+func Test_GetPubKey(t *testing.T) {
+	c := &confd{
+		confCache: &AthenzConfig{
+			ZMSPubKeys: new(sync.Map),
+			ZTSPubKeys: new(sync.Map),
+		},
+	}
+	type args struct {
+		env AthenzEnv
+		keyID string
+	}
+	type test struct {
+		name string
+		args args
+		want *VerifierMock
+	}
+	tests := []test{
+		func() test {
+			zmsVer := &VerifierMock{}
+			ztsVer := &VerifierMock{}
+			c.confCache.ZMSPubKeys.Store("0", zmsVer)
+			c.confCache.ZTSPubKeys.Store("0", ztsVer)
+			return test{
+				name: "success",
+				args: args{
+					env: "zms",
+					keyID: "0",
+				},
+				want: zmsVer,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := c.getPubKey(tt.args.env, tt.args.keyID)
+			if got != tt.want {
+				t.Errorf("getPubKey() = expect: %v	result: %v", tt.want, got)
+			}
+		})
+	}
+}
