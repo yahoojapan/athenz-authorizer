@@ -16,5 +16,5 @@ var (
 	// ErrDomainExpired "Access denied due to expired domain policy file"
 	ErrDomainExpired = errors.New("Access denied due to expired domain policy file")
 
-	ErrFetchPolicy = errors.New("Fetch athenz policy")
+	ErrFetchPolicy = errors.New("Error fetching athenz policy")
 )
