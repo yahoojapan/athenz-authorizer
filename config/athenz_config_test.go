@@ -72,6 +72,10 @@ func Test_GetPubKey(t *testing.T) {
 			ZTSPubKeys: new(sync.Map),
 		},
 	}
+	zmsVer := &VerifierMock{}
+	ztsVer := &VerifierMock{}
+	c.confCache.ZMSPubKeys.Store("0", zmsVer)
+	c.confCache.ZTSPubKeys.Store("0", ztsVer)
 	type args struct {
 		env AthenzEnv
 		keyID string
@@ -82,20 +86,31 @@ func Test_GetPubKey(t *testing.T) {
 		want *VerifierMock
 	}
 	tests := []test{
-		func() test {
-			zmsVer := &VerifierMock{}
-			ztsVer := &VerifierMock{}
-			c.confCache.ZMSPubKeys.Store("0", zmsVer)
-			c.confCache.ZTSPubKeys.Store("0", ztsVer)
-			return test{
-				name: "success",
-				args: args{
-					env: "zms",
-					keyID: "0",
-				},
-				want: zmsVer,
-			}
-		}(),
+		test{
+			name: "get success",
+			args: args{
+				env: "zts",
+				keyID: "0",
+			},
+			want: ztsVer,
+		},
+		test{
+			name: "not found",
+			args: args{
+				env: "zms",
+				keyID: "1",
+			},
+			want: nil,
+		},
+		{
+			name: "invalid env",
+			args: args{
+				env: "dummy",
+				keyID: "0",
+			},
+			want: zmsVer,
+		},
+
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
