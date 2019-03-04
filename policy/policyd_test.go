@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ardielle/ardielle-go/rdl"
-
 	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
@@ -406,7 +405,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			})
 
 			return test{
-				name: "test etag exists",
+				name: "test etag exists but not modified",
 				fields: fields{
 					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:    etagCac,
@@ -444,6 +443,85 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					}
 
 					if upd != false {
+						return errors.New("Invalid upd flag")
+					}
+
+					return err
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("If-None-Match") == "dummyOldEtag" {
+					w.Header().Add("ETag", "dummyNewEtag")
+					w.Write([]byte(`{"signedPolicyData":{"zmsKeyId":"dummyNewId"}}`))
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotModified)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			etagCac := gache.New()
+			etagCac.Set("dummyDomain", &etagCache{
+				eTag: "dummyOldEtag",
+				sp: &SignedPolicy{
+					util.DomainSignedPolicyData{
+						SignedPolicyData: &util.SignedPolicyData{
+							Expires: &rdl.Timestamp{
+								time.Now().Add(time.Hour).UTC(),
+							},
+						},
+					},
+				},
+			})
+
+			return test{
+				name: "test etag exists but modified",
+				fields: fields{
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    etagCac,
+					etagExpTime:  time.Minute,
+					expireMargin: time.Second,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+				},
+				args: args{
+					ctx:    context.Background(),
+					domain: "dummyDomain",
+				},
+				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+					if err != nil {
+						return err
+					}
+
+					etag, ok := p.etagCache.Get("dummyDomain")
+					if !ok {
+						return errors.New("etag not set")
+					}
+					etagCac := etag.(*etagCache)
+					if etagCac.eTag != "dummyNewEtag" {
+						return errors.New("etag header not correct")
+					}
+
+					want := &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								ZmsKeyId: "dummyNewId",
+							},
+						},
+					}
+					if !cmp.Equal(etagCac.sp, want) {
+						return errors.Errorf("etag value not match, got: %v, want: %v", etag, want)
+					}
+
+					if upd != true {
 						return errors.New("Invalid upd flag")
 					}
 
@@ -641,19 +719,357 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			if err := tt.checkFunc(p, got, got1, err); err != nil {
 				t.Errorf("policy.fetchPolicy() error = %v", err)
 			}
+		})
+	}
+}
 
-			/*
-				if (err != nil) != tt.wantErr {
-					t.Errorf("policy.fetchPolicy() error = %v, wantErr %v", err, tt.wantErr)
-					return
+func Test_policy_simplifyAndCache(t *testing.T) {
+	type fields struct {
+		expireMargin     time.Duration
+		rolePolicies     gache.Gache
+		refreshDuration  time.Duration
+		errRetryInterval time.Duration
+		pkp              config.PubKeyProvider
+		etagCache        gache.Gache
+		etagFlushDur     time.Duration
+		etagExpTime      time.Duration
+		athenzURL        string
+		athenzDomains    []string
+		client           *http.Client
+	}
+	type args struct {
+		ctx context.Context
+		sp  *SignedPolicy
+	}
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(pol *policy) error
+		wantErr   bool
+	}
+
+	checkAssertion := func(got *Assertion, action, res, eff string) error {
+		want, _ := NewAssertion(action, res, eff)
+		if !reflect.DeepEqual(got, want) {
+			return errors.Errorf("got: %v, want: %v", got, want)
+		}
+		return nil
+	}
+	tests := []test{
+		func() test {
+			return test{
+				name: "cache success with data",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "dummyEff",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct1",
+													Resource: "dummyDom:dummyRes1",
+													Effect:   "dummyEff1",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom2:role.dummyRole2",
+													Action:   "dummyAct2",
+													Resource: "dummyDom2:dummyRes2",
+													Effect:   "allow",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 2 {
+						return errors.New("invalid length role policies 1")
+					}
+
+					gotRp1, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("cannot simplify and cache data")
+					}
+					gotAsss1 := gotRp1.([]*Assertion)
+					if len(gotAsss1) != 2 {
+						return errors.Errorf("invalid length asss 1, got: %v", gotAsss1)
+					}
+					hv1, hv2 := false, false
+					for _, asss := range gotAsss1 { // because it is go func, we can not control the order of slice
+						if err := checkAssertion(asss, "dummyAct", "dummyDom:dummyRes", "dummyEff"); err != nil {
+							hv1 = true
+						}
+
+						if err := checkAssertion(asss, "dummyAct1", "dummyDom:dummyRes1", "dummyEff1"); err != nil {
+							hv2 = true
+						}
+					}
+					if !hv1 && !hv2 {
+						return errors.Errorf("hv1: %v, hv2: %v", hv1, hv2)
+					}
+
+					gotRp2, ok := pol.rolePolicies.Get("dummyDom2:role.dummyRole2")
+					if !ok {
+						return errors.New("cannot simplify and cache data")
+					}
+					gotAsss2 := gotRp2.([]*Assertion)
+					if len(gotAsss2) != 1 {
+						return errors.New("dummyDom2:role.dummyRole2 invalid length")
+					}
+					if err := checkAssertion(gotAsss2[0], "dummyAct2", "dummyDom2:dummyRes2", "allow"); err != nil {
+						return err
+					}
+
+					return nil
+				},
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "cache success with no data",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{},
+								},
+							},
+						},
+					},
+				},
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "cache failed with invalid assertion",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyRes",
+													Effect:   "allow",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			rp := gache.New()
+
+			rp.Set("dummyDom:role.dummyRole", []*Assertion{
+				func() *Assertion {
+					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "dummyEff")
+					return a
+				}(),
+			})
+			return test{
+				name: "cache replace by new assertion",
+				fields: fields{
+					rolePolicies: rp,
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct1",
+													Resource: "dummyDom1:dummyRes1",
+													Effect:   "allow1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+						return errors.Errorf("invalid role policies length")
+					}
+
+					gotAsss, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("cannot find dummyDom:role.dummyRole")
+					}
+
+					asss := gotAsss.([]*Assertion)
+					if len(asss) != 1 {
+						return errors.New("Invalid asss length")
+					}
+
+					ass := asss[0]
+					if err := checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1"); err != nil {
+						return err
+					}
+
+					return nil
+				},
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			rp := gache.New()
+
+			rp.Set("dummyDom:role.dummyRole", []*Assertion{
+				func() *Assertion {
+					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "dummyEff")
+					return a
+				}(),
+			})
+			return test{
+				name: "cache delete",
+				fields: fields{
+					rolePolicies: rp,
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom1:role.dummyRole1",
+													Action:   "dummyAct1",
+													Resource: "dummyDom1:dummyRes1",
+													Effect:   "allow1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					// check if old policy exists
+					_, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if ok {
+						return errors.New("role policy found")
+					}
+
+					// check new policy exist
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+						return errors.Errorf("invalid role policies length")
+					}
+
+					gotAsss, ok := pol.rolePolicies.Get("dummyDom1:role.dummyRole1")
+					if !ok {
+						return errors.New("cannot find dummyDom1:role.dummyRole1")
+					}
+
+					asss := gotAsss.([]*Assertion)
+					if len(asss) != 1 {
+						return errors.New("Invalid asss length")
+					}
+
+					ass := asss[0]
+					if err := checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1"); err != nil {
+						return err
+					}
+
+					return nil
+				},
+				wantErr: false,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &policy{
+				expireMargin:     tt.fields.expireMargin,
+				rolePolicies:     tt.fields.rolePolicies,
+				refreshDuration:  tt.fields.refreshDuration,
+				errRetryInterval: tt.fields.errRetryInterval,
+				pkp:              tt.fields.pkp,
+				etagCache:        tt.fields.etagCache,
+				etagFlushDur:     tt.fields.etagFlushDur,
+				etagExpTime:      tt.fields.etagExpTime,
+				athenzURL:        tt.fields.athenzURL,
+				athenzDomains:    tt.fields.athenzDomains,
+				client:           tt.fields.client,
+			}
+			if err := p.simplifyAndCache(tt.args.ctx, tt.args.sp); (err != nil) != tt.wantErr {
+				t.Errorf("policy.simplifyAndCache() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(p); err != nil {
+					t.Errorf("policy.simplifyAndCache() error = %v", err)
 				}
-				if !reflect.DeepEqual(got, tt.want) {
-					t.Errorf("policy.fetchPolicy() got = %v, want %v", got, tt.want)
-				}
-				if got1 != tt.want1 {
-					t.Errorf("policy.fetchPolicy() got1 = %v, want %v", got1, tt.want1)
-				}
-			*/
+			}
 		})
 	}
 }
