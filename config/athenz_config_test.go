@@ -15,9 +15,9 @@ import (
 	"sync"
 	"testing"
 
+	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	cmp "github.com/google/go-cmp/cmp"
 	//	"time"
 	//	ntokend "github.com/yahoojapan/athenz-ntokend"
 )
@@ -151,18 +151,20 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 		fields    fields
 		args      args
 		checkFunc func(c *confd, sac *SysAuthConfig, upd bool, err error) error
+		wantErr   string
 	}
 	tests := []test{
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"dummyKey","id":"dummyID"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+				w.Write([]byte(`{"name":"dummyDom.dummyEnv","publicKeys":[{"key":"dummyKey","id":"dummyID"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
 
 			return test{
-				name: "test fetch success",
+				name:    "test fetch success",
+				wantErr: "",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -176,7 +178,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
-					env: "zms",
+					env: "dummyEnv",
 				},
 				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
 					if err != nil {
@@ -190,7 +192,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 
 					want := &SysAuthConfig{
 						Modified: "2017-01-23T02:20:09.331Z",
-						Name:     "dummyDom.zms",
+						Name:     "dummyDom.dummyEnv",
 						PublicKeys: []*PublicKey{
 							{
 								ID:  "dummyID",
@@ -211,6 +213,173 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("If-None-Match") == "dummyOldEtag" {
+					w.WriteHeader(http.StatusNotModified)
+				} else {
+					w.Header().Add("ETag", "dummyNewEtag")
+					w.WriteHeader(http.StatusOK)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			ec := gache.New()
+			ec.Set("dummyEnv", &confCache{
+				eTag: "dummyOldEtag",
+				sac: &SysAuthConfig{
+					Modified: "2017-01-23T02:20:09.331Z",
+					Name:     "dummyDom.dummyEnv",
+					PublicKeys: []*PublicKey{
+						{
+							ID:  "dummyID",
+							Key: "dummyKey",
+						},
+					},
+				},
+			})
+
+			return test{
+				name:    "test etag exists but not modified",
+				wantErr: "",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     ec,
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					env: "dummyEnv",
+				},
+				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
+					if err != nil {
+						return err
+					}
+
+					etag, ok := c.etagCache.Get("dummyEnv")
+					if !ok {
+						return errors.New("cannot use etag cache")
+					}
+
+					want := etag.(*confCache).sac
+					if !cmp.Equal(sac, want) {
+						return errors.Errorf("not match, got: %v, want: %v", sac, want)
+					}
+
+					if upd != false {
+						return errors.New("Invalid upd flag")
+					}
+
+					return err
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("If-None-Match") == "dummyNewEtag" {
+					w.WriteHeader(http.StatusNotModified)
+				} else {
+					w.Header().Add("ETag", "dummyNewEtag")
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"name":"dummyDom.dummyEnv","publicKeys":[{"key":"dummyNewKey","id":"dummyNewID"}],"modified":"2999-01-23T02:20:09.331Z"}`))
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			ec := gache.New()
+			ec.Set("dummyEnv", &confCache{
+				eTag: "dummyOldEtag",
+				sac:  &SysAuthConfig{},
+			})
+
+			return test{
+				name:    "test etag exists but modified",
+				wantErr: "",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     ec,
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					env: "dummyEnv",
+				},
+				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
+					if err != nil {
+						return err
+					}
+
+					_, ok := c.etagCache.Get("dummyEnv")
+					if !ok {
+						return errors.New("cannot use etag cache")
+					}
+					want := &SysAuthConfig{
+						Modified: "2999-01-23T02:20:09.331Z",
+						Name:     "dummyDom.dummyEnv",
+						PublicKeys: []*PublicKey{
+							{
+								ID:  "dummyNewID",
+								Key: "dummyNewKey",
+							},
+						},
+					}
+					if !cmp.Equal(sac, want) {
+						return errors.Errorf("not match, got: %v, want: %v", sac, want)
+					}
+
+					if upd == false {
+						return errors.New("Invalid upd flag")
+					}
+
+					return err
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadGateway)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test not statusOK",
+				wantErr: "http return status not OK: Fetch athenz config error",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					env: "dummyEnv",
+				},
+				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
+					if err == nil {
+						return errors.Errorf("http status not ok, but success")
+					} else {
+						return err
+					}
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -228,7 +397,11 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			got, got1, err := c.fetchPubKeyEntries(tt.args.ctx, tt.args.env)
 
 			if err := tt.checkFunc(c, got, got1, err); err != nil {
-				t.Errorf("c.fetchPubKeyEntries() error = %v", err)
+				if tt.wantErr == "" {
+					t.Errorf("c.fetchPubKeyEntries() error = %v", err)
+				} else if err.Error() != tt.wantErr {
+					t.Errorf("c.fetchPubKeyEntries() error = want: %s	result: %s", tt.wantErr, err.Error())
+				}
 			}
 		})
 	}
