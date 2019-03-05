@@ -290,40 +290,41 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	rp := gache.New()
 	defer rp.Clear()
 
-	eg := errgroup.Group{}
+	// eg := errgroup.Group{}
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
-		var asss []*Assertion
 
-		eg.Go(func() error {
-			for _, ass := range pol.Assertions {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				default:
-					a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
-					if err != nil {
-						return errors.Wrap(err, "error create assertion")
-					}
-
-					if r, ok := rp.Get(ass.Role); ok {
-						asss = append(r.([]*Assertion), a)
-					} else {
-						asss = []*Assertion{a}
-					}
-					rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
+		//eg.Go(func() error {
+		for _, ass := range pol.Assertions {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
+				if err != nil {
+					return errors.Wrap(err, "error create assertion")
 				}
+				var asss []*Assertion
+
+				if r, ok := rp.Get(ass.Role); ok {
+					asss = append(r.([]*Assertion), a)
+				} else {
+					asss = []*Assertion{a}
+				}
+				rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
 			}
-			return nil
-		})
+		}
+		//	return nil
+		//})
 	}
 
-	if err := eg.Wait(); err != nil {
-		return errors.Wrap(err, "error simplify and cache policy")
-	}
+	/*
+		if err := eg.Wait(); err != nil {
+			return errors.Wrap(err, "error simplify and cache policy")
+		}
+	*/
 
 	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		glg.Debugf("jfidsjfdsjfldsj %v, %v, %v", k, val, exp)
 		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
 		return true
 	})

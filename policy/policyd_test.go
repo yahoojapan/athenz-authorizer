@@ -2,6 +2,7 @@ package policy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -1008,7 +1009,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									time.Now().Add(time.Hour * 99999).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1050,7 +1051,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 				},
 				checkFunc: func(pol *policy) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 2 {
-						return errors.New("invalid length role policies 1")
+						return errors.Errorf("invalid length role policies 2, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
 					}
 
 					gotRp1, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
@@ -1092,6 +1093,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 				wantErr: false,
 			}
 		}(),
+
 		func() test {
 			return test{
 				name: "cache success with no data",
@@ -1281,6 +1283,127 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 					}
 
 					return nil
+				},
+				wantErr: false,
+			}
+		}(),
+
+		func() test {
+			return test{
+				name: "cache success with 100x100 data",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: func() []*util.Policy {
+										var pols []*util.Policy
+
+										for j := 0; j < 100; j++ {
+											pols = append(pols, &util.Policy{
+												Assertions: func() []*util.Assertion {
+													var asss []*util.Assertion
+													for i := 0; i < 100; i++ {
+														asss = append(asss, &util.Assertion{
+															Role:     fmt.Sprintf("dummyDom%d:role.dummyRole", j),
+															Action:   "dummyAct",
+															Resource: fmt.Sprintf("dummyDom%d:dummyRes%d", j, i),
+															Effect:   "dummyEff",
+														})
+													}
+													return asss
+												}(),
+											})
+										}
+										return pols
+									}(),
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 100 {
+						return errors.New("invalid length role policies 100")
+					}
+
+					var err error
+					pol.rolePolicies.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
+						//glg.Debugf("key: %s, val: %v", k, val)
+						if len(val.([]*Assertion)) != 100 {
+							err = errors.Errorf("invalid length asss 100, error: %v", k)
+						}
+						return true
+					})
+
+					return err
+				},
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "cache success with no race condition with 100x100 data",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: func() []*util.Policy {
+										var pols []*util.Policy
+
+										for j := 0; j < 100; j++ {
+											pols = append(pols, &util.Policy{
+												Assertions: func() []*util.Assertion {
+													var asss []*util.Assertion
+													for i := 0; i < 100; i++ {
+														asss = append(asss, &util.Assertion{
+															Role:     "dummyDom:role.dummyRole",
+															Action:   "dummyAct",
+															Resource: fmt.Sprintf("dummyDom%d:dummyRes%d", j, i),
+															Effect:   "dummyEff",
+														})
+													}
+													return asss
+												}(),
+											})
+										}
+										return pols
+									}(),
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+						return errors.New("invalid length role policies 1")
+					}
+
+					var err error
+					pol.rolePolicies.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
+						//glg.Debugf("key: %s, val: %v", k, val)
+						if len(val.([]*Assertion)) != 10000 {
+							err = errors.Errorf("invalid length asss 100, error: %v", k)
+						}
+						return true
+					})
+
+					return err
 				},
 				wantErr: false,
 			}
