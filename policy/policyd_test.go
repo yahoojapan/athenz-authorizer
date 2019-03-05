@@ -173,13 +173,164 @@ func Test_policy_CheckPolicy(t *testing.T) {
 		action   string
 		resource string
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name   string
+		fields fields
+		args   args
+		want   error
+	}
+	tests := []test{
+		test{
+			name: "check policy allow success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct1", "dummyDom1:dummyRes1", "deny")
+							return a
+						}(),
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct2", "dummyDom2:dummyRes2", "deny")
+							return a
+						}(),
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: nil,
+		},
+		test{
+			name: "check policy deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("policy deny: Access Check was explicitly denied"),
+		},
+		test{
+			name: "check policy not found",
+			fields: fields{
+				rolePolicies: gache.New(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		test{
+			name: "check policy allow success with multiple roles",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct1", "dummyDom1:dummyRes1", "deny")
+							return a
+						}(),
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct2", "dummyDom2:dummyRes2", "deny")
+							return a
+						}(),
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole1", "dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: nil,
+		},
+		test{
+			name: "check policy no match with assertion resource domain mismatch",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom3:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole1", "dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		test{
+			name: "check policy allow deny with multiple roles with allow and deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					g.Set("dummyDom:role.dummyRole1", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("policy deny: Access Check was explicitly denied"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -196,8 +347,17 @@ func Test_policy_CheckPolicy(t *testing.T) {
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
 			}
-			if err := p.CheckPolicy(tt.args.ctx, tt.args.domain, tt.args.roles, tt.args.action, tt.args.resource); (err != nil) != tt.wantErr {
-				t.Errorf("policy.CheckPolicy() error = %v, wantErr %v", err, tt.wantErr)
+			err := p.CheckPolicy(tt.args.ctx, tt.args.domain, tt.args.roles, tt.args.action, tt.args.resource)
+			if err == nil {
+				if tt.want != nil {
+					t.Errorf("CheckPolicy error: err: nil, want: %v", tt.want)
+				}
+			} else {
+				if tt.want == nil {
+					t.Errorf("CheckPolicy error: err: %v, want: nil", err)
+				} else if err.Error() != tt.want.Error() {
+					t.Errorf("CheckPolicy error: err: %v, want: %v", err, tt.want)
+				}
 			}
 		})
 	}
@@ -221,13 +381,87 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 		ctx context.Context
 		dom string
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(pol *policy) error
+		wantErr   bool
+	}
+	tests := []test{
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("ETag", "dummyEtag")
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "fetch policy success with updated policy",
+				fields: fields{
+					rolePolicies: gache.New(),
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    gache.New(),
+					etagExpTime:  time.Minute,
+					expireMargin: time.Hour,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					dom: "dummyDom",
+				},
+				wantErr: false,
+				checkFunc: func(pol *policy) error {
+					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("role policies not found")
+					}
+					if len(pols.([]*Assertion)) != 1 {
+						return errors.New("role policies not correct")
+					}
+
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "fetch policy failed",
+				fields: fields{
+					rolePolicies: gache.New(),
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    gache.New(),
+					etagExpTime:  time.Minute,
+					expireMargin: time.Hour,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					dom: "dummyDomain",
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -246,6 +480,11 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 			}
 			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.dom); (err != nil) != tt.wantErr {
 				t.Errorf("policy.fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(p); err != nil {
+					t.Errorf("policy.fetchAndCachePolicy() error = %v", err)
+				}
 			}
 		})
 	}

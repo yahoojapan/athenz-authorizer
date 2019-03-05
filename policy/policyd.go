@@ -146,6 +146,7 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 	defer cancel()
 
 	go func() {
+		isAllow := false
 		defer close(ech)
 		wg := new(sync.WaitGroup)
 		for _, role := range roles {
@@ -171,7 +172,11 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 							return
 						default:
 							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
-								ch <- ass.Effect
+								if ass.Effect == nil {
+									isAllow = true
+								} else {
+									ch <- ass.Effect
+								}
 								return
 							}
 						}
@@ -180,26 +185,29 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 			}(ech)
 		}
 		wg.Wait()
+		if isAllow {
+			ech <- nil
+		}
 		ech <- errors.Wrap(ErrNoMatch, "no match")
 	}()
 
 	err := <-ech
 
 	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
-
 	return err
 }
 
 func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
-
 	if err != nil {
 		return errors.Wrap(err, "error fetch policy")
 	}
 
 	if upd {
-		rawpol, _ := json.Marshal(spd)
-		glg.Debugf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
+		if glg.Get().GetCurrentMode(glg.DEBG) != glg.NONE {
+			rawpol, _ := json.Marshal(spd)
+			glg.Debugf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
+		}
 
 		if err = p.simplifyAndCache(ctx, spd); err != nil {
 			return errors.Wrap(err, "error simplify and cache")
@@ -285,6 +293,8 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	eg := errgroup.Group{}
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
+		var asss []*Assertion
+
 		eg.Go(func() error {
 			for _, ass := range pol.Assertions {
 				select {
@@ -296,7 +306,6 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 						return errors.Wrap(err, "error create assertion")
 					}
 
-					var asss []*Assertion
 					if r, ok := rp.Get(ass.Role); ok {
 						asss = append(r.([]*Assertion), a)
 					} else {
@@ -314,6 +323,7 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	}
 
 	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
+		glg.Debugf("jfidsjfdsjfldsj %v, %v, %v", k, val, exp)
 		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
 		return true
 	})
