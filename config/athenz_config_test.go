@@ -151,7 +151,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 		fields    fields
 		args      args
 		checkFunc func(c *confd, sac *SysAuthConfig, upd bool, err error) error
-		wantErr   string
 	}
 	tests := []test{
 		func() test {
@@ -164,7 +163,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 
 			return test{
 				name:    "test fetch success",
-				wantErr: "",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -241,7 +239,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 
 			return test{
 				name:    "test etag exists but not modified",
-				wantErr: "",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -300,7 +297,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 
 			return test{
 				name:    "test etag exists but modified",
-				wantErr: "",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -355,7 +351,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 
 			return test{
 				name: "test not statusOK",
-				wantErr: "http return status not OK: Fetch athenz config error",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -372,15 +367,93 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 					env: "dummyEnv",
 				},
 				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
-					if err == nil {
-						return errors.Errorf("http status not ok, but success")
-					} else {
-						return err
+					wantErr := "http return status not OK: Fetch athenz config error"
+					if err != nil {
+						if err.Error() == wantErr {
+							return nil
+						} else {
+							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
+						}
 					}
+					return errors.Errorf("http status is not OK, but fetch success")
 				},
 			}
 		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test cannot make http request",
+				fields: fields{
+					athenzURL:     " ",
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					env: "dummyEnv",
+				},
+				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
+					wantErr := `error creating getPub request: parse https:// /domain/dummyDom/service/dummyEnv: invalid character " " in host name`
+					if err != nil {
+						if err.Error() == wantErr {
+							return nil
+						} else {
+							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
+						}
+					}
+					return errors.Errorf("http status is not OK, but fetch success")
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test fetch invalid json",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					env: "dummyEnv",
+				},
+				checkFunc: func(c *confd, sac *SysAuthConfig, upd bool, err error) error {
+					wantErr := "json format not correct: EOF"
+					if err != nil {
+						if err.Error() == wantErr {
+							return nil
+						} else {
+							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
+						}
+					}
+					return errors.Errorf("http status is not OK, but fetch success")
+				},
+			}
+		}(),
+
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &confd{
@@ -397,11 +470,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			got, got1, err := c.fetchPubKeyEntries(tt.args.ctx, tt.args.env)
 
 			if err := tt.checkFunc(c, got, got1, err); err != nil {
-				if tt.wantErr == "" {
-					t.Errorf("c.fetchPubKeyEntries() error = %v", err)
-				} else if err.Error() != tt.wantErr {
-					t.Errorf("c.fetchPubKeyEntries() error = want: %s	result: %s", tt.wantErr, err.Error())
-				}
+				t.Errorf("c.fetchPubKeyEntries() error = %v", err)
 			}
 		})
 	}
