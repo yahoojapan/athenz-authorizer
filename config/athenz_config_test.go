@@ -5,24 +5,19 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
-	"time"
-	//	"context"
-	//	"net/http"
-	//	"net/http/httptest"
-	//	"reflect"
-	//	"regexp"
 	"sync"
 	"testing"
+	"time"
 
 	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	//	"time"
-	//	ntokend "github.com/yahoojapan/athenz-ntokend"
+	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
 
-func TestNewAthenzConfd(t *testing.T) {
+func Test_config_NewAthenzConfd(t *testing.T) {
 	type args struct {
 		opts []Option
 	}
@@ -74,7 +69,7 @@ func TestNewAthenzConfd(t *testing.T) {
 	}
 }
 
-func Test_GetPubKey(t *testing.T) {
+func Test_config_getPubKey(t *testing.T) {
 	c := &confd{
 		confCache: &AthenzConfig{
 			ZMSPubKeys: new(sync.Map),
@@ -92,7 +87,7 @@ func Test_GetPubKey(t *testing.T) {
 	type test struct {
 		name string
 		args args
-		want *VerifierMock
+		want authcore.Verifier
 	}
 	tests := []test{
 		test{
@@ -103,14 +98,22 @@ func Test_GetPubKey(t *testing.T) {
 			},
 			want: ztsVer,
 		},
-		//		test{
-		//			name: "not found",
-		//			args: args{
-		//				env: "zms",
-		//				keyID: "1",
-		//			},
-		//			want: nil,
-		//		},
+		{
+			name: "not found zms",
+			args: args{
+				env:   "zms",
+				keyID: "1",
+			},
+			want: nil,
+		},
+		test{
+			name: "not found zts",
+			args: args{
+				env:   "zts",
+				keyID: "1",
+			},
+			want: nil,
+		},
 		{
 			name: "invalid env",
 			args: args{
@@ -130,7 +133,7 @@ func Test_GetPubKey(t *testing.T) {
 	}
 }
 
-func Test_confign_fetchPubKeyEntries(t *testing.T) {
+func Test_config_fetchPubKeyEntries(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -162,7 +165,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			srv := httptest.NewTLSServer(handler)
 
 			return test{
-				name:    "test fetch success",
+				name: "test fetch success",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -238,7 +241,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			})
 
 			return test{
-				name:    "test etag exists but not modified",
+				name: "test etag exists but not modified",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -296,7 +299,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			})
 
 			return test{
-				name:    "test etag exists but modified",
+				name: "test etag exists but modified",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -386,7 +389,7 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 			srv := httptest.NewTLSServer(handler)
 
 			return test{
-				name: "test cannot make http request",
+				name: "test cannot create getPub request",
 				fields: fields{
 					athenzURL:     " ",
 					sysAuthDomain: "dummyDom",
@@ -451,7 +454,6 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 				},
 			}
 		}(),
-
 	}
 
 	for _, tt := range tests {
@@ -475,3 +477,98 @@ func Test_confign_fetchPubKeyEntries(t *testing.T) {
 		})
 	}
 }
+
+func Test_config_GetPubKeyProvider(t *testing.T) {
+	c := &confd{
+		confCache: &AthenzConfig{},
+	}
+	type test struct {
+		name string
+		want string
+	}
+	tests := []test{
+		test{
+			name: "get success",
+			want: "config.PubKeyProvider",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := c.GetPubKeyProvider()
+			if fmt.Sprint(reflect.TypeOf(got)) != tt.want {
+				t.Errorf("c.GetPubKeyProvider() error")
+			}
+		})
+	}
+}
+
+//func Test_config_StartConfUpdator(t *testing.T) {
+//	type fields struct {
+//		refreshDuration  time.Duration
+//		errRetryInterval time.Duration
+//		etagCache        gache.Gache
+//		etagFlushDur     time.Duration
+//		etagExpTime      time.Duration
+//		athenzURL        string
+//		sysAuthDomain    string
+//		client           *http.Client
+//		confCache        *AthenzConfig
+//	}
+//	type args struct {
+//		ctx context.Context
+//	}
+//	type test struct {
+//		name   string
+//		fields fields
+//		args   args
+//	}
+//	tests := []test{
+//		func()test {
+//			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//				w.Header().Add("ETag", "dummyEtag")
+//				w.WriteHeader(http.StatusOK)
+//				w.Write([]byte(`{"name":"dummyDom.dummyEnv","publicKeys":[{"key":"dummyKey","id":"dummyID"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+//			}))
+//			srv := httptest.NewTLSServer(handler)
+//			return test{
+//				name: "success",
+//				fields: fields{
+//					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+//					sysAuthDomain: "dummyDom",
+//					etagCache:     gache.New(),
+//					etagExpTime:   time.Minute,
+//					client:        srv.Client(),
+//					confCache: &AthenzConfig{
+//						ZMSPubKeys: new(sync.Map),
+//						ZTSPubKeys: new(sync.Map),
+//					},
+//				},
+//				args: args{
+//					ctx: context.Background(),
+//				},
+//			}
+//		}(),
+//	}
+//
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			c := &confd{
+//				refreshDuration:  tt.fields.refreshDuration,
+//				errRetryInterval: tt.fields.errRetryInterval,
+//				etagCache:        tt.fields.etagCache,
+//				etagFlushDur:     tt.fields.etagFlushDur,
+//				etagExpTime:      tt.fields.etagExpTime,
+//				athenzURL:        tt.fields.athenzURL,
+//				sysAuthDomain:    tt.fields.sysAuthDomain,
+//				client:           tt.fields.client,
+//				confCache:        tt.fields.confCache,
+//			}
+//			err := c.StartConfUpdator(tt.args.ctx)
+//
+//			if err != nil {
+//				t.Errorf("c.StartConfUpdator() error = %v", err)
+//			}
+//		})
+//	}
+//
+//}
