@@ -543,7 +543,7 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(c *confd) error
+		checkFunc func(*confd, error) error
 	}
 	tests := []test{
 		func() test {
@@ -578,7 +578,10 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *confd) error {
+				checkFunc: func(c *confd, goter error) error {
+					if goter != nil {
+						return goter
+					}
 					ind := 0
 					var err error = nil
 					checker := func(key interface{}, value interface{}) bool {
@@ -670,7 +673,10 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *confd) error {
+				checkFunc: func(c *confd, goter error) error {
+					if goter != nil {
+						return goter
+					}
 					ind := 0
 					var err error = nil
 					checker := func(key interface{}, value interface{}) bool {
@@ -705,6 +711,129 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test fetchPubKeyEntries returns error",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd, goter error) error {
+					wantErr := "error when processing pub key: Error updating ZMS athenz config: error fetch public key entries: json format not correct: EOF"
+					if goter.Error() != wantErr {
+						return errors.Wrap(goter, "unexpected error")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"cannot decode","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test cannot decode key",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd, goter error) error {
+					wantErr := "error when processing pub key: Error updating ZMS athenz config: error decoding key: illegal base64 data at input byte 6"
+					if goter.Error() != wantErr {
+						return errors.Wrap(goter, "unexpected error")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"ZHVtbXkga2V5Cg--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "test cannot new verifier",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd, goter error) error {
+					wantErr := "error when processing pub key: Error updating ZTS athenz config: error initializing verifier: Unable to load public key"
+					if goter.Error() != wantErr {
+						return errors.Wrap(goter, "unexpected error")
+					}
+					return nil
+				},
+			}
+		}(),
+
 	}
 
 	for _, tt := range tests {
@@ -721,11 +850,8 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 				confCache:        tt.fields.confCache,
 			}
 			err := c.UpdateAthenzConfig(tt.args.ctx)
-			if err != nil {
-				t.Errorf("c.UpdateAthenzConfig() error = %v", err)
-			}
-			if err = tt.checkFunc(c); err != nil {
-				t.Errorf("c.c.UpdateAthenzConfig() check error = %v", err)
+			if err = tt.checkFunc(c, err); err != nil {
+				t.Errorf("c.c.UpdateAthenzConfig() error = %v", err)
 			}
 		})
 	}
