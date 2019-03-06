@@ -24,7 +24,7 @@ func Test_config_NewAthenzConfd(t *testing.T) {
 	type test struct {
 		name      string
 		args      args
-		checkFunc func(AthenzConfd) error
+		checkFunc func(AthenzConfd, error) error
 	}
 	tests := []test{
 		test{
@@ -32,9 +32,12 @@ func Test_config_NewAthenzConfd(t *testing.T) {
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got AthenzConfd) error {
+			checkFunc: func(got AthenzConfd, err error) error {
+				if err != nil {
+					return err
+				}
 				if got.(*confd).sysAuthDomain != "sys.auth" {
-					return fmt.Errorf("cannot set default options")
+					return errors.New("cannot set default options")
 				}
 				return nil
 			},
@@ -47,9 +50,31 @@ func Test_config_NewAthenzConfd(t *testing.T) {
 					AthenzURL("dummyURL"),
 				},
 			},
-			checkFunc: func(got AthenzConfd) error {
+			checkFunc: func(got AthenzConfd, err error) error {
+				if err != nil {
+					return err
+				}
 				if got.(*confd).sysAuthDomain != "dummyd" || got.(*confd).athenzURL != "dummyURL" {
-					return fmt.Errorf("cannot set optional params")
+					return errors.New("cannot set optional params")
+				}
+				return nil
+			},
+		},
+		{
+			name: "new athenz confd success with invalid options",
+			args: args{
+				opts: []Option{
+					SysAuthDomain("dummyd"),
+					AthenzURL("dummyURL"),
+					ETagExpTime("invalid"),
+				},
+			},
+			checkFunc: func(got AthenzConfd, err error) error {
+				if got != nil {
+					return errors.New("get invalid AthenzConfd")
+				}
+				if err.Error() != "invalid etag expire time: time: invalid duration invalid" {
+					return errors.Wrap(err, "unexpected error")
 				}
 				return nil
 			},
@@ -58,10 +83,7 @@ func Test_config_NewAthenzConfd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewAthenzConfd(tt.args.opts...)
-			if err != nil {
-				t.Errorf("NewAthenzConfd() =  %v", err)
-			}
-			err = tt.checkFunc(got)
+			err = tt.checkFunc(got, err)
 			if err != nil {
 				t.Errorf("NewAthenzConfd() = %v", err)
 			}
@@ -518,17 +540,17 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 		ctx context.Context
 	}
 	type test struct {
-		name   string
-		fields fields
-		args   args
+		name      string
+		fields    fields
+		args      args
 		checkFunc func(c *confd) error
 	}
 	tests := []test{
-		func()test {
+		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
 					w.Header().Add("ETag", "dummyEtag")
-					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"},{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"1"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					w.WriteHeader(http.StatusOK)
 				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
 					w.Header().Add("ETag", "dummyEtag")
@@ -541,7 +563,7 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 			srv := httptest.NewTLSServer(handler)
 
 			return test{
-				name: "success",
+				name: "test pubkeys fetch success",
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
@@ -556,20 +578,128 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *confd) error{
+				checkFunc: func(c *confd) error {
 					ind := 0
-					counter := func(key interface{}, value interface{}) bool {
-						ind ++
+					var err error = nil
+					checker := func(key interface{}, value interface{}) bool {
+						ind++
+						valType := fmt.Sprint(reflect.TypeOf(value))
+						if valType != "*zmssvctoken.verify" {
+							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
+							return false
+						}
 						return true
 					}
-					c.confCache.ZMSPubKeys.Range(counter)
+					c.confCache.ZMSPubKeys.Range(checker)
+					if ind != 2 {
+						return errors.Errorf("invalid length ZMSPubKeys. want: 2, result: %d", ind)
+					}
+					if err != nil {
+						return err
+					}
+					err = nil
+					ind = 0
+					c.confCache.ZTSPubKeys.Range(checker)
+					if ind != 1 {
+						return errors.Errorf("invalid length ZTSPubKeys. want: 1, result: %d", ind)
+					}
+					if err != nil {
+						return err
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("If-None-Match") == "dummyEtag" {
+					w.WriteHeader(http.StatusNotModified)
+				} else {
+					w.Header().Add("ETag", "dummyNEWEtag")
+					w.WriteHeader(http.StatusOK)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ec := gache.New()
+			ec.Set("zms", &confCache{
+				eTag: "dummyEtag",
+				sac: &SysAuthConfig{
+					Modified: "2017-01-23T02:20:09.331Z",
+					Name:     "dummyDom.zms",
+					PublicKeys: []*PublicKey{
+						{
+							ID:  "dummyID",
+							Key: "dummyKey",
+						},
+					},
+				},
+			})
+			ec.Set("zts", &confCache{
+				eTag: "dummyEtag",
+				sac: &SysAuthConfig{
+					Modified: "2017-01-23T02:20:09.331Z",
+					Name:     "dummyDom.zts",
+					PublicKeys: []*PublicKey{
+						{
+							ID:  "dummyID",
+							Key: "dummyKey",
+						},
+					},
+				},
+			})
+
+			zmsVer := &VerifierMock{}
+			ztsVer := &VerifierMock{}
+			zmsVm := new(sync.Map)
+			ztsVm := new(sync.Map)
+			zmsVm.Store("zms", zmsVer)
+			ztsVm.Store("zts", ztsVer)
+			return test{
+				name: "test use etag cache",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     ec,
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: zmsVm,
+						ZTSPubKeys: ztsVm,
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd) error {
+					ind := 0
+					var err error = nil
+					checker := func(key interface{}, value interface{}) bool {
+						ind++
+						want := zmsVer
+						if key.(string) == "zts" {
+							want = ztsVer
+						}
+						if value.(*VerifierMock) != want {
+							err = errors.Errorf("Pubkey Map key:%s  invalid Verifier.", key)
+							return false
+						}
+						return true
+					}
+					c.confCache.ZMSPubKeys.Range(checker)
 					if ind != 1 {
 						return errors.Errorf("invalid length ZMSPubKeys. want: 1, result: %d", ind)
 					}
+					if err != nil {
+						return err
+					}
+					err = nil
 					ind = 0
-					c.confCache.ZTSPubKeys.Range(counter)
+					c.confCache.ZTSPubKeys.Range(checker)
 					if ind != 1 {
 						return errors.Errorf("invalid length ZTSPubKeys. want: 1, result: %d", ind)
+					}
+					if err != nil {
+						return err
 					}
 					return nil
 				},
@@ -594,77 +724,9 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 			if err != nil {
 				t.Errorf("c.UpdateAthenzConfig() error = %v", err)
 			}
+			if err = tt.checkFunc(c); err != nil {
+				t.Errorf("c.c.UpdateAthenzConfig() check error = %v", err)
+			}
 		})
 	}
 }
-
-//func Test_config_StartConfUpdator(t *testing.T) {
-//	type fields struct {
-//		refreshDuration  time.Duration
-//		errRetryInterval time.Duration
-//		etagCache        gache.Gache
-//		etagFlushDur     time.Duration
-//		etagExpTime      time.Duration
-//		athenzURL        string
-//		sysAuthDomain    string
-//		client           *http.Client
-//		confCache        *AthenzConfig
-//	}
-//	type args struct {
-//		ctx context.Context
-//	}
-//	type test struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}
-//	tests := []test{
-//		func()test {
-//			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//				w.Header().Add("ETag", "dummyEtag")
-//				w.WriteHeader(http.StatusOK)
-//				w.Write([]byte(`{"name":"dummyDom.dummyEnv","publicKeys":[{"key":"dummyKey","id":"dummyID"}],"modified":"2017-01-23T02:20:09.331Z"}`))
-//			}))
-//			srv := httptest.NewTLSServer(handler)
-//			return test{
-//				name: "success",
-//				fields: fields{
-//					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
-//					sysAuthDomain: "dummyDom",
-//					etagCache:     gache.New(),
-//					etagExpTime:   time.Minute,
-//					client:        srv.Client(),
-//					confCache: &AthenzConfig{
-//						ZMSPubKeys: new(sync.Map),
-//						ZTSPubKeys: new(sync.Map),
-//					},
-//				},
-//				args: args{
-//					ctx: context.Background(),
-//				},
-//			}
-//		}(),
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			c := &confd{
-//				refreshDuration:  tt.fields.refreshDuration,
-//				errRetryInterval: tt.fields.errRetryInterval,
-//				etagCache:        tt.fields.etagCache,
-//				etagFlushDur:     tt.fields.etagFlushDur,
-//				etagExpTime:      tt.fields.etagExpTime,
-//				athenzURL:        tt.fields.athenzURL,
-//				sysAuthDomain:    tt.fields.sysAuthDomain,
-//				client:           tt.fields.client,
-//				confCache:        tt.fields.confCache,
-//			}
-//			err := c.StartConfUpdator(tt.args.ctx)
-//
-//			if err != nil {
-//				t.Errorf("c.StartConfUpdator() error = %v", err)
-//			}
-//		})
-//	}
-//
-//}
