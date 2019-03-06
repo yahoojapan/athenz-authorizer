@@ -348,7 +348,7 @@ func Test_config_fetchPubKeyEntries(t *testing.T) {
 		}(),
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusBadGateway)
+				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -497,6 +497,102 @@ func Test_config_GetPubKeyProvider(t *testing.T) {
 			got := c.GetPubKeyProvider()
 			if fmt.Sprint(reflect.TypeOf(got)) != tt.want {
 				t.Errorf("c.GetPubKeyProvider() error")
+			}
+		})
+	}
+}
+
+func Test_config_UpdateAthenzConfig(t *testing.T) {
+	type fields struct {
+		refreshDuration  time.Duration
+		errRetryInterval time.Duration
+		etagCache        gache.Gache
+		etagFlushDur     time.Duration
+		etagExpTime      time.Duration
+		athenzURL        string
+		sysAuthDomain    string
+		client           *http.Client
+		confCache        *AthenzConfig
+	}
+	type args struct {
+		ctx context.Context
+	}
+	type test struct {
+		name   string
+		fields fields
+		args   args
+		checkFunc func(c *confd) error
+	}
+	tests := []test{
+		func()test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "success",
+				fields: fields{
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain: "dummyDom",
+					etagCache:     gache.New(),
+					etagExpTime:   time.Minute,
+					client:        srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd) error{
+					ind := 0
+					counter := func(key interface{}, value interface{}) bool {
+						ind ++
+						return true
+					}
+					c.confCache.ZMSPubKeys.Range(counter)
+					if ind != 1 {
+						return errors.Errorf("invalid length ZMSPubKeys. want: 1, result: %d", ind)
+					}
+					ind = 0
+					c.confCache.ZTSPubKeys.Range(counter)
+					if ind != 1 {
+						return errors.Errorf("invalid length ZTSPubKeys. want: 1, result: %d", ind)
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &confd{
+				refreshDuration:  tt.fields.refreshDuration,
+				errRetryInterval: tt.fields.errRetryInterval,
+				etagCache:        tt.fields.etagCache,
+				etagFlushDur:     tt.fields.etagFlushDur,
+				etagExpTime:      tt.fields.etagExpTime,
+				athenzURL:        tt.fields.athenzURL,
+				sysAuthDomain:    tt.fields.sysAuthDomain,
+				client:           tt.fields.client,
+				confCache:        tt.fields.confCache,
+			}
+			err := c.UpdateAthenzConfig(tt.args.ctx)
+			if err != nil {
+				t.Errorf("c.UpdateAthenzConfig() error = %v", err)
 			}
 		})
 	}
