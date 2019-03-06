@@ -123,13 +123,57 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 	type args struct {
 		ctx context.Context
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(pol *policy) error
+		wantErr   bool
+	}
+	tests := []test{
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("ETag", "dummyEtag")
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "Update policy success",
+				fields: fields{
+					rolePolicies: gache.New(),
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    gache.New(),
+					etagExpTime:  time.Minute,
+					expireMargin: time.Hour,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom", "dummyDom1"},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				wantErr: false,
+				checkFunc: func(pol *policy) error {
+					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("role policies not found")
+					}
+					if len(pols.([]*Assertion)) != 1 {
+						return errors.New("role policies not correct")
+					}
+
+					return nil
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,6 +192,11 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 			}
 			if err := p.UpdatePolicy(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("policy.UpdatePolicy() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(p); err != nil {
+					t.Errorf("policy.UpdatePolicy() error = %v", err)
+				}
 			}
 		})
 	}
