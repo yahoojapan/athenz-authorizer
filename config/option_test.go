@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -15,6 +17,21 @@ func TestAthenzURL(t *testing.T) {
 		args      args
 		checkFunc func(Option) error
 	}{
+		{
+			name: "set empty string",
+			args: args{
+				athenzURL: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+
+				if c.athenzURL != "" {
+					return fmt.Errorf("invalid url was set")
+				}
+				return nil
+			},
+		},
 		{
 			name: "set athenz url success",
 			args: args{
@@ -114,6 +131,20 @@ func TestSysAuthDomain(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "set empty string",
+			args: args{
+				domain: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+				if c.sysAuthDomain != "" {
+					return fmt.Errorf("invalid domain wasset")
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,6 +185,20 @@ func TestETagExpTime(t *testing.T) {
 			},
 		},
 		{
+			name: "test set empty string",
+			args: args{
+				time: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+				if !reflect.DeepEqual(c, &confd{}) {
+					return fmt.Errorf("expected no changes, but got %v", c)
+				}
+				return nil
+			},
+		},
+		{
 			name: "cannot parse string to time.Duration",
 			args: args{
 				time: "dummy",
@@ -182,6 +227,75 @@ func TestETagExpTime(t *testing.T) {
 		})
 	}
 }
+
+func TestErrRetryInterval(t *testing.T) {
+	type args struct {
+		time string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set errRetryInterval expire time success",
+			args: args{
+				time: "2h",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+
+				if c.errRetryInterval != time.Duration(time.Hour*2) {
+					return fmt.Errorf("cannot set errRetryInterval time")
+				}
+				return nil
+			},
+		},
+		{
+			name: "test set empty string",
+			args: args{
+				time: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+				if !reflect.DeepEqual(c, &confd{}) {
+					return fmt.Errorf("expected no changes, but got %v", c)
+				}
+				return nil
+			},
+		},
+		{
+			name: "cannot parse string to time.Duration",
+			args: args{
+				time: "dummy",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				err := got(c)
+
+				if err == nil {
+					return fmt.Errorf("invalid errRetryInterval time was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ErrRetryInterval(tt.args.time)
+			if got == nil {
+				t.Errorf("ErrRetryInterval() = nil")
+				return
+			}
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("ErrRetryInterval() = %v", err)
+			}
+		})
+	}
+}
+
 
 func TestETagFlushDur(t *testing.T) {
 	type args struct {
@@ -218,6 +332,20 @@ func TestETagFlushDur(t *testing.T) {
 
 				if err == nil {
 					return fmt.Errorf("invalid etag flush duration was set")
+				}
+				return nil
+			},
+		},
+		{
+			name: "test set empty string",
+			args: args{
+				dur: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+				if !reflect.DeepEqual(c, &confd{}) {
+					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
 			},
@@ -276,6 +404,20 @@ func TestRefreshDuration(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "test set empty string",
+			args: args{
+				dur: "",
+			},
+			checkFunc: func(got Option) error {
+				c := &confd{}
+				got(c)
+				if !reflect.DeepEqual(c, &confd{}) {
+					return fmt.Errorf("expected no changes, but got %v", c)
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -291,41 +433,59 @@ func TestRefreshDuration(t *testing.T) {
 	}
 }
 
-//func TestHttpClient(t *testing.T) {
-//	type args struct {
-//		cli string
-//	}
-//	tests := []struct {
-//		name      string
-//		args      args
-//		checkFunc func(Option) error
-//	}{
-//		{
-//			name: "set http client success",
-//			args: args{
-//				cli: &http.Client{},
-//			},
-//			checkFunc: func(got Option) error {
-//				c := &confd{}
-//				got(c)
-//
-//				if c.client !=  {
-//					return fmt.Errorf("cannot set http client")
-//				}
-//				return nil
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got := HttpClient(tt.args.cli)
-//			if got == nil {
-//				t.Errorf("HttpClient() = nil")
-//				return
-//			}
-//			if err := tt.checkFunc(got); err != nil {
-//				t.Errorf("HttpClient() = %v", err)
-//			}
-//		})
-//	}
-//}
+func TestHttpClient(t *testing.T) {
+	type args struct {
+		c *http.Client
+	}
+	type test struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			c := &http.Client{}
+			return test{
+				name: "set success",
+				args: args{
+					c: c,
+				},
+				checkFunc: func(opt Option) error {
+					cd := &confd{}
+					if err := opt(cd); err != nil {
+						return err
+					}
+					if cd.client != c {
+						return fmt.Errorf("Error")
+					}
+
+					return nil
+				},
+			}
+		}(),
+		{
+			name: "empty value",
+			args: args{
+				nil,
+			},
+			checkFunc: func(opt Option) error {
+				cd := &confd{}
+				if err := opt(cd); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(cd, &confd{}) {
+					return fmt.Errorf("expected no changes, but got %v", cd)
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := HttpClient(tt.args.c)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("HttpClient() error = %v", err)
+			}
+		})
+	}
+}
