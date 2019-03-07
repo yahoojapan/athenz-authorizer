@@ -13,6 +13,7 @@ import (
 
 	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
+	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
@@ -876,6 +877,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 		fields    fields
 		args      args
 		checkFunc func(*confd, error) error
+		afterFunc func()
 	}
 	tests := []test{
 		func() test {
@@ -893,7 +895,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				}
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 
 			return test{
 				name: "test start config updator and ctx.done",
@@ -916,7 +918,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				},
 				checkFunc: func(c *confd, goter error) error {
 					if goter.Error() != "context deadline exceeded" {
-						return errors.Wrap(goter, "unexpected error: ")
+						return errors.Wrap(goter, "unexpected error")
 					}
 					ind := 0
 					var err error = nil
@@ -929,28 +931,30 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						}
 						return true
 					}
-
-					c.confCache.ZMSPubKeys.Range(checker)
-					if ind != 1 {
-						return errors.Errorf("invalid length ZMSPubKeys. want: 1, result: %d", ind)
+					check := func(m *sync.Map, wc int) error{
+						m.Range(checker)
+						if ind != wc {
+							return errors.Errorf("invalid length ZMSPubKeys. want: %d, result: %d", wc, ind)
+						}
+						if err != nil {
+							return err
+						}
+						return nil
 					}
+					err = check(c.confCache.ZMSPubKeys, 1)
+					if err != nil {
+						return err
+					}
+					err = nil
+					ind = 0
+					err = check(c.confCache.ZTSPubKeys, 1)
 					if err != nil {
 						return err
 					}
 					err = nil
 					ind = 0
 
-					c.confCache.ZTSPubKeys.Range(checker)
-					if ind != 1 {
-						return errors.Errorf("invalid length ZTSPubKeys. want: 1, result: %d", ind)
-					}
-					if err != nil {
-						return err
-					}
-					err = nil
-					ind = 0
-
-					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool{
+					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
 						if key != "zms" && key != "zts" {
 							err = errors.Errorf("unexpected key %s", key)
 							return false
@@ -964,97 +968,169 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 					})
 					return nil
 				},
+				afterFunc: func() {
+					cancel()
+				},
 			}
 		}(),
-//		func() test {
-//			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//				if r.URL.Path == "/domain/dummyDom/service/zms" {
-//					w.Header().Add("ETag", "dummyzmsEtag")
-//					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
-//					w.WriteHeader(http.StatusOK)
-//				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
-//					w.Header().Add("ETag", "dummyztsEtag")
-//					w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
-//					w.WriteHeader(http.StatusOK)
-//				} else {
-//					w.WriteHeader(http.StatusNotFound)
-//				}
-//			}))
-//			srv := httptest.NewTLSServer(handler)
-//			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*2))
-//
-//			return test{
-//				name: "test start config updator and ctx.done",
-//				fields: fields{
-//					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-//					sysAuthDomain:    "dummyDom",
-//					refreshDuration:  time.Minute,
-//					errRetryInterval: time.Minute,
-//					etagCache:        gache.New(),
-//					etagExpTime:      time.Minute,
-//					etagFlushDur:     time.Minute,
-//					client:           srv.Client(),
-//					confCache: &AthenzConfig{
-//						ZMSPubKeys: new(sync.Map),
-//						ZTSPubKeys: new(sync.Map),
-//					},
-//				},
-//				args: args{
-//					ctx: ctx,
-//				},
-//				checkFunc: func(c *confd, goter error) error {
-//					if goter.Error() != "context deadline exceeded" {
-//						return errors.Wrap(goter, "unexpected error: ")
-//					}
-//					ind := 0
-//					var err error = nil
-//					checker := func(key interface{}, value interface{}) bool {
-//						ind++
-//						valType := fmt.Sprint(reflect.TypeOf(value))
-//						if valType != "*zmssvctoken.verify" {
-//							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
-//							return false
-//						}
-//						return true
-//					}
-//
-//					c.confCache.ZMSPubKeys.Range(checker)
-//					if ind != 1 {
-//						return errors.Errorf("invalid length ZMSPubKeys. want: 1, result: %d", ind)
-//					}
-//					if err != nil {
-//						return err
-//					}
-//					err = nil
-//					ind = 0
-//
-//					c.confCache.ZTSPubKeys.Range(checker)
-//					if ind != 1 {
-//						return errors.Errorf("invalid length ZTSPubKeys. want: 1, result: %d", ind)
-//					}
-//					if err != nil {
-//						return err
-//					}
-//					err = nil
-//					ind = 0
-//
-//					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool{
-//						if key != "zms" && key != "zts" {
-//							err = errors.Errorf("unexpected key %s", key)
-//							return false
-//						}
-//						wantEtag := fmt.Sprintf("dummy%sEtag", key)
-//						if val.(*confCache).eTag != wantEtag {
-//							err = errors.Errorf("unexpected etag %s", val.(*confCache).eTag)
-//							return false
-//						}
-//						return true
-//					})
-//					return nil
-//				},
-//			}
-//		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					w.Header().Add("ETag", "dummyzmsEtag")
+					w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					w.Header().Add("ETag", "dummyztsEtag")
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
 
+			return test{
+				name: "test UpdateAthenzConfig faild",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain:    "dummyDom",
+					refreshDuration:  time.Minute,
+					errRetryInterval: time.Minute,
+					etagCache:        gache.New(),
+					etagExpTime:      time.Minute,
+					etagFlushDur:     time.Minute,
+					client:           srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(c *confd, goter error) error {
+					if goter.Error() != "error update athenz config: error when processing pub key: Error updating ZTS athenz config: error fetch public key entries: json format not correct: EOF" {
+						return errors.Wrap(goter, "unexpected error")
+					}
+					return nil
+				},
+				afterFunc: func() {},
+			}
+		}(),
+		func() test {
+			zmsa := true
+			ztsa := true
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/domain/dummyDom/service/zms" {
+					if zmsa {
+						glg.Error("ZMS access 1st")
+						w.Header().Add("ETag", "dummyzmsEtag")
+						w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+						zmsa = false
+					} else {
+						glg.Error("ZMS access 2nd")
+						w.Header().Add("ETag", "dummyNewzmsEtag")
+						w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"},{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"1"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					}
+					w.WriteHeader(http.StatusOK)
+				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
+					if ztsa {
+						glg.Error("ZTS access 1nd")
+						w.Header().Add("ETag", "dummyztsEtag")
+						w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+						w.WriteHeader(http.StatusOK)
+						ztsa = false
+					} else {
+						glg.Error("ZTS access 2nd")
+						w.Header().Add("ETag", "dummyNewztsEtag")
+						w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[],"modified":"2017-01-23T02:20:09.331Z"}`))
+						w.WriteHeader(http.StatusOK)
+					}
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*3))
+
+			return test{
+				name: "test refresh config",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain:    "dummyDom",
+					refreshDuration:  time.Second,
+					errRetryInterval: time.Minute,
+					etagCache:        gache.New(),
+					etagExpTime:      time.Minute,
+					etagFlushDur:     time.Minute,
+					client:           srv.Client(),
+					confCache: &AthenzConfig{
+						ZMSPubKeys: new(sync.Map),
+						ZTSPubKeys: new(sync.Map),
+					},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(c *confd, goter error) error {
+					if goter.Error() != "context deadline exceeded" {
+						return errors.Wrap(goter, "unexpected error")
+					}
+					ind := 0
+					var err error = nil
+
+					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
+						if key != "zms" && key != "zts" {
+							err = errors.Errorf("unexpected key %s", key)
+							return false
+						}
+						wantEtag := fmt.Sprintf("dummyNew%sEtag", key)
+						glg.Debugf("ETAG CHECK want: %s, result: %s",wantEtag, val.(*confCache).eTag)
+						if val.(*confCache).eTag != wantEtag {
+							err = errors.Errorf("unexpected etag %s", val.(*confCache).eTag)
+							return false
+						}
+						return true
+					})
+
+					checker := func(key interface{}, value interface{}) bool {
+						ind++
+						valType := fmt.Sprint(reflect.TypeOf(value))
+						if valType != "*zmssvctoken.verify" {
+							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
+							return false
+						}
+						return true
+					}
+					check := func(m *sync.Map, wc int, env string) error{
+						m.Range(checker)
+						if ind != wc {
+							return errors.Errorf("invalid length %s PubKeys. want: %d, result: %d",env, wc, ind)
+						}
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+					err = check(c.confCache.ZMSPubKeys, 2, "ZMS")
+					if err != nil {
+						return err
+					}
+					err = nil
+					ind = 0
+					err = check(c.confCache.ZTSPubKeys, 0,"ZTS")
+					if err != nil {
+						return err
+					}
+					err = nil
+					ind = 0
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
 	}
 
 	for _, tt := range tests {
@@ -1071,12 +1147,11 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				confCache:        tt.fields.confCache,
 			}
 			ch := c.StartConfUpdator(tt.args.ctx)
-			select {
-			case goter := <-ch:
-				if err := tt.checkFunc(c, goter); err != nil {
-					t.Errorf("c.StartConfUpdator() error = %v", err)
-				}
+			goter := <-ch
+			if err := tt.checkFunc(c, goter); err != nil {
+				t.Errorf("c.StartConfUpdator() error = %v", err)
 			}
+			tt.afterFunc()
 		})
 	}
 }

@@ -87,38 +87,38 @@ func NewAthenzConfd(opts ...Option) (AthenzConfd, error) {
 
 func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting confd updator")
-	ech := make(chan error)
+	ech := make(chan error, 1)
 	if err := c.UpdateAthenzConfig(ctx); err != nil {
 		ech <- errors.Wrap(err, "error update athenz config")
 	}
-	go func(ch chan<- error) {
+
+	go func() {
 		fch := make(chan struct{})
 		defer close(fch)
-		defer close(ch)
 		c.etagCache.StartExpired(ctx, c.etagFlushDur)
-
 		ticker := time.NewTicker(c.refreshDuration)
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping confd updator")
 				ticker.Stop()
-				ch <- ctx.Err()
+				ech <- ctx.Err()
+				close(ech)
 				return
 			case <-fch:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
-					ch <- errors.Wrap(err, "error update athenz config")
+					ech <- errors.Wrap(err, "error update athenz config")
 					time.Sleep(c.errRetryInterval)
 					fch <- struct{}{}
 				}
 			case <-ticker.C:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
-					ch <- errors.Wrap(err, "error update athenz config")
+					ech <- errors.Wrap(err, "error update athenz config")
 					fch <- struct{}{}
 				}
 			}
 		}
-	}(ech)
+	}()
 
 	return ech
 }
@@ -129,6 +129,7 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 
 	// this function decode and create verifier obj and store to corresponding cache map
 	updConf := func(env AthenzEnv, cache *sync.Map) error {
+		cm := new(sync.Map)
 		dec := new(authcore.YBase64)
 		pubKeys, upded, err := c.fetchPubKeyEntries(ctx, env)
 		if err != nil {
@@ -152,9 +153,20 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 				glg.Errorf("error initializing verifier, error: %v", err)
 				return errors.Wrap(err, "error initializing verifier")
 			}
-			cache.Store(key.ID, ver)
+			cm.Store(key.ID, ver)
 			glg.Debugf("Successfully decode key, keyID: %v", key.ID)
 		}
+		cm.Range(func(key interface{}, val interface{}) bool {
+			cache.Store(key, val)
+			return true
+		})
+		cache.Range(func(key interface{}, val interface{}) bool {
+			_, ok := cm.Load(key)
+			if !ok {
+				cache.Delete(key)
+			}
+			return true
+		})
 
 		return nil
 	}
