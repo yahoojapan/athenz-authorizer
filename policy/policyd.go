@@ -305,14 +305,15 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 						return errors.Wrap(err, "error create assertion")
 					}
 					var asss []*Assertion
+
+					mu.Lock()
 					if r, ok := rp.Get(ass.Role); ok {
-						mu.Lock()
 						asss = append(r.([]*Assertion), a)
-						mu.Unlock()
 					} else {
 						asss = []*Assertion{a}
 					}
 					rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
+					mu.Unlock()
 				}
 			}
 			return nil
