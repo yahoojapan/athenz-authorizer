@@ -14,6 +14,7 @@ import (
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
+	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-policy-updater/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -146,7 +147,6 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 	defer cancel()
 
 	go func() {
-		isAllow := false
 		defer close(ech)
 		wg := new(sync.WaitGroup)
 		for _, role := range roles {
@@ -172,11 +172,7 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 							return
 						default:
 							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
-								if ass.Effect == nil {
-									isAllow = true
-								} else {
-									ch <- ass.Effect
-								}
+								ch <- ass.Effect
 								return
 							}
 						}
@@ -185,9 +181,6 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 			}(ech)
 		}
 		wg.Wait()
-		if isAllow {
-			ech <- nil
-		}
 		ech <- errors.Wrap(ErrNoMatch, "no match")
 	}()
 
@@ -292,6 +285,7 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 
 	eg := errgroup.Group{}
 	mu := new(sync.Mutex)
+	assm := new(sync.Map)
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
 		eg.Go(func() error {
@@ -300,28 +294,48 @@ func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
-					a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
-					if err != nil {
-						return errors.Wrap(err, "error create assertion")
-					}
-					var asss []*Assertion
-
-					mu.Lock()
-					if r, ok := rp.Get(ass.Role); ok {
-						asss = append(r.([]*Assertion), a)
+					km := fmt.Sprintf("%s,%s,%s", ass.Role, ass.Action, ass.Resource)
+					if _, ok := assm.Load(km); !ok {
+						assm.Store(km, ass)
 					} else {
-						asss = []*Assertion{a}
+						if strings.EqualFold("deny", ass.Effect) {
+							assm.Store(km, ass)
+						}
 					}
-					rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
-					mu.Unlock()
+
 				}
 			}
+
 			return nil
 		})
 	}
 
 	if err := eg.Wait(); err != nil {
 		return errors.Wrap(err, "error simplify and cache policy")
+	}
+
+	var retErr error
+	assm.Range(func(k interface{}, val interface{}) bool {
+		ass := val.(*util.Assertion)
+		a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
+		if err != nil {
+			retErr = err
+			return false
+		}
+		var asss []*Assertion
+
+		mu.Lock()
+		if r, ok := rp.Get(ass.Role); ok {
+			asss = append(r.([]*Assertion), a)
+		} else {
+			asss = []*Assertion{a}
+		}
+		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
+		mu.Unlock()
+		return true
+	})
+	if retErr != nil {
+		return retErr
 	}
 
 	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {

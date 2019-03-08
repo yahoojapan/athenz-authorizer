@@ -9,8 +9,8 @@ import (
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 
-	"github.com/yahoojapan/athenz-policy-updater/role"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-policy-updater/role"
 
 	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/yahoojapan/athenz-policy-updater/policy"
@@ -96,7 +96,7 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 
 	go func() {
 		// TODO expose set expire daemon duration interface
-		p.cache.StartExpired(ctx, p.cacheExp/10)
+		p.cache.StartExpired(ctx, p.cacheExp/2)
 
 		cech := p.athenzConfd.StartConfUpdator(ctx)
 		pech := p.policyd.StartPolicyUpdator(ctx)

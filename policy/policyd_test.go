@@ -405,35 +405,39 @@ func Test_policy_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
 		},
-		test{
-			name: "check policy allow deny with multiple roles with allow and deny",
-			fields: fields{
-				rolePolicies: func() gache.Gache {
-					g := gache.New()
-					g.Set("dummyDom:role.dummyRole", []*Assertion{
-						func() *Assertion {
-							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
-							return a
-						}(),
-					})
-					g.Set("dummyDom:role.dummyRole1", []*Assertion{
-						func() *Assertion {
-							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
-							return a
-						}(),
-					})
-					return g
-				}(),
+		/*
+			test{
+				name: "check policy deny with multiple roles with allow and deny",
+				fields: fields{
+					rolePolicies: func() gache.Gache {
+						g := gache.New()
+						for i := 0; i < 200; i++ {
+							g.Set("dummyDom:role.dummyRole", []*Assertion{
+								func() *Assertion {
+									a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+									return a
+								}(),
+							})
+						}
+						g.Set("dummyDom:role.dummyRole1", []*Assertion{
+							func() *Assertion {
+								a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+								return a
+							}(),
+						})
+						return g
+					}(),
+				},
+				args: args{
+					ctx:      context.Background(),
+					domain:   "dummyDom",
+					roles:    []string{"dummyRole", "dummyRole1"},
+					action:   "dummyAct",
+					resource: "dummyRes",
+				},
+				want: errors.New("policy deny: Access Check was explicitly denied"),
 			},
-			args: args{
-				ctx:      context.Background(),
-				domain:   "dummyDom",
-				roles:    []string{"dummyRole", "dummyRole1"},
-				action:   "dummyAct",
-				resource: "dummyRes",
-			},
-			want: errors.New("policy deny: Access Check was explicitly denied"),
-		},
+		*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1196,6 +1200,140 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			}
 		}(),
 
+		func() test {
+			return test{
+				name: "cache deny overwrite allow",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour * 99999).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "allow",
+												},
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "allow",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "deny",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "allow",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+						return errors.Errorf("invalid length role policies 1, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
+					}
+
+					gotRp1, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("cannot simplify and cache data")
+					}
+					gotAsss1 := gotRp1.([]*Assertion)
+					if len(gotAsss1) != 1 {
+						return errors.Errorf("invalid length asss 1, got: %v", gotAsss1)
+					}
+
+					return nil
+				},
+				wantErr: false,
+			}
+		}(),
+
+		func() test {
+			return test{
+				name: "cache success with no data",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{},
+								},
+							},
+						},
+					},
+				},
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "cache failed with invalid assertion",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: context.Background(),
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyRes",
+													Effect:   "allow",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				wantErr: true,
+			}
+		}(),
 		func() test {
 			return test{
 				name: "cache success with no data",
