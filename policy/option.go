@@ -15,55 +15,59 @@ var (
 		EtagExpTime("24h"),
 		RefreshDuration("30m"),
 		ErrRetryInterval("1m"),
-		HttpClient(&http.Client{}),
+		HTTPClient(&http.Client{}),
 	}
 )
 
 // Option represents a functional options pattern interface
 type Option func(*policy) error
 
+// EtagFlushDur represents a ETagFlushDur functional option
 func EtagFlushDur(t string) Option {
 	return func(pol *policy) error {
 		if t == "" {
 			return nil
 		}
-		if etagFlushDur, err := time.ParseDuration(t); err != nil {
+		etagFlushDur, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid flush duration")
-		} else {
-			pol.etagFlushDur = etagFlushDur
-			return nil
 		}
+		pol.etagFlushDur = etagFlushDur
+		return nil
 	}
 }
 
+// ExpireMargin represents a ExpiryMargin functional option
 func ExpireMargin(t string) Option {
 	return func(pol *policy) error {
 		if t == "" {
 			return nil
 		}
-		if expireMargin, err := time.ParseDuration(t); err != nil {
+		expireMargin, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid expire margin")
-		} else {
-			pol.expireMargin = expireMargin
-			return nil
 		}
+		pol.expireMargin = expireMargin
+		return nil
 	}
 }
 
+// EtagExpTime represents a EtagExpTime functional option
 func EtagExpTime(t string) Option {
 	return func(pol *policy) error {
 		if t == "" {
 			return nil
 		}
-		if etagExpTime, err := time.ParseDuration(t); err != nil {
+		etagExpTime, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid etag expire time")
-		} else {
-			pol.etagExpTime = etagExpTime
-			return nil
 		}
+		pol.etagExpTime = etagExpTime
+		return nil
 	}
 }
 
+// AthenzURL represents a AthenzURL functional option
 func AthenzURL(url string) Option {
 	return func(pol *policy) error {
 		if url == "" {
@@ -74,6 +78,7 @@ func AthenzURL(url string) Option {
 	}
 }
 
+// AthenzDomains represents a AthenzDomain functional option
 func AthenzDomains(doms []string) Option {
 	return func(pol *policy) error {
 		if doms == nil {
@@ -84,21 +89,23 @@ func AthenzDomains(doms []string) Option {
 	}
 }
 
+// RefreshDuration represents a RefreshDuration functional option
 func RefreshDuration(t string) Option {
 	return func(pol *policy) error {
 		if t == "" {
 			return nil
 		}
-		if rd, err := time.ParseDuration(t); err != nil {
+		rd, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid refresh duration")
-		} else {
-			pol.refreshDuration = rd
-			return nil
 		}
+		pol.refreshDuration = rd
+		return nil
 	}
 }
 
-func HttpClient(c *http.Client) Option {
+// HTTPClient represents a HttpClient functional option
+func HTTPClient(c *http.Client) Option {
 	return func(pol *policy) error {
 		if c != nil {
 			pol.client = c
@@ -107,6 +114,7 @@ func HttpClient(c *http.Client) Option {
 	}
 }
 
+// PubKeyProvider represents a PubKeyProvider functional option
 func PubKeyProvider(pkp config.PubKeyProvider) Option {
 	return func(pol *policy) error {
 		if pkp != nil {
@@ -116,16 +124,17 @@ func PubKeyProvider(pkp config.PubKeyProvider) Option {
 	}
 }
 
+// ErrRetryInterval represents a ErrRetryInterval functional option
 func ErrRetryInterval(i string) Option {
 	return func(pol *policy) error {
 		if i == "" {
 			return nil
 		}
-		if ri, err := time.ParseDuration(i); err != nil {
+		ri, err := time.ParseDuration(i)
+		if err != nil {
 			return errors.Wrap(err, "invalid err retry interval")
-		} else {
-			pol.errRetryInterval = ri
-			return nil
 		}
+		pol.errRetryInterval = ri
+		return nil
 	}
 }

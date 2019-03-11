@@ -397,9 +397,8 @@ func Test_config_fetchPubKeyEntries(t *testing.T) {
 					if err != nil {
 						if err.Error() == wantErr {
 							return nil
-						} else {
-							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 						}
+						return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 					}
 					return errors.Errorf("http status is not OK, but fetch success")
 				},
@@ -433,9 +432,8 @@ func Test_config_fetchPubKeyEntries(t *testing.T) {
 					if err != nil {
 						if err.Error() == wantErr {
 							return nil
-						} else {
-							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 						}
+						return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 					}
 					return errors.Errorf("http status is not OK, but fetch success")
 				},
@@ -469,9 +467,8 @@ func Test_config_fetchPubKeyEntries(t *testing.T) {
 					if err != nil {
 						if err.Error() == wantErr {
 							return nil
-						} else {
-							return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 						}
+						return errors.Errorf("unexpected error. want:%s	result:%s", wantErr, err.Error())
 					}
 					return errors.Errorf("http status is not OK, but fetch success")
 				},
@@ -584,7 +581,7 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 						return goter
 					}
 					ind := 0
-					var err error = nil
+					var err error
 					checker := func(key interface{}, value interface{}) bool {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
@@ -679,7 +676,7 @@ func Test_config_UpdateAthenzConfig(t *testing.T) {
 						return goter
 					}
 					ind := 0
-					var err error = nil
+					var err error
 					checker := func(key interface{}, value interface{}) bool {
 						ind++
 						want := zmsVer
@@ -921,7 +918,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						return errors.Wrap(goter, "unexpected error")
 					}
 					ind := 0
-					var err error = nil
+					var err error
 					checker := func(key interface{}, value interface{}) bool {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
@@ -931,7 +928,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						}
 						return true
 					}
-					check := func(m *sync.Map, wc int) error{
+					check := func(m *sync.Map, wc int) error {
 						m.Range(checker)
 						if ind != wc {
 							return errors.Errorf("invalid length ZMSPubKeys. want: %d, result: %d", wc, ind)
@@ -1071,7 +1068,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						return errors.Wrap(goter, "unexpected error")
 					}
 					ind := 0
-					var err error = nil
+					var err error
 
 					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
 						if key != "zms" && key != "zts" {
@@ -1079,7 +1076,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 							return false
 						}
 						wantEtag := fmt.Sprintf("dummyNew%sEtag", key)
-						glg.Debugf("ETAG CHECK want: %s, result: %s",wantEtag, val.(*confCache).eTag)
+						glg.Debugf("ETAG CHECK want: %s, result: %s", wantEtag, val.(*confCache).eTag)
 						if val.(*confCache).eTag != wantEtag {
 							err = errors.Errorf("unexpected etag %s", val.(*confCache).eTag)
 							return false
@@ -1096,10 +1093,10 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						}
 						return true
 					}
-					check := func(m *sync.Map, wc int, env string) error{
+					check := func(m *sync.Map, wc int, env string) error {
 						m.Range(checker)
 						if ind != wc {
-							return errors.Errorf("invalid length %s PubKeys. want: %d, result: %d",env, wc, ind)
+							return errors.Errorf("invalid length %s PubKeys. want: %d, result: %d", env, wc, ind)
 						}
 						if err != nil {
 							return err
@@ -1112,7 +1109,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 					}
 					err = nil
 					ind = 0
-					err = check(c.confCache.ZTSPubKeys, 0,"ZTS")
+					err = check(c.confCache.ZTSPubKeys, 0, "ZTS")
 					if err != nil {
 						return err
 					}

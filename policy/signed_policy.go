@@ -9,10 +9,12 @@ import (
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
 )
 
+// SignedPolicy represents the signed policy data
 type SignedPolicy struct {
 	util.DomainSignedPolicyData
 }
 
+// Verify verifies the signed policy and return any errors
 func (s *SignedPolicy) Verify(pkp config.PubKeyProvider) error {
 	// verify signed policy data
 	ver := pkp(config.EnvZTS, s.KeyId)

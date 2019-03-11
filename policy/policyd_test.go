@@ -742,9 +742,10 @@ func Test_policy_fetchPolicy(t *testing.T) {
 				sp: &SignedPolicy{
 					util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
-							Expires: &rdl.Timestamp{
-								time.Now().Add(time.Hour).UTC(),
-							},
+							Expires: func() *rdl.Timestamp {
+								t := rdl.NewTimestamp(time.Now().Add(time.Hour))
+								return &t
+							}(),
 						},
 					},
 				},

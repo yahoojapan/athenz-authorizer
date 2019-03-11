@@ -381,7 +381,7 @@ func TestRefreshDuration(t *testing.T) {
 	}
 }
 
-func TestHttpClient(t *testing.T) {
+func TestHTTPClient(t *testing.T) {
 	type args struct {
 		c *http.Client
 	}
@@ -430,9 +430,9 @@ func TestHttpClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HttpClient(tt.args.c)
+			got := HTTPClient(tt.args.c)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("HttpClient() error = %v", err)
+				t.Errorf("HTTPClient() error = %v", err)
 			}
 		})
 	}
