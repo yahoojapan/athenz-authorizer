@@ -264,7 +264,7 @@ func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy,
 
 	// verify policy data
 	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifing policy, err: %v", err)
+		glg.Errorf("Error verifing policy, domain: %s,err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error verify policy data")
 	}
 

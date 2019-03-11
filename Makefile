@@ -31,3 +31,8 @@ test: clean init
 
 contributors:
 	git log --format='%aN <%aE>' | sort -fu > CONTRIBUTORS
+
+coverage:
+	go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	rm -f coverage.out

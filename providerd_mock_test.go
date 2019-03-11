@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/yahoojapan/athenz-policy-updater/policy"
@@ -51,6 +50,5 @@ type RoleTokenMock struct {
 }
 
 func (rm *RoleTokenMock) ParseAndValidateRoleToken(tok string) (*role.RoleToken, error) {
-	glg.Debugf("test %v", rm.wantErr)
 	return rm.rt, rm.wantErr
 }

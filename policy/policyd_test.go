@@ -30,19 +30,39 @@ func TestNewPolicyd(t *testing.T) {
 		checkFunc func(got Policyd) error
 		wantErr   bool
 	}{
-		/*
-			{
-				name: "new success",
-				args: args{
-					opts: []Option{},
-				},
-				checkFunc: func(got Policyd) error {
-					p := got.(*policy)
-
-					return fmt.Errorf("%v", p)
-				},
+		{
+			name: "new success",
+			args: args{
+				opts: []Option{},
 			},
-		*/
+			checkFunc: func(got Policyd) error {
+				p := got.(*policy)
+				if p.expireMargin != time.Hour*3 {
+					return errors.New("invalid expireMargin")
+				}
+				return nil
+			},
+		},
+		{
+			name: "new success with options",
+			args: args{
+				opts: []Option{ExpireMargin("5s")},
+			},
+			checkFunc: func(got Policyd) error {
+				p := got.(*policy)
+				if p.expireMargin != time.Second*5 {
+					return errors.New("invalid expireMargin")
+				}
+				return nil
+			},
+		},
+		{
+			name: "new error due to options",
+			args: args{
+				opts: []Option{EtagExpTime("dummy")},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -52,8 +72,10 @@ func TestNewPolicyd(t *testing.T) {
 				return
 			}
 
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("NewPolicyd() = %v", err)
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(got); err != nil {
+					t.Errorf("NewPolicyd() = %v", err)
+				}
 			}
 		})
 	}
@@ -124,11 +146,13 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 		ctx context.Context
 	}
 	type test struct {
-		name      string
-		fields    fields
-		args      args
-		checkFunc func(pol *policy) error
-		wantErr   bool
+		name       string
+		fields     fields
+		args       args
+		beforeFunc func()
+		checkFunc  func(pol *policy) error
+		wantErr    string
+		afterFunc  func()
 	}
 	tests := []test{
 		func() test {
@@ -160,7 +184,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				wantErr: false,
+				wantErr: "",
 				checkFunc: func(pol *policy) error {
 					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
@@ -227,9 +251,52 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 				}
 			}(),
 		*/
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("ETag", "dummyEtag")
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
+			return test{
+				name: "Update policy success",
+				fields: fields{
+					rolePolicies: gache.New(),
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    gache.New(),
+					etagExpTime:  time.Minute,
+					expireMargin: time.Hour,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom"},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				wantErr: "context deadline exceeded",
+				beforeFunc: func() {
+					time.Sleep(time.Second)
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.afterFunc != nil {
+				defer tt.afterFunc()
+			}
+
 			p := &policy{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
@@ -243,7 +310,10 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
 			}
-			if err := p.UpdatePolicy(tt.args.ctx); (err != nil) != tt.wantErr {
+			if tt.beforeFunc != nil {
+				tt.beforeFunc()
+			}
+			if err := p.UpdatePolicy(tt.args.ctx); (err != nil) && tt.wantErr != "" && err.Error() != tt.wantErr {
 				t.Errorf("policy.UpdatePolicy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
@@ -569,6 +639,39 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("ETag", "dummyEtag")
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			return test{
+				name: "simplifyAndCache failed",
+				fields: fields{
+					rolePolicies: gache.New(),
+					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:    gache.New(),
+					etagExpTime:  time.Minute,
+					expireMargin: time.Hour,
+					client:       srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+				},
+				args: args{
+					ctx: context.Background(),
+					dom: "dummyDom",
+				},
+				wantErr: true,
+			}
+		}(),
+
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1202,6 +1305,68 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 		}(),
 
 		func() test {
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*5))
+			return test{
+				name: "test context done",
+				fields: fields{
+					rolePolicies: gache.New(),
+				},
+				args: args{
+					ctx: ctx,
+					sp: &SignedPolicy{
+						util.DomainSignedPolicyData{
+							SignedPolicyData: &util.SignedPolicyData{
+								Expires: &rdl.Timestamp{
+									time.Now().Add(time.Hour * 99999).UTC(),
+								},
+								PolicyData: &util.PolicyData{
+									Policies: []*util.Policy{
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "dummyEff",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct1",
+													Resource: "dummyDom:dummyRes1",
+													Effect:   "dummyEff1",
+												},
+											},
+										},
+										&util.Policy{
+											Assertions: []*util.Assertion{
+												&util.Assertion{
+													Role:     "dummyDom2:role.dummyRole2",
+													Action:   "dummyAct2",
+													Resource: "dummyDom2:dummyRes2",
+													Effect:   "allow",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				checkFunc: func(pol *policy) error {
+					cancel()
+					return nil
+				},
+				wantErr: true,
+			}
+		}(),
+
+
+		func() test {
 			return test{
 				name: "cache deny overwrite allow",
 				fields: fields{
@@ -1251,6 +1416,12 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 													Resource: "dummyDom:dummyRes",
 													Effect:   "allow",
 												},
+												&util.Assertion{
+													Role:     "dummyDom:role.dummyRole",
+													Action:   "dummyAct",
+													Resource: "dummyDom:dummyRes",
+													Effect:   "deny",
+												},
 											},
 										},
 									},
@@ -1271,6 +1442,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 					gotAsss1 := gotRp1.([]*Assertion)
 					if len(gotAsss1) != 1 {
 						return errors.Errorf("invalid length asss 1, got: %v", gotAsss1)
+					}
+					if gotAsss1[0].Effect == nil {
+						return errors.Errorf("Deny policy did not overwrite allow policy")
 					}
 
 					return nil
