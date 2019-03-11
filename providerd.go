@@ -16,7 +16,7 @@ import (
 	"github.com/yahoojapan/athenz-policy-updater/policy"
 )
 
-// TokenService represents a interface for user to get the token, and automatically update the token
+// Providerd represents a daemon for user to verify the role token
 type Providerd interface {
 	StartProviderd(context.Context) <-chan error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
@@ -51,8 +51,8 @@ type provider struct {
 	policyEtagExpTime     string
 }
 
-// New return TokenService
-// This function will initialize the TokenService object with the tokenOptions
+// New return Providerd
+// This function will initialize the Providerd object with the options
 func New(opts ...Option) (Providerd, error) {
 	prov := &provider{}
 	var err error
@@ -68,7 +68,7 @@ func New(opts ...Option) (Providerd, error) {
 		config.ETagExpTime(prov.athenzConfEtagExpTime),
 		config.ETagFlushDur(prov.athenzConfEtagFlushDur),
 		config.RefreshDuration(prov.athenzConfRefreshDuration),
-		config.HttpClient(prov.client),
+		config.HTTPClient(prov.client),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create athenzConfd")
 	}
@@ -80,7 +80,7 @@ func New(opts ...Option) (Providerd, error) {
 		policy.AthenzURL(prov.athenzURL),
 		policy.AthenzDomains(prov.athenzDomains),
 		policy.RefreshDuration(prov.policyRefreshDuration),
-		policy.HttpClient(prov.client),
+		policy.HTTPClient(prov.client),
 		policy.PubKeyProvider(prov.athenzConfd.GetPubKeyProvider()),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create policyd")
@@ -91,6 +91,7 @@ func New(opts ...Option) (Providerd, error) {
 	return prov, nil
 }
 
+// StartProviderd starts provider daemon.
 func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 	ech := make(chan error)
 
@@ -119,6 +120,7 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 	return ech
 }
 
+// VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (p *provider) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")

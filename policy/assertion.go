@@ -11,12 +11,14 @@ var (
 	replacer = strings.NewReplacer(".*", ".*", "*", ".*")
 )
 
+// Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
 	Reg            *regexp.Regexp
 	ResourceDomain string
 	Effect         error
 }
 
+// NewAssertion returns the Assertion object or error
 func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	domres := strings.SplitN(resource, ":", 2)
 	if len(domres) < 2 {

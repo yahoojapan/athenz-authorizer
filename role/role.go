@@ -7,6 +7,7 @@ import (
 	"github.com/yahoojapan/athenz-policy-updater/config"
 )
 
+// RoleTokenParser represents the role token parser interface.
 type RoleTokenParser interface {
 	ParseAndValidateRoleToken(tok string) (*RoleToken, error)
 }
@@ -15,12 +16,14 @@ type rtp struct {
 	pkp config.PubKeyProvider
 }
 
+// NewRoleTokenParser returns the RoleTokenParser instance.
 func NewRoleTokenParser(prov config.PubKeyProvider) RoleTokenParser {
 	return &rtp{
 		pkp: prov,
 	}
 }
 
+// ParseAndValidateRoleToken return the parsed and validiated role token, and return any parsing and validate errors.
 func (r *rtp) ParseAndValidateRoleToken(tok string) (*RoleToken, error) {
 	rt, err := r.parseRoleToken(tok)
 	if err != nil {

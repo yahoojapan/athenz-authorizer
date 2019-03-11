@@ -18,6 +18,7 @@ var (
 // Option represents a functional options pattern interface
 type Option func(*provider) error
 
+// PolicyRefreshDuration represents a PolicyRefreshDuration functional option
 func PolicyRefreshDuration(t string) Option {
 	return func(prov *provider) error {
 		prov.policyRefreshDuration = t
@@ -25,6 +26,7 @@ func PolicyRefreshDuration(t string) Option {
 	}
 }
 
+// AthenzConfRefreshDuration represents a AthenzConfRefreshDuration functional option
 func AthenzConfRefreshDuration(t string) Option {
 	return func(prov *provider) error {
 		prov.athenzConfRefreshDuration = t
@@ -32,6 +34,7 @@ func AthenzConfRefreshDuration(t string) Option {
 	}
 }
 
+// AthenzURL represents a AthenzURL functional option
 func AthenzURL(url string) Option {
 	return func(prov *provider) error {
 		prov.athenzURL = url
@@ -39,6 +42,7 @@ func AthenzURL(url string) Option {
 	}
 }
 
+// AthenzDomains represents a AthenzDomains functional option
 func AthenzDomains(domains []string) Option {
 	return func(prov *provider) error {
 		prov.athenzDomains = domains
@@ -47,6 +51,8 @@ func AthenzDomains(domains []string) Option {
 }
 
 // athenzConfd parameters
+
+// AthenzConfSysAuthDomain represents a AthenzConfSysAuthDomain functional option
 func AthenzConfSysAuthDomain(domain string) Option {
 	return func(prov *provider) error {
 		prov.athenzConfSysAuthDomain = domain
@@ -54,6 +60,7 @@ func AthenzConfSysAuthDomain(domain string) Option {
 	}
 }
 
+// AthenzConfEtagExpTime represents a AthenzConfEtagExpTime functional option
 func AthenzConfEtagExpTime(t string) Option {
 	return func(prov *provider) error {
 		prov.athenzConfEtagExpTime = t
@@ -61,6 +68,7 @@ func AthenzConfEtagExpTime(t string) Option {
 	}
 }
 
+// AthenzConfEtagFlushDur represents a AthenzConfEtagFlushDur functional option
 func AthenzConfEtagFlushDur(t string) Option {
 	return func(prov *provider) error {
 		prov.athenzConfEtagFlushDur = t
@@ -69,6 +77,8 @@ func AthenzConfEtagFlushDur(t string) Option {
 }
 
 // policyd parameters
+
+// PolicyExpireMargin represents a PolicyExpireMargin functional option
 func PolicyExpireMargin(t string) Option {
 	return func(prov *provider) error {
 		prov.policyExpireMargin = t
@@ -76,6 +86,7 @@ func PolicyExpireMargin(t string) Option {
 	}
 }
 
+// PolicyEtagFlushDur represents a PolicyEtagFlushDur functional option
 func PolicyEtagFlushDur(t string) Option {
 	return func(prov *provider) error {
 		prov.policyEtagFlushDur = t
@@ -83,6 +94,7 @@ func PolicyEtagFlushDur(t string) Option {
 	}
 }
 
+// PolicyEtagExpTime represents a PolicyEtagExpTime functional option
 func PolicyEtagExpTime(t string) Option {
 	return func(prov *provider) error {
 		prov.policyEtagExpTime = t
@@ -90,6 +102,7 @@ func PolicyEtagExpTime(t string) Option {
 	}
 }
 
+// Transport represents a Transport functional option
 func Transport(t *http.Transport) Option {
 	return func(prov *provider) error {
 		if t == nil {
@@ -105,6 +118,7 @@ func Transport(t *http.Transport) Option {
 	}
 }
 
+// Cache represents a Cache functional option
 func Cache(c gache.Gache, dur time.Duration) Option {
 	return func(prov *provider) error {
 		prov.cache = c.SetDefaultExpire(dur)

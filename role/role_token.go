@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RoleToken represents role token data.
 type RoleToken struct {
 	// Version    string   // required
 	Domain string   // required
@@ -25,6 +26,7 @@ type RoleToken struct {
 	UnsignedToken string
 }
 
+// SetParams sets the value for corresponding key data.
 func (r *RoleToken) SetParams(key, value string) error {
 	switch key {
 	// case "a":
@@ -64,6 +66,7 @@ func (r *RoleToken) SetParams(key, value string) error {
 	return nil
 }
 
+// Expired returns if the role token is expired or not.
 func (r *RoleToken) Expired() bool {
 	return time.Now().After(r.ExpiryTime)
 }

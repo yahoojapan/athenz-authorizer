@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// Policyd represent the daemon to retrive policy data from Athenz.
 type Policyd interface {
 	StartPolicyUpdator(context.Context) <-chan error
 	UpdatePolicy(context.Context) error
@@ -49,6 +50,7 @@ type etagCache struct {
 	sp   *SignedPolicy
 }
 
+// NewPolicyd represent the constructor of Policyd
 func NewPolicyd(opts ...Option) (Policyd, error) {
 	p := &policy{
 		rolePolicies: gache.New(), //new(sync.Map),
@@ -71,6 +73,7 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 	return p, nil
 }
 
+// StartPolicyUpdator starts the Policy daemon to retrive the policy data periodically
 func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updator")
 
@@ -114,6 +117,7 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 	return ech
 }
 
+// UpdatePolicy updates and cache policy data
 func (p *policy) UpdatePolicy(ctx context.Context) error {
 	glg.Info("Updating policy")
 	defer glg.Info("Updated policy")
@@ -141,6 +145,8 @@ func (p *policy) UpdatePolicy(ctx context.Context) error {
 	return eg.Wait()
 }
 
+// CheckPolicy checks the specified request has privilege to access the resources or not.
+// If return is nil then the request is allowed, otherwise the request is rejected.
 func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
 	ech := make(chan error, 1)
 	cctx, cancel := context.WithCancel(ctx)

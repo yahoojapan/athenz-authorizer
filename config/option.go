@@ -14,7 +14,7 @@ var (
 		ETagFlushDur("84h"),
 		RefreshDuration("24h"),
 		ErrRetryInterval("1m"),
-		HttpClient(&http.Client{}),
+		HTTPClient(&http.Client{}),
 	}
 )
 
@@ -82,7 +82,7 @@ func RefreshDuration(t string) Option {
 	}
 }
 
-func HttpClient(cl *http.Client) Option {
+func HTTPClient(cl *http.Client) Option {
 	return func(c *confd) error {
 		if c != nil {
 			c.client = cl
