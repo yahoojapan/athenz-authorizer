@@ -2,7 +2,6 @@ package providerd
 
 import (
 	"context"
-	"crypto/x509"
 	"net/http"
 	"time"
 
@@ -20,7 +19,7 @@ import (
 type Providerd interface {
 	StartProviderd(context.Context) <-chan error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
-	VerifyRoleCert(cert []*x509.Certificate) error
+	//	VerifyRoleCert(cert []*x509.Certificate) error
 }
 
 type provider struct {
@@ -92,7 +91,7 @@ func New(opts ...Option) (Providerd, error) {
 }
 
 func (p *provider) StartProviderd(ctx context.Context) <-chan error {
-	ech := make(chan error)
+	ech := make(chan error, 1)
 
 	go func() {
 		// TODO expose set expire daemon duration interface
@@ -103,6 +102,7 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
+				ech <- ctx.Err()
 				return
 			case err := <-cech:
 				if err != nil {
@@ -143,6 +143,6 @@ func (p *provider) VerifyRoleToken(ctx context.Context, tok, act, res string) er
 	return nil
 }
 
-func (p *provider) VerifyRoleCert(cert []*x509.Certificate) error {
-	return nil
-}
+//func (p *provider) VerifyRoleCert(cert []*x509.Certificate) error {
+//	return nil
+//}
