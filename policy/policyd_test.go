@@ -98,16 +98,64 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 	type args struct {
 		ctx context.Context
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   <-chan error
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(*policy, error) error
+		afterFunc func()
 	}
+	tests := []test{
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("ETag", "dummyEtag")
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*500))
+
+			return test{
+				name: "Start updator success",
+				fields: fields{
+					rolePolicies:    gache.New(),
+					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:       gache.New(),
+					etagExpTime:     time.Minute,
+					etagFlushDur:    time.Second,
+					refreshDuration: time.Second,
+					expireMargin:    time.Hour,
+					client:          srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom"},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(p *policy, got error) error {
+					if got.Error() != ctx.Err().Error() {
+						return errors.Errorf("got: %v, want: %v", got, context.Canceled)
+					}
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.afterFunc != nil {
+				defer tt.afterFunc()
+			}
 			p := &policy{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
@@ -121,8 +169,12 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
 			}
-			if got := p.StartPolicyUpdator(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("policy.StartPolicyUpdator() = %v, want %v", got, tt.want)
+			ch := p.StartPolicyUpdator(tt.args.ctx)
+			got := <-ch
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(p, got); err != nil {
+					t.Errorf("policy.StartPolicyUpdator() error = %v", err)
+				}
 			}
 		})
 	}
@@ -671,7 +723,6 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
-
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1364,7 +1415,6 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
-
 
 		func() test {
 			return test{
