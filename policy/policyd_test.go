@@ -102,7 +102,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(*policy, error) error
+		checkFunc func(*policy, <-chan error) error
 		afterFunc func()
 	}
 	tests := []test{
@@ -113,7 +113,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
+			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "Start updator success",
@@ -138,10 +138,13 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(p *policy, got error) error {
-					if got.Error() != ctx.Err().Error() {
-						return errors.Errorf("got: %v, want: %v", got, context.Canceled)
-					}
+				checkFunc: func(p *policy, ch <-chan error) error {
+					time.Sleep(time.Millisecond*100)
+					cancel()
+//					got := <-ch
+//					if got.Error() != ctx.Err().Error() {
+//						return errors.Errorf("got: %v, want: %v", got, context.Canceled)
+//					}
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
@@ -171,7 +174,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*30))
+			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "Start updator can update cache",
@@ -181,7 +184,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					etagCache:       gache.New(),
 					etagExpTime:     time.Minute,
 					etagFlushDur:    time.Second,
-					refreshDuration: time.Millisecond * 10,
+					refreshDuration: time.Millisecond*30,
 					expireMargin:    time.Hour,
 					client:          srv.Client(),
 					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
@@ -196,10 +199,13 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(p *policy, got error) error {
-					if got.Error() != context.DeadlineExceeded.Error() {
-						return errors.Errorf("got: %v, want: %v", got, context.DeadlineExceeded)
-					}
+				checkFunc: func(p *policy, ch <-chan error) error {
+					time.Sleep(time.Millisecond*100)
+					cancel()
+//					got := <-ch
+//					if got.Error() != context.DeadlineExceeded.Error() {
+//						return errors.Errorf("got: %v, want: %v", got, context.DeadlineExceeded)
+//					}
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
@@ -250,9 +256,8 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				client:           tt.fields.client,
 			}
 			ch := p.StartPolicyUpdator(tt.args.ctx)
-			got := <-ch
 			if tt.checkFunc != nil {
-				if err := tt.checkFunc(p, got); err != nil {
+				if err := tt.checkFunc(p, ch); err != nil {
 					t.Errorf("policy.StartPolicyUpdator() error = %v", err)
 				}
 			}
