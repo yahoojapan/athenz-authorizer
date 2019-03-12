@@ -99,13 +99,13 @@ func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 		defer close(ech)
 		c.etagCache.StartExpired(ctx, c.etagFlushDur)
 		ticker := time.NewTicker(c.refreshDuration)
-		var ebuf error
+		ebuf := errors.New("")
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping confd updator")
 				ticker.Stop()
-				if ebuf != nil {
+				if ebuf.Error() != "" {
 					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
 				} else {
 					ech <- ctx.Err()
@@ -116,7 +116,7 @@ func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 					err = errors.Wrap(err, "error update athenz config")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = nil
+						ebuf = errors.New("")
 					default:
 						ebuf = errors.Wrap(ebuf, err.Error())
 					}
@@ -132,7 +132,7 @@ func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 					err = errors.Wrap(err, "error update athenz config")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = nil
+						ebuf = errors.New("")
 					default:
 						ebuf = errors.Wrap(ebuf, err.Error())
 					}

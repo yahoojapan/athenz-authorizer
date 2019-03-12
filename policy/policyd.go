@@ -89,14 +89,14 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		p.rolePolicies.StartExpired(ctx, time.Hour*24)
 		ticker := time.NewTicker(p.refreshDuration)
-		var ebuf error
+		ebuf := errors.New("")
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping policyd updator")
 				ticker.Stop()
 				ech <- ctx.Err()
-				if ebuf != nil {
+				if ebuf.Error() != "" {
 					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
 				} else {
 					ech <- ctx.Err()
@@ -107,7 +107,7 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 					err = errors.Wrap(err, "error update policy")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = nil
+						ebuf = errors.New("")
 					default:
 						ebuf = errors.Wrap(ebuf, err.Error())
 					}
@@ -123,7 +123,7 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 					err = errors.Wrap(err, "error update policy")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = nil
+						ebuf = errors.New("")
 					default:
 						ebuf = errors.Wrap(ebuf, err.Error())
 					}
