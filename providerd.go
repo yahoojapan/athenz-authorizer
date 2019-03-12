@@ -92,7 +92,7 @@ func New(opts ...Option) (Providerd, error) {
 
 // StartProviderd starts provider daemon.
 func (p *provider) StartProviderd(ctx context.Context) <-chan error {
-	ech := make(chan error, 1)
+	ech := make(chan error, 200)
 
 	go func() {
 		// TODO expose set expire daemon duration interface
