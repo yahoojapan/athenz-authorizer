@@ -160,6 +160,145 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			c := 0
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				c++
+				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
+				res := fmt.Sprintf("dummyRes%d", c)
+				act := fmt.Sprintf("dummyAct%d", c)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*30))
+
+			return test{
+				name: "Start updator can update cache",
+				fields: fields{
+					rolePolicies:    gache.New(),
+					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:       gache.New(),
+					etagExpTime:     time.Minute,
+					etagFlushDur:    time.Second,
+					refreshDuration: time.Millisecond * 10,
+					expireMargin:    time.Hour,
+					client:          srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom"},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(p *policy, got error) error {
+					if got.Error() != context.DeadlineExceeded.Error() {
+						return errors.Errorf("got: %v, want: %v", got, context.DeadlineExceeded)
+					}
+					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("rolePolicies is empty")
+					}
+
+					if len(asss.([]*Assertion)) != 1 {
+						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
+					}
+					ass := asss.([]*Assertion)[0]
+					if ass.Reg.String() != fmt.Sprintf("^dummyact%d-dummyres%d$", c, c) {
+						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
+					}
+
+					ec, ok := p.etagCache.Get("dummyDom")
+					if !ok {
+						return errors.New("etagCache is empty")
+					}
+					ecwant := fmt.Sprintf("dummyEtag%d", c)
+					if ec.(*etagCache).eTag != ecwant {
+						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
+		func() test {
+			c := 0
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				c++
+				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
+				res := fmt.Sprintf("dummyRes%d", c)
+				act := fmt.Sprintf("dummyAct%d", c)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*30))
+
+			return test{
+				name: "Start updator retry to update",
+				fields: fields{
+					rolePolicies:     gache.New(),
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:        gache.New(),
+					etagExpTime:      time.Minute,
+					etagFlushDur:     time.Second,
+					errRetryInterval: time.Millisecond * 5,
+					refreshDuration:  time.Millisecond * 10,
+					expireMargin:     time.Hour,
+					client:           srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom"},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(p *policy, got error) error {
+					if got != nil && got.Error() != "error update policy: context deadline exceeded" {
+						return errors.Errorf("got: %v, want: %v", got, context.DeadlineExceeded.Error())
+					}
+					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("rolePolicies is empty")
+					}
+
+					if len(asss.([]*Assertion)) != 1 {
+						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
+					}
+					ass := asss.([]*Assertion)[0]
+					if ass.Reg.String() != fmt.Sprintf("^dummyact%d-dummyres%d$", c, c) {
+						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
+					}
+
+					ec, ok := p.etagCache.Get("dummyDom")
+					if !ok {
+						return errors.New("etagCache is empty")
+					}
+					ecwant := fmt.Sprintf("dummyEtag%d", c)
+					if ec.(*etagCache).eTag != ecwant {
+						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
 	}
 
 	for _, tt := range tests {
