@@ -208,7 +208,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
 					}
 					ass := asss.([]*Assertion)[0]
-					if ass.Reg.String() != fmt.Sprintf("^dummyact%d-dummyres%d$", c, c) {
+					if ass.Reg.String() == "^dummyact1-dummyres1$" {
 						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
 					}
 
