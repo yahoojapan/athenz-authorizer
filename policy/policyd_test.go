@@ -141,10 +141,6 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				checkFunc: func(p *policy, ch <-chan error) error {
 					time.Sleep(time.Millisecond*100)
 					cancel()
-//					got := <-ch
-//					if got.Error() != ctx.Err().Error() {
-//						return errors.Errorf("got: %v, want: %v", got, context.Canceled)
-//					}
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
@@ -202,10 +198,6 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				checkFunc: func(p *policy, ch <-chan error) error {
 					time.Sleep(time.Millisecond*100)
 					cancel()
-//					got := <-ch
-//					if got.Error() != context.DeadlineExceeded.Error() {
-//						return errors.Errorf("got: %v, want: %v", got, context.DeadlineExceeded)
-//					}
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
