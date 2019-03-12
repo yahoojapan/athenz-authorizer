@@ -139,7 +139,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(p *policy, ch <-chan error) error {
-					time.Sleep(time.Millisecond*100)
+					time.Sleep(time.Millisecond * 100)
 					cancel()
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
@@ -180,7 +180,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					etagCache:       gache.New(),
 					etagExpTime:     time.Minute,
 					etagFlushDur:    time.Second,
-					refreshDuration: time.Millisecond*30,
+					refreshDuration: time.Millisecond * 30,
 					expireMargin:    time.Hour,
 					client:          srv.Client(),
 					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
@@ -196,9 +196,9 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(p *policy, ch <-chan error) error {
-					time.Sleep(time.Millisecond*100)
+					time.Sleep(time.Millisecond * 100)
 					cancel()
-					time.Sleep(time.Millisecond *50)
+					time.Sleep(time.Millisecond * 50)
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
@@ -209,6 +209,85 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					}
 					ass := asss.([]*Assertion)[0]
 					if ass.Reg.String() == "^dummyact1-dummyres1$" {
+						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
+					}
+
+					ec, ok := p.etagCache.Get("dummyDom")
+					if !ok {
+						return errors.New("etagCache is empty")
+					}
+					ecwant := fmt.Sprintf("dummyEtag%d", c)
+					if ec.(*etagCache).eTag != ecwant {
+						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
+		func() test {
+			c := 0
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if c < 3 {
+					c++
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
+				res := fmt.Sprintf("dummyRes%d", c)
+				act := fmt.Sprintf("dummyAct%d", c)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithCancel(context.Background())
+
+			return test{
+				name: "Start updator retry update",
+				fields: fields{
+					rolePolicies:     gache.New(),
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:        gache.New(),
+					etagExpTime:      time.Minute,
+					etagFlushDur:     time.Second,
+					refreshDuration:  time.Minute,
+					errRetryInterval: time.Millisecond * 5,
+					expireMargin:     time.Hour,
+					client:           srv.Client(),
+					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
+					},
+					athenzDomains: []string{"dummyDom"},
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(p *policy, ch <-chan error) error {
+					go func() {
+						for {
+							<-ch
+						}
+					}()
+					time.Sleep(time.Millisecond * 100)
+					cancel()
+					time.Sleep(time.Millisecond * 50)
+					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("rolePolicies is empty")
+					}
+
+					if len(asss.([]*Assertion)) != 1 {
+						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
+					}
+					ass := asss.([]*Assertion)[0]
+					if ass.Reg.String() != fmt.Sprintf("^dummyact%d-dummyres%d$", c, c) {
 						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
 					}
 

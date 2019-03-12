@@ -87,7 +87,7 @@ func NewAthenzConfd(opts ...Option) (AthenzConfd, error) {
 
 func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting confd updator")
-	ech := make(chan error, 1)
+	ech := make(chan error, 100)
 	if err := c.UpdateAthenzConfig(ctx); err != nil {
 		ech <- errors.Wrap(err, "error update athenz config")
 	}

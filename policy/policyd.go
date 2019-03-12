@@ -77,17 +77,17 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updator")
 
-	ech := make(chan error)
+	ech := make(chan error, 100)
 
-	go func(ch chan<- error) {
-		fch := make(chan struct{})
+	go func() {
+		fch := make(chan struct{}, 1)
 		defer close(fch)
-		defer close(ch)
+		defer close(ech)
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		p.rolePolicies.StartExpired(ctx, time.Hour*24)
 
 		if err := p.UpdatePolicy(ctx); err != nil {
-			ch <- errors.Wrap(err, "error update policy")
+			ech <- errors.Wrap(err, "error update policy")
 			fch <- struct{}{}
 		}
 
@@ -97,22 +97,22 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 			case <-ctx.Done():
 				glg.Info("Stopping policyd updator")
 				ticker.Stop()
-				ch <- ctx.Err()
+				ech <- ctx.Err()
 				return
 			case <-fch:
 				if err := p.UpdatePolicy(ctx); err != nil {
-					ch <- errors.Wrap(err, "error update policy")
+					ech <- errors.Wrap(err, "error update policy")
 					time.Sleep(p.errRetryInterval)
 					fch <- struct{}{}
 				}
 			case <-ticker.C:
 				if err := p.UpdatePolicy(ctx); err != nil {
-					ch <- errors.Wrap(err, "error update policy")
+					ech <- errors.Wrap(err, "error update policy")
 					fch <- struct{}{}
 				}
 			}
 		}
-	}(ech)
+	}()
 
 	return ech
 }
