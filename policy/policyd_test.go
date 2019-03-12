@@ -198,6 +198,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				checkFunc: func(p *policy, ch <-chan error) error {
 					time.Sleep(time.Millisecond*100)
 					cancel()
+					time.Sleep(time.Millisecond *50)
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
