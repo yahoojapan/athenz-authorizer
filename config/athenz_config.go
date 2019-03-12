@@ -88,33 +88,59 @@ func NewAthenzConfd(opts ...Option) (AthenzConfd, error) {
 func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting confd updator")
 	ech := make(chan error, 100)
+	fch := make(chan struct{}, 1)
 	if err := c.UpdateAthenzConfig(ctx); err != nil {
 		ech <- errors.Wrap(err, "error update athenz config")
+		fch <- struct{}{}
 	}
 
 	go func() {
-		fch := make(chan struct{})
 		defer close(fch)
+		defer close(ech)
 		c.etagCache.StartExpired(ctx, c.etagFlushDur)
 		ticker := time.NewTicker(c.refreshDuration)
+		var ebuf error
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping confd updator")
 				ticker.Stop()
-				ech <- ctx.Err()
-				close(ech)
+				if ebuf != nil {
+					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
+				} else {
+					ech <- ctx.Err()
+				}
 				return
 			case <-fch:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update athenz config")
+					err = errors.Wrap(err, "error update athenz config")
+					select {
+					case ech <- errors.Wrap(ebuf, err.Error()):
+						ebuf = nil
+					default:
+						ebuf = errors.Wrap(ebuf, err.Error())
+					}
 					time.Sleep(c.errRetryInterval)
-					fch <- struct{}{}
+					select {
+					case fch <- struct{}{}:
+					default:
+						glg.Warn("failure queue already full")
+					}
 				}
 			case <-ticker.C:
 				if err := c.UpdateAthenzConfig(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update athenz config")
-					fch <- struct{}{}
+					err = errors.Wrap(err, "error update athenz config")
+					select {
+					case ech <- errors.Wrap(ebuf, err.Error()):
+						ebuf = nil
+					default:
+						ebuf = errors.Wrap(ebuf, err.Error())
+					}
+					select {
+					case fch <- struct{}{}:
+					default:
+						glg.Warn("failure queue already full")
+					}
 				}
 			}
 		}

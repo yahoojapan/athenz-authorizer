@@ -76,39 +76,62 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 // StartPolicyUpdator starts the Policy daemon to retrive the policy data periodically
 func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updator")
-
 	ech := make(chan error, 100)
+	fch := make(chan struct{}, 1)
+	if err := p.UpdatePolicy(ctx); err != nil {
+		ech <- errors.Wrap(err, "error update policy")
+		fch <- struct{}{}
+	}
 
 	go func() {
-		fch := make(chan struct{}, 1)
 		defer close(fch)
 		defer close(ech)
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		p.rolePolicies.StartExpired(ctx, time.Hour*24)
-
-		if err := p.UpdatePolicy(ctx); err != nil {
-			ech <- errors.Wrap(err, "error update policy")
-			fch <- struct{}{}
-		}
-
 		ticker := time.NewTicker(p.refreshDuration)
+		var ebuf error
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping policyd updator")
 				ticker.Stop()
 				ech <- ctx.Err()
+				if ebuf != nil {
+					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
+				} else {
+					ech <- ctx.Err()
+				}
 				return
 			case <-fch:
 				if err := p.UpdatePolicy(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update policy")
+					err = errors.Wrap(err, "error update policy")
+					select {
+					case ech <- errors.Wrap(ebuf, err.Error()):
+						ebuf = nil
+					default:
+						ebuf = errors.Wrap(ebuf, err.Error())
+					}
 					time.Sleep(p.errRetryInterval)
-					fch <- struct{}{}
+					select {
+					case fch <- struct{}{}:
+					default:
+						glg.Warn("failure queue already full")
+					}
 				}
 			case <-ticker.C:
 				if err := p.UpdatePolicy(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update policy")
-					fch <- struct{}{}
+					err = errors.Wrap(err, "error update policy")
+					select {
+					case ech <- errors.Wrap(ebuf, err.Error()):
+						ebuf = nil
+					default:
+						ebuf = errors.Wrap(ebuf, err.Error())
+					}
+					select {
+					case fch <- struct{}{}:
+					default:
+						glg.Warn("failure queue already full")
+					}
 				}
 			}
 		}

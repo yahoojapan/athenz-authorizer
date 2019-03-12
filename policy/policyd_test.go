@@ -270,11 +270,6 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(p *policy, ch <-chan error) error {
-					go func() {
-						for {
-							<-ch
-						}
-					}()
 					time.Sleep(time.Millisecond * 100)
 					cancel()
 					time.Sleep(time.Millisecond * 50)
