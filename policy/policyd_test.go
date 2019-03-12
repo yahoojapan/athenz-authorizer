@@ -113,7 +113,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*500))
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
 
 			return test{
 				name: "Start updator success",
@@ -141,6 +141,17 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				checkFunc: func(p *policy, got error) error {
 					if got.Error() != ctx.Err().Error() {
 						return errors.Errorf("got: %v, want: %v", got, context.Canceled)
+					}
+					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					if !ok {
+						return errors.New("rolePolicies is empty")
+					}
+					if len(asss.([]*Assertion)) != 1 {
+						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
+					}
+					_, ok = p.etagCache.Get("dummyDom")
+					if !ok {
+						return errors.New("etagCache is empty")
 					}
 					return nil
 				},
