@@ -13,7 +13,6 @@ import (
 
 	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
-	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
@@ -873,8 +872,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(*confd, error) error
-		afterFunc func()
+		checkFunc func(*confd, <-chan error) error
 	}
 	tests := []test{
 		func() test {
@@ -892,7 +890,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				}
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "test start config updator and ctx.done",
@@ -913,10 +911,8 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(c *confd, goter error) error {
-					if goter.Error() != "context deadline exceeded" {
-						return errors.Wrap(goter, "unexpected error")
-					}
+				checkFunc: func(c *confd, ch <-chan error) error {
+					cancel()
 					ind := 0
 					var err error
 					checker := func(key interface{}, value interface{}) bool {
@@ -965,9 +961,6 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 					})
 					return nil
 				},
-				afterFunc: func() {
-					cancel()
-				},
 			}
 		}(),
 		func() test {
@@ -984,6 +977,7 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				}
 			}))
 			srv := httptest.NewTLSServer(handler)
+			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "test UpdateAthenzConfig faild",
@@ -1002,55 +996,54 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 					},
 				},
 				args: args{
-					ctx: context.Background(),
+					ctx: ctx,
 				},
-				checkFunc: func(c *confd, goter error) error {
+				checkFunc: func(c *confd, ch <-chan error) error {
+					goter := <-ch
+					cancel()
 					if goter.Error() != "error update athenz config: error when processing pub key: Error updating ZTS athenz config: error fetch public key entries: json format not correct: EOF" {
 						return errors.Wrap(goter, "unexpected error")
 					}
 					return nil
 				},
-				afterFunc: func() {},
 			}
 		}(),
 		func() test {
-			zmsa := true
-			ztsa := true
+			ztsc := 0
+			zmsc := 0
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
-					if zmsa {
-						w.Header().Add("ETag", "dummyzmsEtag")
-						w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
-						zmsa = false
-					} else {
-						w.Header().Add("ETag", "dummyNewzmsEtag")
-						w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"},{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"1"}],"modified":"2017-01-23T02:20:09.331Z"}`))
+					if zmsc < 4 {
+						zmsc++
+						w.WriteHeader(http.StatusInternalServerError)
+						return
 					}
+					w.Header().Add("ETag", fmt.Sprintf("dummyzmsEtag%d", zmsc))
+					w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, zmsc)))
 					w.WriteHeader(http.StatusOK)
 				} else if r.URL.Path == "/domain/dummyDom/service/zts" {
-					if ztsa {
-						w.Header().Add("ETag", "dummyztsEtag")
-						w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
-						ztsa = false
-					} else {
-						w.Header().Add("ETag", "dummyNewztsEtag")
-						w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[],"modified":"2017-01-23T02:20:09.331Z"}`))
+					if ztsc < 4 {
+						ztsc++
+						w.WriteHeader(http.StatusInternalServerError)
+						return
 					}
+					w.Header().Add("ETag", fmt.Sprintf("dummyztsEtag%d", ztsc))
+					w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, ztsc)))
 					w.WriteHeader(http.StatusOK)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
 				}
 			}))
 			srv := httptest.NewTLSServer(handler)
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*3))
+			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "test refresh config",
 				fields: fields{
 					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain:    "dummyDom",
-					refreshDuration:  time.Second,
-					errRetryInterval: time.Minute,
+					refreshDuration:  time.Millisecond * 3,
+					errRetryInterval: time.Millisecond,
 					etagCache:        gache.New(),
 					etagExpTime:      time.Minute,
 					etagFlushDur:     time.Minute,
@@ -1063,10 +1056,15 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(c *confd, goter error) error {
-					if goter.Error() != "context deadline exceeded" {
-						return errors.Wrap(goter, "unexpected error")
-					}
+				checkFunc: func(c *confd, ch <-chan error) error {
+					go func() {
+						for {
+							<-ch
+						}
+					}()
+					time.Sleep(time.Millisecond * 100)
+					cancel()
+					time.Sleep(time.Millisecond * 100)
 					ind := 0
 					var err error
 
@@ -1075,10 +1073,9 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 							err = errors.Errorf("unexpected key %s", key)
 							return false
 						}
-						wantEtag := fmt.Sprintf("dummyNew%sEtag", key)
-						glg.Debugf("ETAG CHECK want: %s, result: %s", wantEtag, val.(*confCache).eTag)
+						wantEtag := fmt.Sprintf("dummy%sEtag%d", key, 4)
 						if val.(*confCache).eTag != wantEtag {
-							err = errors.Errorf("unexpected etag %s", val.(*confCache).eTag)
+							err = errors.Errorf("unexpected etag %s, want: %s", val.(*confCache).eTag, wantEtag)
 							return false
 						}
 						return true
@@ -1103,22 +1100,19 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 						}
 						return nil
 					}
-					err = check(c.confCache.ZMSPubKeys, 2, "ZMS")
+					err = check(c.confCache.ZMSPubKeys, 1, "ZMS")
 					if err != nil {
 						return err
 					}
 					err = nil
 					ind = 0
-					err = check(c.confCache.ZTSPubKeys, 0, "ZTS")
+					err = check(c.confCache.ZTSPubKeys, 1, "ZTS")
 					if err != nil {
 						return err
 					}
 					err = nil
 					ind = 0
 					return nil
-				},
-				afterFunc: func() {
-					cancel()
 				},
 			}
 		}(),
@@ -1138,11 +1132,9 @@ func Test_config_StartConfigUpdator(t *testing.T) {
 				confCache:        tt.fields.confCache,
 			}
 			ch := c.StartConfUpdator(tt.args.ctx)
-			goter := <-ch
-			if err := tt.checkFunc(c, goter); err != nil {
+			if err := tt.checkFunc(c, ch); err != nil {
 				t.Errorf("c.StartConfUpdator() error = %v", err)
 			}
-			tt.afterFunc()
 		})
 	}
 }
