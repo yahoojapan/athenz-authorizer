@@ -1,5 +1,54 @@
 # Athenz policy updater
 
+## What is Athenz policy updater
+
+Athenz policy updater is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to provider authenication and authorization check of user request.
+
+## Usage
+
+To initialize policy updater.
+
+```go
+
+athenzURL := "www.athenz.io" // athenz URL
+athenzDoms := []string { // athenz Domains
+    "dom1",
+    "dom2",
+}
+confRefreshDur := time.Hour * 24 // athenzConf refresh duration
+polRefreshDur := time.Hour // policy refresh duration
+
+func Main() {
+    // Initialize providerd
+    daemon, err := New()
+    if err != nil {
+       // cannot initialize providerd
+    }
+
+    // Start providerd 
+    ctx := context.Background() // user can control providerd daemon lifetime using this context
+    errs := daemon.StartProviderd(ctx)
+    go func() {
+        err := <-errs
+        // user should handle errors return from providerd
+    }()
+
+    // Verify role token
+    if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
+        // token not authorizated
+    }
+}
+
+func New() (providerd.Providerd, error) {
+    return providerd.New(
+        providerd.AthenzURL(athenzURL),
+        providerd.AthenzDomains(athenzDoms),
+        providerd.AthenzConfRefreshDuration(confRefreshDur),
+        providerd.PolicyRefreshDuration(polRefreshDur),
+    )
+}
+```
+
 ## License
 
 ```markdown
