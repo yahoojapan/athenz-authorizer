@@ -1,12 +1,12 @@
 /*
 Copyright (C)  2018 Yahoo Japan Corporation Athenz team.
- 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
- 
+
     http://www.apache.org/licenses/LICENSE-2.0
- 
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -375,9 +375,8 @@ func TestPolicyEtagExpTime(t *testing.T) {
 		})
 	}
 }
-func TestCache(t *testing.T) {
+func TestCacheExp(t *testing.T) {
 	type args struct {
-		c gache.Gache
 		d time.Duration
 	}
 	tests := []struct {
@@ -388,11 +387,12 @@ func TestCache(t *testing.T) {
 		{
 			name: "set success",
 			args: args{
-				c: gache.New(),
 				d: time.Duration(time.Hour * 2),
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &provider{
+					cache: gache.New(),
+				}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -405,9 +405,9 @@ func TestCache(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Cache(tt.args.c, tt.args.d)
+			got := CacheExp(tt.args.d)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("Cache() error = %v", err)
+				t.Errorf("CacheExp() error = %v", err)
 			}
 		})
 	}
@@ -448,7 +448,7 @@ func TestTransport(t *testing.T) {
 					return err
 				}
 				want := &http.Client{
-					Timeout: time.Second *30,
+					Timeout: time.Second * 30,
 				}
 				if !reflect.DeepEqual(prov.client, want) {
 					return fmt.Errorf("invalid param was set")
@@ -456,7 +456,6 @@ func TestTransport(t *testing.T) {
 				return nil
 			},
 		},
-
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

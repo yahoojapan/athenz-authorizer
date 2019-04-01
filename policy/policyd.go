@@ -1,12 +1,12 @@
 /*
 Copyright (C)  2018 Yahoo Japan Corporation Athenz team.
- 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
- 
+
     http://www.apache.org/licenses/LICENSE-2.0
- 
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,7 @@ type Policyd interface {
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
 }
 
-type policy struct {
+type policyd struct {
 	expireMargin     time.Duration // expire margin force update policy when the policy expire time hit the margin
 	rolePolicies     gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
 	refreshDuration  time.Duration
@@ -67,10 +67,9 @@ type etagCache struct {
 
 // NewPolicyd represent the constructor of Policyd
 func NewPolicyd(opts ...Option) (Policyd, error) {
-	p := &policy{
-		rolePolicies: gache.New(), //new(sync.Map),
+	p := &policyd{
+		rolePolicies: gache.New(),
 		etagCache:    gache.New(),
-		client:       &http.Client{},
 	}
 
 	p.rolePolicies.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, key string) {
@@ -89,7 +88,7 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 }
 
 // StartPolicyUpdator starts the Policy daemon to retrive the policy data periodically
-func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
+func (p *policyd) StartPolicyUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updator")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
@@ -156,7 +155,7 @@ func (p *policy) StartPolicyUpdator(ctx context.Context) <-chan error {
 }
 
 // UpdatePolicy updates and cache policy data
-func (p *policy) UpdatePolicy(ctx context.Context) error {
+func (p *policyd) UpdatePolicy(ctx context.Context) error {
 	glg.Info("Updating policy")
 	defer glg.Info("Updated policy")
 	eg := errgroup.Group{}
@@ -185,7 +184,7 @@ func (p *policy) UpdatePolicy(ctx context.Context) error {
 
 // CheckPolicy checks the specified request has privilege to access the resources or not.
 // If return is nil then the request is allowed, otherwise the request is rejected.
-func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
+func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
 	ech := make(chan error, 1)
 	cctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -234,7 +233,7 @@ func (p *policy) CheckPolicy(ctx context.Context, domain string, roles []string,
 	return err
 }
 
-func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
+func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 	if err != nil {
 		return errors.Wrap(err, "error fetch policy")
@@ -254,7 +253,7 @@ func (p *policy) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	return nil
 }
 
-func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy, bool, error) {
+func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy, bool, error) {
 	glg.Infof("Fetching policy for domain %s", domain)
 	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
 	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", p.athenzURL, domain)
@@ -323,7 +322,7 @@ func (p *policy) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy,
 	return sp, true, nil
 }
 
-func (p *policy) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
+func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	rp := gache.New()
 	defer rp.Clear()
 

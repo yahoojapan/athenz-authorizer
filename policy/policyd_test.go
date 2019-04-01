@@ -1,12 +1,12 @@
 /*
 Copyright (C)  2018 Yahoo Japan Corporation Athenz team.
- 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
- 
+
     http://www.apache.org/licenses/LICENSE-2.0
- 
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,7 +51,7 @@ func TestNewPolicyd(t *testing.T) {
 				opts: []Option{},
 			},
 			checkFunc: func(got Policyd) error {
-				p := got.(*policy)
+				p := got.(*policyd)
 				if p.expireMargin != time.Hour*3 {
 					return errors.New("invalid expireMargin")
 				}
@@ -64,7 +64,7 @@ func TestNewPolicyd(t *testing.T) {
 				opts: []Option{ExpireMargin("5s")},
 			},
 			checkFunc: func(got Policyd) error {
-				p := got.(*policy)
+				p := got.(*policyd)
 				if p.expireMargin != time.Second*5 {
 					return errors.New("invalid expireMargin")
 				}
@@ -117,7 +117,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(*policy, <-chan error) error
+		checkFunc func(*policyd, <-chan error) error
 		afterFunc func()
 	}
 	tests := []test{
@@ -153,7 +153,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(p *policy, ch <-chan error) error {
+				checkFunc: func(p *policyd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
@@ -210,7 +210,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(p *policy, ch <-chan error) error {
+				checkFunc: func(p *policyd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
 					time.Sleep(time.Millisecond * 50)
@@ -284,7 +284,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(p *policy, ch <-chan error) error {
+				checkFunc: func(p *policyd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
 					time.Sleep(time.Millisecond * 50)
@@ -324,7 +324,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 			if tt.afterFunc != nil {
 				defer tt.afterFunc()
 			}
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -369,7 +369,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 		fields     fields
 		args       args
 		beforeFunc func()
-		checkFunc  func(pol *policy) error
+		checkFunc  func(pol *policyd) error
 		wantErr    string
 		afterFunc  func()
 	}
@@ -404,7 +404,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 					ctx: context.Background(),
 				},
 				wantErr: "",
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("role policies not found")
@@ -448,7 +448,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 						ctx: context.Background(),
 					},
 					wantErr: false,
-					checkFunc: func(pol *policy) error {
+					checkFunc: func(pol *policyd) error {
 						pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
 						if !ok {
 							return errors.New("role policies not found")
@@ -516,7 +516,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 				defer tt.afterFunc()
 			}
 
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -730,7 +730,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -781,7 +781,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(pol *policy) error
+		checkFunc func(pol *policyd) error
 		wantErr   bool
 	}
 	tests := []test{
@@ -815,7 +815,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 					dom: "dummyDom",
 				},
 				wantErr: false,
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("role policies not found")
@@ -893,7 +893,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -940,7 +940,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(p *policy, sp *SignedPolicy, upd bool, err error) error
+		checkFunc func(p *policyd, sp *SignedPolicy, upd bool, err error) error
 	}
 	tests := []test{
 		func() test {
@@ -971,7 +971,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -1030,7 +1030,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummy",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if sp != nil {
 						return errors.New("invalid return")
 					}
@@ -1092,7 +1092,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -1164,7 +1164,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -1222,7 +1222,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if sp != nil {
 						return errors.Errorf("sp should be nil")
 					}
@@ -1264,7 +1264,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if sp != nil {
 						return errors.Errorf("sp should be nil")
 					}
@@ -1307,7 +1307,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if sp != nil {
 						return errors.Errorf("sp should be nil")
 					}
@@ -1350,7 +1350,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					ctx:    context.Background(),
 					domain: "dummyDomain",
 				},
-				checkFunc: func(p *policy, sp *SignedPolicy, upd bool, err error) error {
+				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					if sp != nil {
 						return errors.Errorf("sp should be nil")
 					}
@@ -1369,7 +1369,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -1413,7 +1413,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(pol *policy) error
+		checkFunc func(pol *policyd) error
 		wantErr   bool
 	}
 
@@ -1477,7 +1477,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 2 {
 						return errors.Errorf("invalid length role policies 2, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
 					}
@@ -1575,7 +1575,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					cancel()
 					return nil
 				},
@@ -1647,7 +1647,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
 						return errors.Errorf("invalid length role policies 1, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
 					}
@@ -1822,7 +1822,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
 						return errors.Errorf("invalid role policies length")
 					}
@@ -1887,7 +1887,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					// check if old policy exists
 					_, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
 					if ok {
@@ -1961,7 +1961,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 100 {
 						return errors.New("invalid length role policies 100")
 					}
@@ -2021,7 +2021,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policy) error {
+				checkFunc: func(pol *policyd) error {
 					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
 						return errors.New("invalid length role policies 1")
 					}
@@ -2043,7 +2043,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policy{
+			p := &policyd{
 				expireMargin:     tt.fields.expireMargin,
 				rolePolicies:     tt.fields.rolePolicies,
 				refreshDuration:  tt.fields.refreshDuration,
