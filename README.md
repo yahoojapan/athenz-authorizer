@@ -22,7 +22,7 @@ polRefreshDur := time.Hour // policy refresh duration
 // Initialize providerd
 daemon, err := providerd.New(
     providerd.AthenzURL(athenzURL),
-    providerd.AthenzDomains(athenzDoms),
+    providerd.AthenzDomains(athenzDoms...),
     providerd.AthenzConfRefreshDuration(confRefreshDur),
     providerd.PolicyRefreshDuration(polRefreshDur),
 )

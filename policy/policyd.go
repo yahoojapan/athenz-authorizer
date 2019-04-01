@@ -34,7 +34,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Policyd represent the daemon to retrive policy data from Athenz.
+// Policyd represent the daemon to retrieve policy data from Athenz.
 type Policyd interface {
 	StartPolicyUpdator(context.Context) <-chan error
 	UpdatePolicy(context.Context) error

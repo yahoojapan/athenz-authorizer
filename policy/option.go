@@ -94,7 +94,7 @@ func AthenzURL(url string) Option {
 }
 
 // AthenzDomains represents a AthenzDomain functional option
-func AthenzDomains(doms []string) Option {
+func AthenzDomains(doms ...string) Option {
 	return func(pol *policyd) error {
 		if doms == nil {
 			return nil
