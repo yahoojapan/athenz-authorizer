@@ -34,6 +34,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// AthenzConfd represent the daemon to retrieve athenz configuration data from Athenz.
 type AthenzConfd interface {
 	StartConfUpdator(ctx context.Context) <-chan error
 	UpdateAthenzConfig(context.Context) error
@@ -56,6 +57,7 @@ type confd struct {
 	confCache *AthenzConfig
 }
 
+// AthenzConfig represent the cache of Athenz config.
 type AthenzConfig struct {
 	ZMSPubKeys *sync.Map //map[string]authcore.Verifier
 	ZTSPubKeys *sync.Map //map[string]authcore.Verifier
@@ -66,22 +68,25 @@ type confCache struct {
 	sac  *SysAuthConfig
 }
 
+// PubKeyProvider represent the public key provider to retrive the public key.
 type PubKeyProvider func(AthenzEnv, string) authcore.Verifier
 
+// AthenzEnv represent the athenz environment name.
 type AthenzEnv string
 
 const (
+	// EnvZMS represent the ZMS environment name.
 	EnvZMS AthenzEnv = "zms"
+
+	// EnvZTS represent the ZTS environment name.
 	EnvZTS AthenzEnv = "zts"
 )
 
 var (
 	regex = regexp.MustCompile("^(http|https)://")
-
-	ErrFetchAthenzConf = errors.New("Fetch athenz config error")
-	ErrEmptyAthenzConf = errors.New("Athenz config not initialized")
 )
 
+// NewAthenzConfd represent the constructor of AthenzConfd
 func NewAthenzConfd(opts ...Option) (AthenzConfd, error) {
 	c := &confd{
 		confCache: &AthenzConfig{
@@ -100,6 +105,7 @@ func NewAthenzConfd(opts ...Option) (AthenzConfd, error) {
 	return c, nil
 }
 
+// StartConfUpdator starts the conf daemon to retrive the athenz configuration data periodically
 func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 	glg.Info("Starting confd updator")
 	ech := make(chan error, 100)
@@ -164,6 +170,7 @@ func (c *confd) StartConfUpdator(ctx context.Context) <-chan error {
 	return ech
 }
 
+// UpdateAthenzConfig updates and cache athenz configuration data
 func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 	glg.Info("Updating athenz config")
 	eg := errgroup.Group{}
@@ -237,6 +244,7 @@ func (c *confd) UpdateAthenzConfig(ctx context.Context) error {
 	return nil
 }
 
+// GetPubKeyProvider returns the public key provider for user to get the public key
 func (c *confd) GetPubKeyProvider() PubKeyProvider {
 	return c.getPubKey
 }

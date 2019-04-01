@@ -33,8 +33,10 @@ var (
 	}
 )
 
+// Option represents a functional options pattern interface
 type Option func(*confd) error
 
+// AthenzURL represents a AthenzURL functional option
 func AthenzURL(url string) Option {
 	return func(c *confd) error {
 		if url == "" {
@@ -45,6 +47,7 @@ func AthenzURL(url string) Option {
 	}
 }
 
+// SysAuthDomain represents a SysAuthDomain functional option
 func SysAuthDomain(d string) Option {
 	return func(c *confd) error {
 		if d == "" {
@@ -55,6 +58,7 @@ func SysAuthDomain(d string) Option {
 	}
 }
 
+// ETagExpTime represents a ETagExpTime functional option
 func ETagExpTime(t string) Option {
 	return func(c *confd) error {
 		if t == "" {
@@ -69,6 +73,7 @@ func ETagExpTime(t string) Option {
 	}
 }
 
+// ETagFlushDur represents a ETagFlushDur functional option
 func ETagFlushDur(t string) Option {
 	return func(c *confd) error {
 		if t == "" {
@@ -83,6 +88,7 @@ func ETagFlushDur(t string) Option {
 	}
 }
 
+// RefreshDuration represents a RefreshDuration functional option
 func RefreshDuration(t string) Option {
 	return func(c *confd) error {
 		if t == "" {
@@ -97,6 +103,7 @@ func RefreshDuration(t string) Option {
 	}
 }
 
+// HTTPClient represents a HTTPClient functional option
 func HTTPClient(cl *http.Client) Option {
 	return func(c *confd) error {
 		if c != nil {
@@ -106,6 +113,7 @@ func HTTPClient(cl *http.Client) Option {
 	}
 }
 
+// ErrRetryInterval represents a ErrRetryInterval functional option
 func ErrRetryInterval(i string) Option {
 	return func(c *confd) error {
 		if i == "" {

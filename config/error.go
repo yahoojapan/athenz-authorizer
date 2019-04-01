@@ -15,15 +15,12 @@ limitations under the License.
 */
 package config
 
-// SysAuthConfig represent the system authority config data structure
-type SysAuthConfig struct {
-	Modified   string       `json:"modified"`
-	Name       string       `json:"name"`
-	PublicKeys []*PublicKey `json:"publicKeys"`
-}
+import "github.com/pkg/errors"
 
-// PublicKey represent the public key ID and the key from Athenz
-type PublicKey struct {
-	ID  string `json:"id"`
-	Key string `json:"key"`
-}
+var (
+	// ErrFetchAthenzConf "Fetch athenz config error"
+	ErrFetchAthenzConf = errors.New("Fetch athenz config error")
+
+	// ErrEmptyAthenzConf "Athenz config not initialized"
+	ErrEmptyAthenzConf = errors.New("Athenz config not initialized")
+)
