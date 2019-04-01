@@ -158,7 +158,7 @@ func TestAthenzDomains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzDomains(tt.args.t)
+			got := AthenzDomains(tt.args.t...)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("AthenzDomains() error = %v", err)
 			}

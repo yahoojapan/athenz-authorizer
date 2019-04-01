@@ -40,7 +40,7 @@ func AthenzURL(url string) Option {
 }
 
 // AthenzDomains represents a AthenzDomains functional option
-func AthenzDomains(domains []string) Option {
+func AthenzDomains(domains ...string) Option {
 	return func(prov *provider) error {
 		prov.athenzDomains = domains
 		return nil
