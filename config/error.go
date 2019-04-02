@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package policy
+package config
 
-type VerifierMock struct {
-	VerifyFunc func(i, s string) error
-}
+import "github.com/pkg/errors"
 
-func (vm VerifierMock) Verify(input, signature string) error {
-	return vm.VerifyFunc(input, signature)
-}
+var (
+	// ErrFetchAthenzConf "Fetch athenz config error"
+	ErrFetchAthenzConf = errors.New("Fetch athenz config error")
+
+	// ErrEmptyAthenzConf "Athenz config not initialized"
+	ErrEmptyAthenzConf = errors.New("Athenz config not initialized")
+)

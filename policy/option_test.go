@@ -1,12 +1,12 @@
 /*
 Copyright (C)  2018 Yahoo Japan Corporation Athenz team.
- 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
- 
+
     http://www.apache.org/licenses/LICENSE-2.0
- 
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,7 @@ func TestEtagFlushDur(t *testing.T) {
 				"1h",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -57,7 +57,7 @@ func TestEtagFlushDur(t *testing.T) {
 				"dummy",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err == nil {
 					return fmt.Errorf("expected error, but not return")
 				}
@@ -71,11 +71,11 @@ func TestEtagFlushDur(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -107,7 +107,7 @@ func TestExpireMargin(t *testing.T) {
 				"1h",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -123,7 +123,7 @@ func TestExpireMargin(t *testing.T) {
 				"dummy",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err == nil {
 					return fmt.Errorf("expected error, but not return")
 				}
@@ -137,11 +137,11 @@ func TestExpireMargin(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -173,7 +173,7 @@ func TestEtagExpTime(t *testing.T) {
 				"1h",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -189,7 +189,7 @@ func TestEtagExpTime(t *testing.T) {
 				"dummy",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err == nil {
 					return fmt.Errorf("expected error, but not return")
 				}
@@ -203,11 +203,11 @@ func TestEtagExpTime(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -239,7 +239,7 @@ func TestAthenzURL(t *testing.T) {
 				"http://dummy.com",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -256,11 +256,11 @@ func TestAthenzURL(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -292,7 +292,7 @@ func TestAthenzDomains(t *testing.T) {
 				[]string{"domain1", "domain2"},
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -309,11 +309,11 @@ func TestAthenzDomains(t *testing.T) {
 				nil,
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -322,7 +322,7 @@ func TestAthenzDomains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzDomains(tt.args.t)
+			got := AthenzDomains(tt.args.t...)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("AthenzDomains() error = %v", err)
 			}
@@ -345,7 +345,7 @@ func TestRefreshDuration(t *testing.T) {
 				"1h",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -361,7 +361,7 @@ func TestRefreshDuration(t *testing.T) {
 				"dummy",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err == nil {
 					return fmt.Errorf("expected error, but not return")
 				}
@@ -375,11 +375,11 @@ func TestRefreshDuration(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -414,7 +414,7 @@ func TestHTTPClient(t *testing.T) {
 					c: c,
 				},
 				checkFunc: func(opt Option) error {
-					pol := &policy{}
+					pol := &policyd{}
 					if err := opt(pol); err != nil {
 						return err
 					}
@@ -432,11 +432,11 @@ func TestHTTPClient(t *testing.T) {
 				nil,
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -473,7 +473,7 @@ func TestPubKeyProvider(t *testing.T) {
 					pkp: pkp,
 				},
 				checkFunc: func(opt Option) error {
-					pol := &policy{}
+					pol := &policyd{}
 					if err := opt(pol); err != nil {
 						return err
 					}
@@ -491,11 +491,11 @@ func TestPubKeyProvider(t *testing.T) {
 				nil,
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
@@ -527,7 +527,7 @@ func TestErrRetryInterval(t *testing.T) {
 				"1h",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
@@ -543,7 +543,7 @@ func TestErrRetryInterval(t *testing.T) {
 				"dummy",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err == nil {
 					return fmt.Errorf("expected error, but not return")
 				}
@@ -557,11 +557,11 @@ func TestErrRetryInterval(t *testing.T) {
 				"",
 			},
 			checkFunc: func(opt Option) error {
-				pol := &policy{}
+				pol := &policyd{}
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(pol, &policy{}) {
+				if !reflect.DeepEqual(pol, &policyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
 				return nil
