@@ -95,7 +95,7 @@ func New(opts ...Option) (Providerd, error) {
 		policy.EtagFlushDur(prov.policyEtagFlushDur),
 		policy.EtagExpTime(prov.policyEtagExpTime),
 		policy.AthenzURL(prov.athenzURL),
-		policy.AthenzDomains(prov.athenzDomains),
+		policy.AthenzDomains(prov.athenzDomains...),
 		policy.RefreshDuration(prov.policyRefreshDuration),
 		policy.HTTPClient(prov.client),
 		policy.PubKeyProvider(prov.athenzConfd.GetPubKeyProvider()),
