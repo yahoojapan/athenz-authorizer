@@ -11,20 +11,13 @@ Athenz policy updater is a library to cache the policies of [Athenz](https://git
 To initialize policy updater.
 
 ```golang
-athenzURL := "www.athenz.io" // athenz URL
-athenzDoms := []string { // athenz Domains
-    "dom1",
-    "dom2",
-}
-confRefreshDur := time.Hour * 24 // athenzConf refresh duration
-polRefreshDur := time.Hour // policy refresh duration
 
 // Initialize providerd
 daemon, err := providerd.New(
-    providerd.AthenzURL(athenzURL),
-    providerd.AthenzDomains(athenzDoms...),
-    providerd.AthenzConfRefreshDuration(confRefreshDur),
-    providerd.PolicyRefreshDuration(polRefreshDur),
+    providerd.AthenzURL("www.athenz.io"), // set athenz URL
+    providerd.AthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
+    providerd.AthenzConfRefreshDuration(time.Hour * 24), // set athenz config refresh duration
+    providerd.PolicyRefreshDuration(time.Hour), // set policy refresh duration
 )
 if err != nil {
    // cannot initialize policy updater daemon
