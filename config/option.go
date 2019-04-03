@@ -64,12 +64,13 @@ func ETagExpTime(t string) Option {
 		if t == "" {
 			return nil
 		}
-		if etagExpTime, err := time.ParseDuration(t); err != nil {
+
+		etagExpTime, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid etag expire time")
-		} else {
-			c.etagExpTime = etagExpTime
-			return nil
 		}
+		c.etagExpTime = etagExpTime
+		return nil
 	}
 }
 
@@ -79,12 +80,13 @@ func ETagFlushDur(t string) Option {
 		if t == "" {
 			return nil
 		}
-		if etagFlushDur, err := time.ParseDuration(t); err != nil {
+
+		etagFlushDur, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid etag flush duration")
-		} else {
-			c.etagFlushDur = etagFlushDur
-			return nil
 		}
+		c.etagFlushDur = etagFlushDur
+		return nil
 	}
 }
 
@@ -94,12 +96,13 @@ func RefreshDuration(t string) Option {
 		if t == "" {
 			return nil
 		}
-		if rd, err := time.ParseDuration(t); err != nil {
+
+		rd, err := time.ParseDuration(t)
+		if err != nil {
 			return errors.Wrap(err, "invalid refresh druation")
-		} else {
-			c.refreshDuration = rd
-			return nil
 		}
+		c.refreshDuration = rd
+		return nil
 	}
 }
 
@@ -119,11 +122,12 @@ func ErrRetryInterval(i string) Option {
 		if i == "" {
 			return nil
 		}
-		if ri, err := time.ParseDuration(i); err != nil {
+
+		ri, err := time.ParseDuration(i)
+		if err != nil {
 			return errors.Wrap(err, "invalid err retry interval")
-		} else {
-			c.errRetryInterval = ri
-			return nil
 		}
+		c.errRetryInterval = ri
+		return nil
 	}
 }

@@ -1512,11 +1512,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 					if len(gotAsss2) != 1 {
 						return errors.New("dummyDom2:role.dummyRole2 invalid length")
 					}
-					if err := checkAssertion(gotAsss2[0], "dummyAct2", "dummyDom2:dummyRes2", "allow"); err != nil {
-						return err
-					}
 
-					return nil
+					return checkAssertion(gotAsss2[0], "dummyAct2", "dummyDom2:dummyRes2", "allow")
 				},
 				wantErr: false,
 			}
@@ -1838,11 +1835,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 					}
 
 					ass := asss[0]
-					if err := checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1"); err != nil {
-						return err
-					}
 
-					return nil
+					return checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1")
 				},
 				wantErr: false,
 			}
@@ -1910,11 +1904,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 					}
 
 					ass := asss[0]
-					if err := checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1"); err != nil {
-						return err
-					}
-
-					return nil
+					return checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1")
 				},
 				wantErr: false,
 			}
