@@ -42,7 +42,7 @@ func Test_config_NewAthenzConfd(t *testing.T) {
 		checkFunc func(AthenzConfd, error) error
 	}
 	tests := []test{
-		test{
+		{
 			name: "new athenz confd success",
 			args: args{
 				opts: []Option{},
@@ -127,7 +127,7 @@ func Test_config_getPubKey(t *testing.T) {
 		want authcore.Verifier
 	}
 	tests := []test{
-		test{
+		{
 			name: "get success",
 			args: args{
 				env:   "zts",
@@ -143,7 +143,7 @@ func Test_config_getPubKey(t *testing.T) {
 			},
 			want: nil,
 		},
-		test{
+		{
 			name: "not found zts",
 			args: args{
 				env:   "zts",
@@ -521,7 +521,7 @@ func Test_config_GetPubKeyProvider(t *testing.T) {
 		want string
 	}
 	tests := []test{
-		test{
+		{
 			name: "get success",
 			want: "config.PubKeyProvider",
 		},

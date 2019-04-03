@@ -572,7 +572,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 		want   error
 	}
 	tests := []test{
-		test{
+		{
 			name: "check policy allow success",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
@@ -603,7 +603,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 			},
 			want: nil,
 		},
-		test{
+		{
 			name: "check policy deny",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
@@ -626,7 +626,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("policy deny: Access Check was explicitly denied"),
 		},
-		test{
+		{
 			name: "check policy not found",
 			fields: fields{
 				rolePolicies: gache.New(),
@@ -640,7 +640,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
 		},
-		test{
+		{
 			name: "check policy allow success with multiple roles",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
@@ -671,7 +671,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 			},
 			want: nil,
 		},
-		test{
+		{
 			name: "check policy no match with assertion resource domain mismatch",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
@@ -1441,9 +1441,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
@@ -1451,9 +1451,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct1",
 													Resource: "dummyDom:dummyRes1",
@@ -1461,9 +1461,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom2:role.dummyRole2",
 													Action:   "dummyAct2",
 													Resource: "dummyDom2:dummyRes2",
@@ -1539,9 +1539,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
@@ -1549,9 +1549,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct1",
 													Resource: "dummyDom:dummyRes1",
@@ -1559,9 +1559,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom2:role.dummyRole2",
 													Action:   "dummyAct2",
 													Resource: "dummyDom2:dummyRes2",
@@ -1599,15 +1599,15 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
 													Effect:   "allow",
 												},
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
@@ -1615,9 +1615,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
@@ -1625,15 +1625,15 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 												},
 											},
 										},
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
 													Effect:   "allow",
 												},
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyDom:dummyRes",
@@ -1707,9 +1707,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyRes",
@@ -1763,9 +1763,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyRole",
 													Action:   "dummyAct",
 													Resource: "dummyRes",
@@ -1806,9 +1806,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom:role.dummyRole",
 													Action:   "dummyAct1",
 													Resource: "dummyDom1:dummyRes1",
@@ -1871,9 +1871,9 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
-										&util.Policy{
+										{
 											Assertions: []*util.Assertion{
-												&util.Assertion{
+												{
 													Role:     "dummyDom1:role.dummyRole1",
 													Action:   "dummyAct1",
 													Resource: "dummyDom1:dummyRes1",
