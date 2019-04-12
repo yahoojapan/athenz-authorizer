@@ -22,8 +22,8 @@ import (
 
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/yahoojapan/athenz-policy-updater/policy"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 	"github.com/yahoojapan/athenz-policy-updater/role"
 )
 
@@ -48,8 +48,8 @@ func TestNew(t *testing.T) {
 				if prov.(*provider).athenzURL != "www.athenz.com/zts/v1" {
 					return errors.New("invalid url")
 				}
-				if prov.(*provider).athenzConfd == nil {
-					return errors.New("cannot new athenzConfd")
+				if prov.(*provider).pubkeyd == nil {
+					return errors.New("cannot new pubkeyd")
 				}
 				if prov.(*provider).policyd == nil {
 					return errors.New("cannot new policyd")
@@ -73,19 +73,20 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "test NewAthenzConfd returns error",
+			name: "test NewPubkeyd returns error",
 			args: args{
-				[]Option{AthenzConfEtagExpTime("dummy")},
+				[]Option{PubkeyEtagExpTime("dummy")},
 			},
 			checkFunc: func(prov Providerd, err error) error {
-				if err.Error() != "error create athenzConfd: invalid etag expire time: time: invalid duration dummy" {
-					return errors.Wrap(err, "unexpected error")
+				want := "error create pubkeyd: invalid etag expire time: time: invalid duration dummy"
+				if err.Error() != want {
+					return errors.Errorf("Unexpected error: %s, expected: %s", err, want)
 				}
 				return nil
 			},
 		},
 		{
-			name: "test NewAthenzConfd returns error",
+			name: "test NewPolicy returns error",
 			args: args{
 				[]Option{PolicyEtagExpTime("dummy")},
 			},
@@ -109,10 +110,10 @@ func TestNew(t *testing.T) {
 
 func TestStartProviderd(t *testing.T) {
 	type fields struct {
-		athenzConfd config.AthenzConfd
-		policyd     policy.Policyd
-		cache       gache.Gache
-		cacheExp    time.Duration
+		pubkeyd  pubkey.Pubkeyd
+		policyd  policy.Policyd
+		cache    gache.Gache
+		cacheExp time.Duration
 	}
 	type args struct {
 		ctx context.Context
@@ -136,10 +137,10 @@ func TestStartProviderd(t *testing.T) {
 			return test{
 				name: "test context done",
 				fields: fields{
-					athenzConfd: cm,
-					policyd:     pm,
-					cache:       gache.New(),
-					cacheExp:    time.Minute,
+					pubkeyd:  cm,
+					policyd:  pm,
+					cache:    gache.New(),
+					cacheExp: time.Minute,
 				},
 				args: args{
 					ctx: ctx,
@@ -164,18 +165,18 @@ func TestStartProviderd(t *testing.T) {
 				policydExp: time.Second,
 			}
 			return test{
-				name: "test context done",
+				name: "test context pubkey updater returns error",
 				fields: fields{
-					athenzConfd: cm,
-					policyd:     pm,
-					cache:       gache.New(),
-					cacheExp:    time.Minute,
+					pubkeyd:  cm,
+					policyd:  pm,
+					cache:    gache.New(),
+					cacheExp: time.Minute,
 				},
 				args: args{
 					ctx: ctx,
 				},
 				checkFunc: func(prov Providerd, err error) error {
-					if err.Error() != "update athenz conf error: confd error" {
+					if err.Error() != "update pubkey error: pubkey error" {
 						return errors.Wrap(err, "unexpected err")
 					}
 					return nil
@@ -194,12 +195,12 @@ func TestStartProviderd(t *testing.T) {
 				policydExp: time.Millisecond * 10,
 			}
 			return test{
-				name: "test context done",
+				name: "test policyd returns error",
 				fields: fields{
-					athenzConfd: cm,
-					policyd:     pm,
-					cache:       gache.New(),
-					cacheExp:    time.Minute,
+					pubkeyd:  cm,
+					policyd:  pm,
+					cache:    gache.New(),
+					cacheExp: time.Minute,
 				},
 				args: args{
 					ctx: ctx,
@@ -219,10 +220,10 @@ func TestStartProviderd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			prov := &provider{
-				athenzConfd: tt.fields.athenzConfd,
-				policyd:     tt.fields.policyd,
-				cache:       tt.fields.cache,
-				cacheExp:    tt.fields.cacheExp,
+				pubkeyd:  tt.fields.pubkeyd,
+				policyd:  tt.fields.policyd,
+				cache:    tt.fields.cache,
+				cacheExp: tt.fields.cacheExp,
 			}
 			ch := prov.StartProviderd(tt.args.ctx)
 			goter := <-ch

@@ -32,10 +32,10 @@ type ExponentialRoundTripper struct {
 }
 
 var retriableStatuses = map[int]struct{}{
-	http.StatusTooManyRequests:     struct{}{},
-	http.StatusInternalServerError: struct{}{},
-	http.StatusServiceUnavailable:  struct{}{},
-	http.StatusGatewayTimeout:      struct{}{},
+	http.StatusTooManyRequests:     {},
+	http.StatusInternalServerError: {},
+	http.StatusServiceUnavailable:  {},
+	http.StatusGatewayTimeout:      {},
 }
 
 func NewExponentialRoundTripper(transport http.RoundTripper, backoffFactor float64, maxRetryCount int, maxRetryTime time.Duration) (*ExponentialRoundTripper, error) {

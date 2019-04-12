@@ -60,7 +60,7 @@ func TestPolicyRefreshDuration(t *testing.T) {
 		})
 	}
 }
-func TestAthenzConfRefreshDuration(t *testing.T) {
+func TestPubkeyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -79,7 +79,7 @@ func TestAthenzConfRefreshDuration(t *testing.T) {
 				if err := opt(prov); err != nil {
 					return err
 				}
-				if prov.athenzConfRefreshDuration != "dummy" {
+				if prov.pubkeyRefreshDuration != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -88,9 +88,9 @@ func TestAthenzConfRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzConfRefreshDuration(tt.args.t)
+			got := PubkeyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzConfRefreshDuration() error = %v", err)
+				t.Errorf("PubkeyRefreshDuration() error = %v", err)
 			}
 		})
 	}
@@ -165,7 +165,7 @@ func TestAthenzDomains(t *testing.T) {
 		})
 	}
 }
-func TestAthenzConfSysAuthDomain(t *testing.T) {
+func TestPubkeySysAuthDomain(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -184,7 +184,7 @@ func TestAthenzConfSysAuthDomain(t *testing.T) {
 				if err := opt(prov); err != nil {
 					return err
 				}
-				if prov.athenzConfSysAuthDomain != "dummy" {
+				if prov.pubkeySysAuthDomain != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -193,14 +193,14 @@ func TestAthenzConfSysAuthDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzConfSysAuthDomain(tt.args.t)
+			got := PubkeySysAuthDomain(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzConfSysAuthDomain() error = %v", err)
+				t.Errorf("PubkeySysAuthDomain() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzConfEtagExpTime(t *testing.T) {
+func TestPubkeyEtagExpTime(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -219,7 +219,7 @@ func TestAthenzConfEtagExpTime(t *testing.T) {
 				if err := opt(prov); err != nil {
 					return err
 				}
-				if prov.athenzConfEtagExpTime != "dummy" {
+				if prov.pubkeyEtagExpTime != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -228,14 +228,14 @@ func TestAthenzConfEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzConfEtagExpTime(tt.args.t)
+			got := PubkeyEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzConfEtagExpTime() error = %v", err)
+				t.Errorf("PubkeyEtagExpTime() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzConfEtagFlushDur(t *testing.T) {
+func TestPubkeyEtagFlushDur(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -254,7 +254,7 @@ func TestAthenzConfEtagFlushDur(t *testing.T) {
 				if err := opt(prov); err != nil {
 					return err
 				}
-				if prov.athenzConfEtagFlushDur != "dummy" {
+				if prov.pubkeyEtagFlushDur != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -263,9 +263,9 @@ func TestAthenzConfEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzConfEtagFlushDur(tt.args.t)
+			got := PubkeyEtagFlushDur(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzConfEtagFlushDur() error = %v", err)
+				t.Errorf("PubkeyEtagFlushDur() error = %v", err)
 			}
 		})
 	}

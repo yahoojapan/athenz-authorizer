@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 // RoleTokenParser represents the role token parser interface.
@@ -28,11 +28,11 @@ type RoleTokenParser interface {
 }
 
 type rtp struct {
-	pkp config.PubKeyProvider
+	pkp pubkey.Provider
 }
 
 // NewRoleTokenParser returns the RoleTokenParser instance.
-func NewRoleTokenParser(prov config.PubKeyProvider) RoleTokenParser {
+func NewRoleTokenParser(prov pubkey.Provider) RoleTokenParser {
 	return &rtp{
 		pkp: prov,
 	}
@@ -77,7 +77,7 @@ func (r *rtp) validate(rt *RoleToken) error {
 	if rt.Expired() {
 		return errors.Wrapf(ErrRoleTokenExpired, "token expired")
 	}
-	ver := r.pkp(config.EnvZTS, rt.KeyID)
+	ver := r.pkp(pubkey.EnvZTS, rt.KeyID)
 	if ver == nil {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}

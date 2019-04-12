@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 func TestSignedPolicy_Verify(t *testing.T) {
@@ -30,7 +30,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 		DomainSignedPolicyData util.DomainSignedPolicyData
 	}
 	type args struct {
-		pkp config.PubKeyProvider
+		pkp pubkey.Provider
 	}
 	tests := []struct {
 		name    string
@@ -54,7 +54,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				},
 			},
 			args: args{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(d, s string) error {
 							if d == "" || s == "" {
@@ -72,8 +72,8 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				DomainSignedPolicyData: util.DomainSignedPolicyData{},
 			},
 			args: args{
-				pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
-					if e == config.EnvZTS {
+				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+					if e == pubkey.EnvZTS {
 						return nil
 					}
 					return VerifierMock{
@@ -93,7 +93,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				},
 			},
 			args: args{
-				pkp: func(e config.AthenzEnv, kid string) authcore.Verifier {
+				pkp: func(e pubkey.AthenzEnv, kid string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(d, s string) error {
 							if s == "dummyZtsSignature" {
@@ -114,8 +114,8 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				},
 			},
 			args: args{
-				pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
-					if e == config.EnvZMS {
+				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+					if e == pubkey.EnvZMS {
 						return nil
 					}
 					return VerifierMock{
@@ -137,7 +137,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				},
 			},
 			args: args{
-				pkp: func(e config.AthenzEnv, kid string) authcore.Verifier {
+				pkp: func(e pubkey.AthenzEnv, kid string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(d, s string) error {
 							if s == "dummyZmsSignature" {

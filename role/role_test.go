@@ -22,12 +22,12 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 func TestNewRoleTokenParser(t *testing.T) {
 	type args struct {
-		prov config.PubKeyProvider
+		prov pubkey.Provider
 	}
 	type test struct {
 		name string
@@ -36,7 +36,7 @@ func TestNewRoleTokenParser(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			/*		p := config.PubKeyProvider(func(config.AthenzEnv, string) authcore.Verifier {
+			/*		p := pubkey.Provider(func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return nil
 				})*/
 			return test{
@@ -61,7 +61,7 @@ func TestNewRoleTokenParser(t *testing.T) {
 
 func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 	type fields struct {
-		pkp config.PubKeyProvider
+		pkp pubkey.Provider
 	}
 	type args struct {
 		tok string
@@ -76,7 +76,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 		{
 			name: "parse validate success",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(string, string) error {
 							return nil
@@ -106,7 +106,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 		{
 			name: "validate error",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(string, string) error {
 							return fmt.Errorf("")
@@ -139,7 +139,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 
 func Test_rtp_parseRoleToken(t *testing.T) {
 	type fields struct {
-		pkp config.PubKeyProvider
+		pkp pubkey.Provider
 	}
 	type args struct {
 		tok string
@@ -206,7 +206,7 @@ func Test_rtp_parseRoleToken(t *testing.T) {
 
 func Test_rtp_validate(t *testing.T) {
 	type fields struct {
-		pkp config.PubKeyProvider
+		pkp pubkey.Provider
 	}
 	type args struct {
 		rt *RoleToken
@@ -220,7 +220,7 @@ func Test_rtp_validate(t *testing.T) {
 		{
 			name: "validate success",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(string, string) error {
 							return nil
@@ -237,7 +237,7 @@ func Test_rtp_validate(t *testing.T) {
 		{
 			name: "token expired",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(string, string) error {
 							return nil
@@ -255,7 +255,7 @@ func Test_rtp_validate(t *testing.T) {
 		{
 			name: "validate error",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return VerifierMock{
 						VerifyFunc: func(string, string) error {
 							return fmt.Errorf("")
@@ -273,7 +273,7 @@ func Test_rtp_validate(t *testing.T) {
 		{
 			name: "verifier not found",
 			fields: fields{
-				pkp: func(config.AthenzEnv, string) authcore.Verifier {
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
 					return nil
 				},
 			},

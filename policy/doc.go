@@ -13,14 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package config
 
-import "github.com/pkg/errors"
+// Package policy represents the athenz policy updater fetching and verify logic and provide an interface to verify the policy data. 
+package policy
 
-var (
-	// ErrFetchAthenzConf "Fetch athenz config error"
-	ErrFetchAthenzConf = errors.New("Fetch athenz config error")
-
-	// ErrEmptyAthenzConf "Athenz config not initialized"
-	ErrEmptyAthenzConf = errors.New("Athenz config not initialized")
-)

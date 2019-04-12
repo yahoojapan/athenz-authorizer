@@ -20,21 +20,21 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/yahoojapan/athenz-policy-updater/policy"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 	"github.com/yahoojapan/athenz-policy-updater/role"
 )
 
 type ConfdMock struct {
-	config.AthenzConfd
+	pubkey.Pubkeyd
 	confdExp time.Duration
 }
 
-func (cm *ConfdMock) StartConfUpdator(ctx context.Context) <-chan error {
+func (cm *ConfdMock) StartPubkeyUpdater(ctx context.Context) <-chan error {
 	ech := make(chan error, 1)
 	go func() {
 		time.Sleep(cm.confdExp)
-		ech <- errors.New("confd error")
+		ech <- errors.New("pubkey error")
 	}()
 	return ech
 }
@@ -45,7 +45,7 @@ type PolicydMock struct {
 	wantErr    error
 }
 
-func (pm *PolicydMock) StartPolicyUpdator(context.Context) <-chan error {
+func (pm *PolicydMock) StartPolicyUpdater(context.Context) <-chan error {
 	ech := make(chan error, 1)
 	go func() {
 		time.Sleep(pm.policydExp)

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 func TestEtagFlushDur(t *testing.T) {
@@ -455,7 +455,7 @@ func TestHTTPClient(t *testing.T) {
 
 func TestPubKeyProvider(t *testing.T) {
 	type args struct {
-		pkp config.PubKeyProvider
+		pkp pubkey.Provider
 	}
 	type test struct {
 		name      string
@@ -464,7 +464,7 @@ func TestPubKeyProvider(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			pkp := config.PubKeyProvider(func(config.AthenzEnv, string) authcore.Verifier {
+			pkp := pubkey.Provider(func(pubkey.AthenzEnv, string) authcore.Verifier {
 				return nil
 			})
 			return test{

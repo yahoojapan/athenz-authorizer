@@ -24,10 +24,9 @@ import (
 	"github.com/kpango/glg"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/role"
-
-	"github.com/yahoojapan/athenz-policy-updater/config"
 	"github.com/yahoojapan/athenz-policy-updater/policy"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-policy-updater/role"
 )
 
 // Providerd represents a daemon for user to verify the role token
@@ -39,7 +38,7 @@ type Providerd interface {
 
 type provider struct {
 	//
-	athenzConfd     config.AthenzConfd
+	pubkeyd         pubkey.Pubkeyd
 	policyd         policy.Policyd
 	roleTokenParser role.RoleTokenParser
 
@@ -51,11 +50,11 @@ type provider struct {
 	cache    gache.Gache
 	cacheExp time.Duration
 
-	// athenzConfd parameters
-	athenzConfRefreshDuration string
-	athenzConfSysAuthDomain   string
-	athenzConfEtagExpTime     string
-	athenzConfEtagFlushDur    string
+	// pubkeyd parameters
+	pubkeyRefreshDuration string
+	pubkeySysAuthDomain   string
+	pubkeyEtagExpTime     string
+	pubkeyEtagFlushDur    string
 
 	// policyd parameters
 	policyExpireMargin    string
@@ -79,15 +78,15 @@ func New(opts ...Option) (Providerd, error) {
 		}
 	}
 
-	if prov.athenzConfd, err = config.NewAthenzConfd(
-		config.AthenzURL(prov.athenzURL),
-		config.SysAuthDomain(prov.athenzConfSysAuthDomain),
-		config.ETagExpTime(prov.athenzConfEtagExpTime),
-		config.ETagFlushDur(prov.athenzConfEtagFlushDur),
-		config.RefreshDuration(prov.athenzConfRefreshDuration),
-		config.HTTPClient(prov.client),
+	if prov.pubkeyd, err = pubkey.NewPubkeyd(
+		pubkey.AthenzURL(prov.athenzURL),
+		pubkey.SysAuthDomain(prov.pubkeySysAuthDomain),
+		pubkey.ETagExpTime(prov.pubkeyEtagExpTime),
+		pubkey.ETagFlushDur(prov.pubkeyEtagFlushDur),
+		pubkey.RefreshDuration(prov.pubkeyRefreshDuration),
+		pubkey.HTTPClient(prov.client),
 	); err != nil {
-		return nil, errors.Wrap(err, "error create athenzConfd")
+		return nil, errors.Wrap(err, "error create pubkeyd")
 	}
 
 	if prov.policyd, err = policy.NewPolicyd(
@@ -98,12 +97,12 @@ func New(opts ...Option) (Providerd, error) {
 		policy.AthenzDomains(prov.athenzDomains...),
 		policy.RefreshDuration(prov.policyRefreshDuration),
 		policy.HTTPClient(prov.client),
-		policy.PubKeyProvider(prov.athenzConfd.GetPubKeyProvider()),
+		policy.PubKeyProvider(prov.pubkeyd.GetProvider()),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create policyd")
 	}
 
-	prov.roleTokenParser = role.NewRoleTokenParser(prov.athenzConfd.GetPubKeyProvider())
+	prov.roleTokenParser = role.NewRoleTokenParser(prov.pubkeyd.GetProvider())
 
 	return prov, nil
 }
@@ -116,8 +115,8 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 		// TODO expose set expire daemon duration interface
 		p.cache.StartExpired(ctx, p.cacheExp/2)
 
-		cech := p.athenzConfd.StartConfUpdator(ctx)
-		pech := p.policyd.StartPolicyUpdator(ctx)
+		cech := p.pubkeyd.StartPubkeyUpdater(ctx)
+		pech := p.policyd.StartPolicyUpdater(ctx)
 		for {
 			select {
 			case <-ctx.Done():
@@ -125,7 +124,7 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 				return
 			case err := <-cech:
 				if err != nil {
-					ech <- errors.Wrap(err, "update athenz conf error")
+					ech <- errors.Wrap(err, "update pubkey error")
 				}
 			case err := <-pech:
 				if err != nil {

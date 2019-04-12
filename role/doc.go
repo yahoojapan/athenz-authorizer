@@ -13,12 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package config
 
-type VerifierMock struct {
-	VerifyFunc func(i, s string) error
-}
-
-func (vm VerifierMock) Verify(input, signature string) error {
-	return vm.VerifyFunc(input, signature)
-}
+// Package role represents the processing logic of role token.
+package role
