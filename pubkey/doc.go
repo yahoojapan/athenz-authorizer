@@ -14,6 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package config represents the athenz configuration updater fetching logic and provide an interface to get the athenz configuration(athenz server public key).
-package config
-
+// Package pubkey represents the public key updater fetching logic and the interface
+package pubkey

@@ -73,37 +73,37 @@ func CacheExp(exp time.Duration) Option {
 }
 
 /*
-	athenzConfd parameters
+	Pubkeyd parameters
 */
 
-// AthenzConfRefreshDuration represents a AthenzConfRefreshDuration functional option
-func AthenzConfRefreshDuration(t string) Option {
+// PubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
+func PubkeyRefreshDuration(t string) Option {
 	return func(prov *provider) error {
-		prov.athenzConfRefreshDuration = t
+		prov.pubkeyRefreshDuration = t
 		return nil
 	}
 }
 
-// AthenzConfSysAuthDomain represents a AthenzConfSysAuthDomain functional option
-func AthenzConfSysAuthDomain(domain string) Option {
+// PubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
+func PubkeySysAuthDomain(domain string) Option {
 	return func(prov *provider) error {
-		prov.athenzConfSysAuthDomain = domain
+		prov.pubkeySysAuthDomain = domain
 		return nil
 	}
 }
 
-// AthenzConfEtagExpTime represents a AthenzConfEtagExpTime functional option
-func AthenzConfEtagExpTime(t string) Option {
+// PubkeyEtagExpTime represents a PubkeyEtagExpTime functional option
+func PubkeyEtagExpTime(t string) Option {
 	return func(prov *provider) error {
-		prov.athenzConfEtagExpTime = t
+		prov.pubkeyEtagExpTime = t
 		return nil
 	}
 }
 
-// AthenzConfEtagFlushDur represents a AthenzConfEtagFlushDur functional option
-func AthenzConfEtagFlushDur(t string) Option {
+// PubkeyEtagFlushDur represents a PubkeyEtagFlushDur functional option
+func PubkeyEtagFlushDur(t string) Option {
 	return func(prov *provider) error {
-		prov.athenzConfEtagFlushDur = t
+		prov.pubkeyEtagFlushDur = t
 		return nil
 	}
 }

@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 var (
@@ -130,7 +130,7 @@ func HTTPClient(c *http.Client) Option {
 }
 
 // PubKeyProvider represents a PubKeyProvider functional option
-func PubKeyProvider(pkp config.PubKeyProvider) Option {
+func PubKeyProvider(pkp pubkey.Provider) Option {
 	return func(pol *policyd) error {
 		if pkp != nil {
 			pol.pkp = pkp

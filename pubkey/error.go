@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package config
+package pubkey
 
 import "github.com/pkg/errors"
 
 var (
-	// ErrFetchAthenzConf "Fetch athenz config error"
-	ErrFetchAthenzConf = errors.New("Fetch athenz config error")
+	// ErrFetchAthenzPubkey "Fetch athenz pubkey error"
+	ErrFetchAthenzPubkey = errors.New("Fetch athenz pubkey error")
 
-	// ErrEmptyAthenzConf "Athenz config not initialized"
-	ErrEmptyAthenzConf = errors.New("Athenz config not initialized")
+	// ErrEmptyAthenzPubkey "Athenz pubkey not initialized"
+	ErrEmptyAthenzPubkey = errors.New("Athenz pubkey not initialized")
 )

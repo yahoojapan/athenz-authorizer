@@ -30,13 +30,13 @@ import (
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 	"golang.org/x/sync/errgroup"
 )
 
 // Policyd represent the daemon to retrieve policy data from Athenz.
 type Policyd interface {
-	StartPolicyUpdator(context.Context) <-chan error
+	StartPolicyUpdater(context.Context) <-chan error
 	UpdatePolicy(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
 }
@@ -47,7 +47,7 @@ type policyd struct {
 	refreshDuration  time.Duration
 	errRetryInterval time.Duration
 
-	pkp config.PubKeyProvider
+	pkp pubkey.Provider
 
 	etagCache    gache.Gache
 	etagFlushDur time.Duration
@@ -87,9 +87,9 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 	return p, nil
 }
 
-// StartPolicyUpdator starts the Policy daemon to retrive the policy data periodically
-func (p *policyd) StartPolicyUpdator(ctx context.Context) <-chan error {
-	glg.Info("Starting policyd updator")
+// StartPolicyUpdater starts the Policy daemon to retrive the policy data periodically
+func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
+	glg.Info("Starting policyd updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
 	if err := p.UpdatePolicy(ctx); err != nil {
@@ -107,7 +107,7 @@ func (p *policyd) StartPolicyUpdator(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
-				glg.Info("Stopping policyd updator")
+				glg.Info("Stopping policyd updater")
 				ticker.Stop()
 				ech <- ctx.Err()
 				if ebuf.Error() != "" {

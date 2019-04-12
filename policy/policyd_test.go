@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-policy-updater/config"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 func TestNewPolicyd(t *testing.T) {
@@ -96,13 +96,13 @@ func TestNewPolicyd(t *testing.T) {
 	}
 }
 
-func Test_policy_StartPolicyUpdator(t *testing.T) {
+func Test_policy_StartPolicyUpdater(t *testing.T) {
 	type fields struct {
 		expireMargin     time.Duration
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration
@@ -141,7 +141,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					refreshDuration: time.Second,
 					expireMargin:    time.Hour,
 					client:          srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -198,7 +198,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					refreshDuration: time.Millisecond * 30,
 					expireMargin:    time.Hour,
 					client:          srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -272,7 +272,7 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 					errRetryInterval: time.Millisecond * 5,
 					expireMargin:     time.Hour,
 					client:           srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -337,10 +337,10 @@ func Test_policy_StartPolicyUpdator(t *testing.T) {
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
 			}
-			ch := p.StartPolicyUpdator(tt.args.ctx)
+			ch := p.StartPolicyUpdater(tt.args.ctx)
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(p, ch); err != nil {
-					t.Errorf("policy.StartPolicyUpdator() error = %v", err)
+					t.Errorf("policy.StartPolicyUpdater() error = %v", err)
 				}
 			}
 		})
@@ -353,7 +353,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration
@@ -391,7 +391,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -435,7 +435,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 						etagExpTime:  time.Minute,
 						expireMargin: time.Hour,
 						client:       srv.Client(),
-						pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+						pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 							return VerifierMock{
 								VerifyFunc: func(d, s string) error {
 									return nil
@@ -488,7 +488,7 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -550,7 +550,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration
@@ -765,7 +765,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration
@@ -802,7 +802,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -843,7 +843,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -875,7 +875,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -924,7 +924,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration
@@ -959,7 +959,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1018,7 +1018,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Second,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1080,7 +1080,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Second,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1152,7 +1152,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Second,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1210,7 +1210,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1252,7 +1252,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1295,7 +1295,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return nil
@@ -1338,7 +1338,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 					etagExpTime:  time.Minute,
 					expireMargin: time.Hour,
 					client:       srv.Client(),
-					pkp: func(e config.AthenzEnv, id string) authcore.Verifier {
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
 								return errors.New("error")
@@ -1397,7 +1397,7 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 		rolePolicies     gache.Gache
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
-		pkp              config.PubKeyProvider
+		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
 		etagExpTime      time.Duration

@@ -19,9 +19,9 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/config"
 
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
+	"github.com/yahoojapan/athenz-policy-updater/pubkey"
 )
 
 // SignedPolicy represents the signed policy data
@@ -30,9 +30,9 @@ type SignedPolicy struct {
 }
 
 // Verify verifies the signed policy and return any errors
-func (s *SignedPolicy) Verify(pkp config.PubKeyProvider) error {
+func (s *SignedPolicy) Verify(pkp pubkey.Provider) error {
 	// verify signed policy data
-	ver := pkp(config.EnvZTS, s.KeyId)
+	ver := pkp(pubkey.EnvZTS, s.KeyId)
 	if ver == nil {
 		return errors.New("zts key not found")
 	}
@@ -46,7 +46,7 @@ func (s *SignedPolicy) Verify(pkp config.PubKeyProvider) error {
 	}
 
 	// verify policy data
-	ver = pkp(config.EnvZMS, s.SignedPolicyData.ZmsKeyId)
+	ver = pkp(pubkey.EnvZMS, s.SignedPolicyData.ZmsKeyId)
 	if ver == nil {
 		return errors.New("zms key not found")
 	}

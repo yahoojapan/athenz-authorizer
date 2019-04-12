@@ -13,12 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package config
+package pubkey
 
-type VerifierMock struct {
-	VerifyFunc func(i, s string) error
+// SysAuthConfig represent the system authority config data structure
+type SysAuthConfig struct {
+	Modified   string       `json:"modified"`
+	Name       string       `json:"name"`
+	PublicKeys []*PublicKey `json:"publicKeys"`
 }
 
-func (vm VerifierMock) Verify(input, signature string) error {
-	return vm.VerifyFunc(input, signature)
+// PublicKey represent the public key ID and the key from Athenz
+type PublicKey struct {
+	ID  string `json:"id"`
+	Key string `json:"key"`
 }
