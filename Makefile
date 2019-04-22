@@ -6,6 +6,7 @@ all: clean install lint test bench
 
 clean:
 	go clean ./...
+	go clean -modcache
 	rm -rf ./*.log
 	rm -rf ./*.svg
 	rm -rf ./go.mod
@@ -22,6 +23,11 @@ init:
 	GO111MODULE=on go mod init
 	GO111MODULE=on go mod vendor
 	sleep 3
+
+deps: clean
+	GO111MODULE=on go mod init
+	GO111MODULE=on go mod vendor
+	rm -rf vendor
 
 lint:
 	gometalinter --enable-all . | rg -v comment

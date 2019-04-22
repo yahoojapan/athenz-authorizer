@@ -8,6 +8,6 @@ require (
 	github.com/kpango/gache v1.1.11
 	github.com/kpango/glg v1.3.1
 	github.com/pkg/errors v0.8.1
-	github.com/yahoo/athenz v1.8.17
-	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
+	github.com/yahoo/athenz v1.8.20
+	golang.org/x/sync v0.0.0-20190412183630-56d357773e84
 )
