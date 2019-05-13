@@ -68,7 +68,7 @@ type confCache struct {
 	sac  *SysAuthConfig
 }
 
-// Provider represent the public key provider to retrive the public key.
+// Provider represent the public key provider to retrieve the public key.
 type Provider func(AthenzEnv, string) authcore.Verifier
 
 // AthenzEnv represent the athenz environment name.
@@ -105,7 +105,7 @@ func NewPubkeyd(opts ...Option) (Pubkeyd, error) {
 	return c, nil
 }
 
-// StartPubkeyUpdater starts the pubkey daemon to retrive the public key periodically
+// StartPubkeyUpdater starts the pubkey daemon to retrieve the public key periodically
 func (c *athenzPubkeyd) StartPubkeyUpdater(ctx context.Context) <-chan error {
 	glg.Info("Starting pubkey updator")
 	ech := make(chan error, 100)
@@ -126,10 +126,17 @@ func (c *athenzPubkeyd) StartPubkeyUpdater(ctx context.Context) <-chan error {
 			case <-ctx.Done():
 				glg.Info("Stopping pubkeyd")
 				ticker.Stop()
+				err := ctx.Err()
+				if err != context.Canceled {
+					if ebuf.Error() != "" {
+						err = errors.Wrap(err, ebuf.Error())
+					}
+					ech <- err
+					return
+				}
+				glg.Warn(err)
 				if ebuf.Error() != "" {
-					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
-				} else {
-					ech <- ctx.Err()
+					ech <- ebuf
 				}
 				return
 			case <-fch:

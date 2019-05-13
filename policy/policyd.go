@@ -87,7 +87,7 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 	return p, nil
 }
 
-// StartPolicyUpdater starts the Policy daemon to retrive the policy data periodically
+// StartPolicyUpdater starts the Policy daemon to retrieve the policy data periodically
 func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updater")
 	ech := make(chan error, 100)
@@ -109,11 +109,17 @@ func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
 			case <-ctx.Done():
 				glg.Info("Stopping policyd updater")
 				ticker.Stop()
-				ech <- ctx.Err()
+				err := ctx.Err()
+				if err != context.Canceled {
+					if ebuf.Error() != "" {
+						err = errors.Wrap(err, ebuf.Error())
+					}
+					ech <- err
+					return
+				}
+				glg.Warn(err)
 				if ebuf.Error() != "" {
-					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
-				} else {
-					ech <- ctx.Err()
+					ech <- ebuf
 				}
 				return
 			case <-fch:
@@ -164,14 +170,24 @@ func (p *policyd) UpdatePolicy(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			glg.Info("Update policy interrupted")
-			return ctx.Err()
+			err := ctx.Err()
+			if err != context.Canceled {
+				return err
+			}
+			glg.Warn(err)
+			return nil
 		default:
 			dom := domain
 			eg.Go(func() error {
 				select {
 				case <-ctx.Done():
 					glg.Info("Update policy interrupted")
-					return ctx.Err()
+					err := ctx.Err()
+					if err != context.Canceled {
+						return err
+					}
+					glg.Warn(err)
+					return nil
 				default:
 					return p.fetchAndCachePolicy(ctx, dom)
 				}
@@ -199,7 +215,12 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 				defer wg.Done()
 				select {
 				case <-cctx.Done():
-					ch <- cctx.Err()
+					err := cctx.Err()
+					if err != context.Canceled {
+						ch <- err
+						return
+					}
+					glg.Warn(err)
 					return
 				default:
 					asss, ok := p.rolePolicies.Get(dr)
@@ -211,7 +232,12 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 						glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
 						select {
 						case <-cctx.Done():
-							ch <- cctx.Err()
+							err := cctx.Err()
+							if err != context.Canceled {
+								ch <- err
+								return
+							}
+							glg.Warn(err)
 							return
 						default:
 							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
@@ -335,7 +361,12 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 			for _, ass := range pol.Assertions {
 				select {
 				case <-ctx.Done():
-					return ctx.Err()
+					err := ctx.Err()
+					if err != context.Canceled {
+						return err
+					}
+					glg.Warn(err)
+					return nil
 				default:
 					km := fmt.Sprintf("%s,%s,%s", ass.Role, ass.Action, ass.Resource)
 					if _, ok := assm.Load(km); !ok {

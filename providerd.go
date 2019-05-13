@@ -120,7 +120,12 @@ func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
-				ech <- ctx.Err()
+				err := ctx.Err()
+				if err != context.Canceled {
+					ech <- err
+					return
+				}
+				glg.Warn(err)
 				return
 			case err := <-cech:
 				if err != nil {
