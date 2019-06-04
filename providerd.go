@@ -111,15 +111,16 @@ func New(opts ...Option) (Providerd, error) {
 func (p *provider) StartProviderd(ctx context.Context) <-chan error {
 	ech := make(chan error, 200)
 
-	go func() {
-		// TODO expose set expire daemon duration interface
-		p.cache.StartExpired(ctx, p.cacheExp/2)
+	g := p.cache.StartExpired(ctx, p.cacheExp/2)
 
-		cech := p.pubkeyd.StartPubkeyUpdater(ctx)
-		pech := p.policyd.StartPolicyUpdater(ctx)
+	cech := p.pubkeyd.StartPubkeyUpdater(ctx)
+	pech := p.policyd.StartPolicyUpdater(ctx)
+
+	go func() {
 		for {
 			select {
 			case <-ctx.Done():
+				g.Clear()
 				ech <- ctx.Err()
 				return
 			case err := <-cech:
