@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package providerd
+package authorizerd
 
 import (
 	"context"
@@ -22,9 +22,9 @@ import (
 
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/policy"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
-	"github.com/yahoojapan/athenz-policy-updater/role"
+	"github.com/yahoojapan/athenz-authorizer/policy"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/role"
 )
 
 func TestNew(t *testing.T) {
@@ -34,24 +34,24 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      args
-		checkFunc func(Providerd, error) error
+		checkFunc func(Authorizerd, error) error
 	}{
 		{
 			name: "test new success",
 			args: args{
 				[]Option{},
 			},
-			checkFunc: func(prov Providerd, err error) error {
+			checkFunc: func(prov Authorizerd, err error) error {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*provider).athenzURL != "www.athenz.com/zts/v1" {
+				if prov.(*authorizer).athenzURL != "www.athenz.com/zts/v1" {
 					return errors.New("invalid url")
 				}
-				if prov.(*provider).pubkeyd == nil {
+				if prov.(*authorizer).pubkeyd == nil {
 					return errors.New("cannot new pubkeyd")
 				}
-				if prov.(*provider).policyd == nil {
+				if prov.(*authorizer).policyd == nil {
 					return errors.New("cannot new policyd")
 				}
 				return nil
@@ -62,22 +62,22 @@ func TestNew(t *testing.T) {
 			args: args{
 				[]Option{AthenzURL("www.dummy.com")},
 			},
-			checkFunc: func(prov Providerd, err error) error {
+			checkFunc: func(prov Authorizerd, err error) error {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*provider).athenzURL != "www.dummy.com" {
+				if prov.(*authorizer).athenzURL != "www.dummy.com" {
 					return errors.New("invalid url")
 				}
 				return nil
 			},
 		},
 		{
-			name: "test NewPubkeyd returns error",
+			name: "test New returns error",
 			args: args{
 				[]Option{PubkeyEtagExpTime("dummy")},
 			},
-			checkFunc: func(prov Providerd, err error) error {
+			checkFunc: func(prov Authorizerd, err error) error {
 				want := "error create pubkeyd: invalid etag expire time: time: invalid duration dummy"
 				if err.Error() != want {
 					return errors.Errorf("Unexpected error: %s, expected: %s", err, want)
@@ -90,7 +90,7 @@ func TestNew(t *testing.T) {
 			args: args{
 				[]Option{PolicyEtagExpTime("dummy")},
 			},
-			checkFunc: func(prov Providerd, err error) error {
+			checkFunc: func(prov Authorizerd, err error) error {
 				if err.Error() != "error create policyd: error create policyd: invalid etag expire time: time: invalid duration dummy" {
 					return errors.Wrap(err, "unexpected error")
 				}
@@ -108,7 +108,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestStartProviderd(t *testing.T) {
+func TestStart(t *testing.T) {
 	type fields struct {
 		pubkeyd  pubkey.Pubkeyd
 		policyd  policy.Policyd
@@ -122,7 +122,7 @@ func TestStartProviderd(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(Providerd, error) error
+		checkFunc func(Authorizerd, error) error
 		afterFunc func()
 	}
 	tests := []test{
@@ -145,7 +145,7 @@ func TestStartProviderd(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(prov Providerd, err error) error {
+				checkFunc: func(prov Authorizerd, err error) error {
 					if err.Error() != "context deadline exceeded" {
 						return errors.Wrap(err, "unexpected err")
 					}
@@ -175,7 +175,7 @@ func TestStartProviderd(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(prov Providerd, err error) error {
+				checkFunc: func(prov Authorizerd, err error) error {
 					if err.Error() != "update pubkey error: pubkey error" {
 						return errors.Wrap(err, "unexpected err")
 					}
@@ -205,7 +205,7 @@ func TestStartProviderd(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(prov Providerd, err error) error {
+				checkFunc: func(prov Authorizerd, err error) error {
 					if err.Error() != "update policy error: policyd error" {
 						return errors.Wrap(err, "unexpected err")
 					}
@@ -219,16 +219,16 @@ func TestStartProviderd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prov := &provider{
+			prov := &authorizer{
 				pubkeyd:  tt.fields.pubkeyd,
 				policyd:  tt.fields.policyd,
 				cache:    tt.fields.cache,
 				cacheExp: tt.fields.cacheExp,
 			}
-			ch := prov.StartProviderd(tt.args.ctx)
+			ch := prov.Start(tt.args.ctx)
 			goter := <-ch
 			if err := tt.checkFunc(prov, goter); err != nil {
-				t.Errorf("StartProviderd() error = %v", err)
+				t.Errorf("Start() error = %v", err)
 			}
 			tt.afterFunc()
 		})
@@ -246,20 +246,20 @@ func TestVerifyRoleToken(t *testing.T) {
 		policyd         policy.Policyd
 		cache           gache.Gache
 		cacheExp        time.Duration
-		roleTokenParser role.RoleTokenParser
+		roleTokenProcessor role.Processor
 	}
 	type test struct {
 		name      string
 		args      args
 		fields    fields
 		wantErr   string
-		checkFunc func(*provider) error
+		checkFunc func(*authorizer) error
 	}
 	tests := []test{
 		func() test {
 			c := gache.New()
-			rm := &RoleTokenMock{
-				rt:      &role.RoleToken{},
+			rm := &TokenMock{
+				rt:      &role.Token{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{
@@ -275,12 +275,12 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
 				wantErr: "",
-				checkFunc: func(prov *provider) error {
+				checkFunc: func(prov *authorizer) error {
 					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
@@ -292,8 +292,8 @@ func TestVerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &RoleTokenMock{
-				rt:      &role.RoleToken{},
+			rm := &TokenMock{
+				rt:      &role.Token{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{
@@ -309,7 +309,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -319,8 +319,8 @@ func TestVerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &RoleTokenMock{
-				rt:      &role.RoleToken{},
+			rm := &TokenMock{
+				rt:      &role.Token{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{
@@ -336,7 +336,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -346,8 +346,8 @@ func TestVerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &RoleTokenMock{
-				rt:      &role.RoleToken{},
+			rm := &TokenMock{
+				rt:      &role.Token{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{
@@ -363,7 +363,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -372,7 +372,7 @@ func TestVerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &RoleTokenMock{
+			rm := &TokenMock{
 				wantErr: errors.New("cannot parse roletoken"),
 			}
 			cm := &PolicydMock{}
@@ -386,7 +386,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -395,8 +395,8 @@ func TestVerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &RoleTokenMock{
-				rt: &role.RoleToken{},
+			rm := &TokenMock{
+				rt: &role.Token{},
 			}
 			cm := &PolicydMock{
 				wantErr: errors.New("deny"),
@@ -411,7 +411,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         cm,
-					roleTokenParser: rm,
+					roleTokenProcessor: rm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -421,11 +421,11 @@ func TestVerifyRoleToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prov := &provider{
-				policyd:         tt.fields.policyd,
-				roleTokenParser: tt.fields.roleTokenParser,
-				cache:           tt.fields.cache,
-				cacheExp:        tt.fields.cacheExp,
+			prov := &authorizer{
+				policyd:    tt.fields.policyd,
+				roleProcessor: tt.fields.roleTokenProcessor,
+				cache:      tt.fields.cache,
+				cacheExp:   tt.fields.cacheExp,
 			}
 			err := prov.VerifyRoleToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {

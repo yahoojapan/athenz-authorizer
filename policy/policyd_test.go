@@ -31,10 +31,10 @@ import (
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
-func TestNewPolicyd(t *testing.T) {
+func TestNew(t *testing.T) {
 	type args struct {
 		opts []Option
 	}
@@ -81,22 +81,22 @@ func TestNewPolicyd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewPolicyd(tt.args.opts...)
+			got, err := New(tt.args.opts...)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewPolicyd() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(got); err != nil {
-					t.Errorf("NewPolicyd() = %v", err)
+					t.Errorf("New() = %v", err)
 				}
 			}
 		})
 	}
 }
 
-func Test_policy_StartPolicyUpdater(t *testing.T) {
+func Test_policy_Start(t *testing.T) {
 	type fields struct {
 		expireMargin     time.Duration
 		rolePolicies     gache.Gache
@@ -337,17 +337,17 @@ func Test_policy_StartPolicyUpdater(t *testing.T) {
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
 			}
-			ch := p.StartPolicyUpdater(tt.args.ctx)
+			ch := p.Start(tt.args.ctx)
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(p, ch); err != nil {
-					t.Errorf("policy.StartPolicyUpdater() error = %v", err)
+					t.Errorf("policy.Start() error = %v", err)
 				}
 			}
 		})
 	}
 }
 
-func Test_policy_UpdatePolicy(t *testing.T) {
+func Test_policy_Update(t *testing.T) {
 	type fields struct {
 		expireMargin     time.Duration
 		rolePolicies     gache.Gache
@@ -532,12 +532,12 @@ func Test_policy_UpdatePolicy(t *testing.T) {
 			if tt.beforeFunc != nil {
 				tt.beforeFunc()
 			}
-			if err := p.UpdatePolicy(tt.args.ctx); (err != nil) && tt.wantErr != "" && err.Error() != tt.wantErr {
-				t.Errorf("policy.UpdatePolicy() error = %v, wantErr %v", err, tt.wantErr)
+			if err := p.Update(tt.args.ctx); (err != nil) && tt.wantErr != "" && err.Error() != tt.wantErr {
+				t.Errorf("policy.Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(p); err != nil {
-					t.Errorf("policy.UpdatePolicy() error = %v", err)
+					t.Errorf("policy.Update() error = %v", err)
 				}
 			}
 		})

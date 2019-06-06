@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-func TestRoleToken_SetParams(t *testing.T) {
+func TestToken_SetParams(t *testing.T) {
 	type fields struct {
 		Domain        string
 		Roles         []string
@@ -40,7 +40,7 @@ func TestRoleToken_SetParams(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(got *RoleToken) error
+		checkFunc func(got *Token) error
 		wantErr   bool
 	}{
 		{
@@ -50,8 +50,8 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "d",
 				value: "dummyd",
 			},
-			checkFunc: func(got *RoleToken) error {
-				expected := &RoleToken{
+			checkFunc: func(got *Token) error {
+				expected := &Token{
 					Domain: "dummyd",
 				}
 
@@ -69,8 +69,8 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "e",
 				value: "1550643321",
 			},
-			checkFunc: func(got *RoleToken) error {
-				expected := &RoleToken{
+			checkFunc: func(got *Token) error {
+				expected := &Token{
 					ExpiryTime: func() time.Time {
 						t, _ := strconv.ParseInt("1550643321", 10, 64)
 						return time.Unix(t, 0)
@@ -91,7 +91,7 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "e",
 				value: "1550643321",
 			},
-			checkFunc: func(got *RoleToken) error {
+			checkFunc: func(got *Token) error {
 				// 2019-02-20 06:15:21 +0000 UTC
 				expected := time.Date(2019, 2, 20, 6, 15, 21, 0, time.UTC)
 				if !expected.Equal(got.ExpiryTime) {
@@ -117,8 +117,8 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "k",
 				value: "dummyk",
 			},
-			checkFunc: func(got *RoleToken) error {
-				expected := &RoleToken{
+			checkFunc: func(got *Token) error {
+				expected := &Token{
 					KeyID: "dummyk",
 				}
 
@@ -136,8 +136,8 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "r",
 				value: "r1,r2",
 			},
-			checkFunc: func(got *RoleToken) error {
-				expected := &RoleToken{
+			checkFunc: func(got *Token) error {
+				expected := &Token{
 					Roles: []string{"r1", "r2"},
 				}
 
@@ -155,8 +155,8 @@ func TestRoleToken_SetParams(t *testing.T) {
 				key:   "s",
 				value: "dummys",
 			},
-			checkFunc: func(got *RoleToken) error {
-				expected := &RoleToken{
+			checkFunc: func(got *Token) error {
+				expected := &Token{
 					Signature: "dummys",
 				}
 
@@ -170,7 +170,7 @@ func TestRoleToken_SetParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &RoleToken{
+			r := &Token{
 				Domain:        tt.fields.Domain,
 				Roles:         tt.fields.Roles,
 				ExpiryTime:    tt.fields.ExpiryTime,
@@ -179,18 +179,18 @@ func TestRoleToken_SetParams(t *testing.T) {
 				UnsignedToken: tt.fields.UnsignedToken,
 			}
 			if err := r.SetParams(tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
-				t.Errorf("RoleToken.SetParams() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Token.SetParams() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(r); err != nil {
-					t.Errorf("RoleToken set not expected, err: %v", err)
+					t.Errorf("Token set not expected, err: %v", err)
 				}
 			}
 		})
 	}
 }
 
-func TestRoleToken_Expired(t *testing.T) {
+func TestToken_Expired(t *testing.T) {
 	type fields struct {
 		Domain        string
 		Roles         []string
@@ -221,7 +221,7 @@ func TestRoleToken_Expired(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &RoleToken{
+			r := &Token{
 				Domain:        tt.fields.Domain,
 				Roles:         tt.fields.Roles,
 				ExpiryTime:    tt.fields.ExpiryTime,
@@ -230,7 +230,7 @@ func TestRoleToken_Expired(t *testing.T) {
 				UnsignedToken: tt.fields.UnsignedToken,
 			}
 			if got := r.Expired(); got != tt.want {
-				t.Errorf("RoleToken.Expired() = %v, want %v", got, tt.want)
+				t.Errorf("Token.Expired() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -38,7 +38,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "" {
@@ -53,7 +53,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -68,7 +68,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "http://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -83,7 +83,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "https://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -98,7 +98,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "ftp://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "ftp://dummy" {
@@ -137,7 +137,7 @@ func TestSysAuthDomain(t *testing.T) {
 				domain: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.sysAuthDomain != "dummy" {
@@ -152,7 +152,7 @@ func TestSysAuthDomain(t *testing.T) {
 				domain: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 				if c.sysAuthDomain != "" {
 					return fmt.Errorf("invalid domain wasset")
@@ -190,7 +190,7 @@ func TestETagExpTime(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.etagExpTime != time.Duration(time.Hour*2) {
@@ -205,9 +205,9 @@ func TestETagExpTime(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -219,7 +219,7 @@ func TestETagExpTime(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -258,7 +258,7 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.errRetryInterval != time.Duration(time.Hour*2) {
@@ -273,9 +273,9 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -287,7 +287,7 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -326,7 +326,7 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.etagFlushDur != time.Duration(time.Hour*2) {
@@ -341,7 +341,7 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -356,9 +356,9 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -394,7 +394,7 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.refreshDuration != time.Duration(time.Hour*2) {
@@ -409,7 +409,7 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -424,9 +424,9 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -465,7 +465,7 @@ func TestHTTPClient(t *testing.T) {
 					c: c,
 				},
 				checkFunc: func(opt Option) error {
-					cd := &athenzPubkeyd{}
+					cd := &pubkeyd{}
 					if err := opt(cd); err != nil {
 						return err
 					}
@@ -483,11 +483,11 @@ func TestHTTPClient(t *testing.T) {
 				nil,
 			},
 			checkFunc: func(opt Option) error {
-				cd := &athenzPubkeyd{}
+				cd := &pubkeyd{}
 				if err := opt(cd); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(cd, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(cd, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", cd)
 				}
 				return nil

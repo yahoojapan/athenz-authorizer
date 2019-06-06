@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package providerd
+package authorizerd
 
 import (
 	"context"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/policy"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
-	"github.com/yahoojapan/athenz-policy-updater/role"
+	"github.com/yahoojapan/athenz-authorizer/policy"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/role"
 )
 
 type ConfdMock struct {
@@ -30,7 +30,7 @@ type ConfdMock struct {
 	confdExp time.Duration
 }
 
-func (cm *ConfdMock) StartPubkeyUpdater(ctx context.Context) <-chan error {
+func (cm *ConfdMock) Start(ctx context.Context) <-chan error {
 	ech := make(chan error, 1)
 	go func() {
 		time.Sleep(cm.confdExp)
@@ -45,7 +45,7 @@ type PolicydMock struct {
 	wantErr    error
 }
 
-func (pm *PolicydMock) StartPolicyUpdater(context.Context) <-chan error {
+func (pm *PolicydMock) Start(context.Context) <-chan error {
 	ech := make(chan error, 1)
 	go func() {
 		time.Sleep(pm.policydExp)
@@ -58,12 +58,12 @@ func (pm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []s
 	return pm.wantErr
 }
 
-type RoleTokenMock struct {
-	role.RoleTokenParser
+type TokenMock struct {
+	role.Processor
 	wantErr error
-	rt      *role.RoleToken
+	rt      *role.Token
 }
 
-func (rm *RoleTokenMock) ParseAndValidateRoleToken(tok string) (*role.RoleToken, error) {
+func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
 	return rm.rt, rm.wantErr
 }

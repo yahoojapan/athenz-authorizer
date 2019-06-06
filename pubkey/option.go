@@ -34,11 +34,11 @@ var (
 )
 
 // Option represents a functional options pattern interface
-type Option func(*athenzPubkeyd) error
+type Option func(*pubkeyd) error
 
 // AthenzURL represents a AthenzURL functional option
 func AthenzURL(url string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if url == "" {
 			return nil
 		}
@@ -49,7 +49,7 @@ func AthenzURL(url string) Option {
 
 // SysAuthDomain represents a SysAuthDomain functional option
 func SysAuthDomain(d string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if d == "" {
 			return nil
 		}
@@ -60,7 +60,7 @@ func SysAuthDomain(d string) Option {
 
 // ETagExpTime represents a ETagExpTime functional option
 func ETagExpTime(t string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
@@ -76,7 +76,7 @@ func ETagExpTime(t string) Option {
 
 // ETagFlushDur represents a ETagFlushDur functional option
 func ETagFlushDur(t string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
@@ -92,7 +92,7 @@ func ETagFlushDur(t string) Option {
 
 // RefreshDuration represents a RefreshDuration functional option
 func RefreshDuration(t string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
@@ -108,7 +108,7 @@ func RefreshDuration(t string) Option {
 
 // HTTPClient represents a HTTPClient functional option
 func HTTPClient(cl *http.Client) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if c != nil {
 			c.client = cl
 		}
@@ -118,7 +118,7 @@ func HTTPClient(cl *http.Client) Option {
 
 // ErrRetryInterval represents a ErrRetryInterval functional option
 func ErrRetryInterval(i string) Option {
-	return func(c *athenzPubkeyd) error {
+	return func(c *pubkeyd) error {
 		if i == "" {
 			return nil
 		}

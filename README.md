@@ -1,8 +1,8 @@
 # Athenz policy updater
-[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![release](https://img.shields.io/github/release/yahoojapan/athenz-policy-updater.svg?style=flat-square)](https://github.com/yahoojapan/athenz-policy-updater/releases/latest) [![CircleCI](https://circleci.com/gh/yahoojapan/athenz-policy-updater.svg)](https://circleci.com/gh/yahoojapan/athenz-policy-updater) [![codecov](https://codecov.io/gh/yahoojapan/athenz-policy-updater/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-policy-updater) [![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-policy-updater)](https://goreportcard.com/report/github.com/yahoojapan/athenz-policy-updater) [![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-policy-updater.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-policy-updater) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-policy-updater?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=yahoojapan/athenz-policy-updater&amp;utm_campaign=Badge_Grade) [![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-policy-updater?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-policy-updater)
+[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![release](https://img.shields.io/github/release/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://github.com/yahoojapan/athenz-authorizer/releases/latest) [![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer) [![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer) [![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer) [![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=yahoojapan/athenz-authorizer&amp;utm_campaign=Badge_Grade) [![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
 ## What is Athenz policy updater
 
-Athenz policy updater is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to provider authenication and authorization check of user request.
+Athenz policy updater is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authenication and authorization check of user request.
 
 ![Overview](./doc/policy_updater_overview.png)
 
@@ -12,12 +12,12 @@ To initialize policy updater.
 
 ```golang
 
-// Initialize providerd
-daemon, err := providerd.New(
-    providerd.AthenzURL("www.athenz.io"), // set athenz URL
-    providerd.AthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
-    providerd.PubkeyRefreshDuration(time.Hour * 24), // set athenz public key refresh duration
-    providerd.PolicyRefreshDuration(time.Hour), // set policy refresh duration
+// Initialize authorizerd
+daemon, err := authorizerd.New(
+    authorizerd.AthenzURL("www.athenz.io"), // set athenz URL
+    authorizerd.AthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
+    authorizerd.PubkeyRefreshDuration(time.Hour * 24), // set athenz public key refresh duration
+    authorizerd.PolicyRefreshDuration(time.Hour), // set policy refresh duration
 )
 if err != nil {
    // cannot initialize policy updater daemon
@@ -25,7 +25,7 @@ if err != nil {
 
 // Start policy updater daemon
 ctx := context.Background() // user can control policy updator daemon lifetime using this context
-errs := daemon.StartProviderd(ctx)
+errs := daemon.Start(ctx)
 go func() {
     err := <-errs
     // user should handle errors return from the daemon

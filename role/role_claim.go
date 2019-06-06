@@ -13,6 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+package role
 
-// Package authorizerd represents the policy updater daemon.
-package authorizerd
+import (
+	jwt "github.com/dgrijalva/jwt-go"
+)
+
+// Claim represents role jwt claim data.
+type Claim struct {
+	Domain   string `json:"d"`
+	Email    string `json:"email"`
+	KeyID    string `json:"k"`
+	MFA      string `json:"mfa"`
+	Role     string `json:"r"`
+	Salt     string `json:"a"`
+	UserID   string `json:"u"`
+	UserName string `json:"n"`
+	Version  string `json:"v"`
+	jwt.StandardClaims
+}

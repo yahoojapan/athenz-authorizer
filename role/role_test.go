@@ -22,17 +22,17 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
-func TestNewRoleTokenParser(t *testing.T) {
+func TestNew(t *testing.T) {
 	type args struct {
 		prov pubkey.Provider
 	}
 	type test struct {
 		name string
 		args args
-		want RoleTokenParser
+		want Processor
 	}
 	tests := []test{
 		func() test {
@@ -52,8 +52,8 @@ func TestNewRoleTokenParser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewRoleTokenParser(tt.args.prov); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewRoleTokenParser() = %v, want %v", got, tt.want)
+			if got := New(tt.args.prov); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -70,7 +70,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *RoleToken
+		want    *Token
 		wantErr bool
 	}{
 		{
@@ -87,7 +87,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 			args: args{
 				tok: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25;s=dummysignature",
 			},
-			want: &RoleToken{
+			want: &Token{
 				UnsignedToken: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25",
 				Domain:        "dummy.sidecartest",
 				ExpiryTime:    time.Unix(9999999999, 0),
@@ -137,7 +137,7 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 	}
 }
 
-func Test_rtp_parseRoleToken(t *testing.T) {
+func Test_rtp_parseToken(t *testing.T) {
 	type fields struct {
 		pkp pubkey.Provider
 	}
@@ -148,7 +148,7 @@ func Test_rtp_parseRoleToken(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *RoleToken
+		want    *Token
 		wantErr bool
 	}{
 		{
@@ -156,7 +156,7 @@ func Test_rtp_parseRoleToken(t *testing.T) {
 			args: args{
 				tok: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=1550643321;k=0;i=172.16.168.25;s=dummysignature",
 			},
-			want: &RoleToken{
+			want: &Token{
 				UnsignedToken: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=1550643321;k=0;i=172.16.168.25",
 				Domain:        "dummy.sidecartest",
 				ExpiryTime:    time.Date(2019, 2, 20, 6, 15, 21, 0, time.UTC).Local(),
@@ -192,13 +192,13 @@ func Test_rtp_parseRoleToken(t *testing.T) {
 			r := &rtp{
 				pkp: tt.fields.pkp,
 			}
-			got, err := r.parseRoleToken(tt.args.tok)
+			got, err := r.parseToken(tt.args.tok)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("rtp.parseRoleToken() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("rtp.parseToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("rtp.parseRoleToken() = %v, want %v", got, tt.want)
+				t.Errorf("rtp.parseToken() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -209,7 +209,7 @@ func Test_rtp_validate(t *testing.T) {
 		pkp pubkey.Provider
 	}
 	type args struct {
-		rt *RoleToken
+		rt *Token
 	}
 	tests := []struct {
 		name    string
@@ -229,7 +229,7 @@ func Test_rtp_validate(t *testing.T) {
 				},
 			},
 			args: args{
-				&RoleToken{
+				&Token{
 					ExpiryTime: time.Now().Add(time.Hour),
 				},
 			},
@@ -246,7 +246,7 @@ func Test_rtp_validate(t *testing.T) {
 				},
 			},
 			args: args{
-				&RoleToken{
+				&Token{
 					ExpiryTime: time.Now().Add(-1 * time.Hour),
 				},
 			},
@@ -264,7 +264,7 @@ func Test_rtp_validate(t *testing.T) {
 				},
 			},
 			args: args{
-				&RoleToken{
+				&Token{
 					ExpiryTime: time.Now().Add(time.Hour),
 				},
 			},
@@ -278,7 +278,7 @@ func Test_rtp_validate(t *testing.T) {
 				},
 			},
 			args: args{
-				&RoleToken{
+				&Token{
 					ExpiryTime: time.Now().Add(time.Hour),
 				},
 			},

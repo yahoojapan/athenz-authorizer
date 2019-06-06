@@ -30,14 +30,14 @@ import (
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 	"golang.org/x/sync/errgroup"
 )
 
 // Policyd represent the daemon to retrieve policy data from Athenz.
 type Policyd interface {
-	StartPolicyUpdater(context.Context) <-chan error
-	UpdatePolicy(context.Context) error
+	Start(context.Context) <-chan error
+	Update(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
 }
 
@@ -65,8 +65,8 @@ type etagCache struct {
 	sp   *SignedPolicy
 }
 
-// NewPolicyd represent the constructor of Policyd
-func NewPolicyd(opts ...Option) (Policyd, error) {
+// New represent the constructor of Policyd
+func New(opts ...Option) (Policyd, error) {
 	p := &policyd{
 		rolePolicies: gache.New(),
 		etagCache:    gache.New(),
@@ -87,12 +87,12 @@ func NewPolicyd(opts ...Option) (Policyd, error) {
 	return p, nil
 }
 
-// StartPolicyUpdater starts the Policy daemon to retrive the policy data periodically
-func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
+// Start starts the Policy daemon to retrive the policy data periodically
+func (p *policyd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.UpdatePolicy(ctx); err != nil {
+	if err := p.Update(ctx); err != nil {
 		ech <- errors.Wrap(err, "error update policy")
 		fch <- struct{}{}
 	}
@@ -117,7 +117,7 @@ func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
 				}
 				return
 			case <-fch:
-				if err := p.UpdatePolicy(ctx); err != nil {
+				if err := p.Update(ctx); err != nil {
 					err = errors.Wrap(err, "error update policy")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
@@ -133,7 +133,7 @@ func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
 					}
 				}
 			case <-ticker.C:
-				if err := p.UpdatePolicy(ctx); err != nil {
+				if err := p.Update(ctx); err != nil {
 					err = errors.Wrap(err, "error update policy")
 					select {
 					case ech <- errors.Wrap(ebuf, err.Error()):
@@ -154,8 +154,8 @@ func (p *policyd) StartPolicyUpdater(ctx context.Context) <-chan error {
 	return ech
 }
 
-// UpdatePolicy updates and cache policy data
-func (p *policyd) UpdatePolicy(ctx context.Context) error {
+// Update updates and cache policy data
+func (p *policyd) Update(ctx context.Context) error {
 	glg.Info("Updating policy")
 	defer glg.Info("Updated policy")
 	eg := errgroup.Group{}

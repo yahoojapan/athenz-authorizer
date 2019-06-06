@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
 var (

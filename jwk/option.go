@@ -13,6 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+package jwk
 
-// Package authorizerd represents the policy updater daemon.
-package authorizerd
+var (
+	defaultOptions = []Option{
+		Sample("sample"),
+	}
+)
+
+// Option represents a functional options pattern interface
+type Option func(*jwkd) error
+
+// Sample represents a Sample functional option
+func Sample(t string) Option {
+	return func(j *jwkd) error {
+		return nil
+	}
+}

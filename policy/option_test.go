@@ -23,7 +23,7 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
 func TestEtagFlushDur(t *testing.T) {

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package providerd
+package authorizerd
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func TestPolicyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -75,7 +75,7 @@ func TestPubkeyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -110,7 +110,7 @@ func TestAthenzURL(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -145,7 +145,7 @@ func TestAthenzDomains(t *testing.T) {
 				t: []string{"dummy1", "dummy2"},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -180,7 +180,7 @@ func TestPubkeySysAuthDomain(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -215,7 +215,7 @@ func TestPubkeyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -250,7 +250,7 @@ func TestPubkeyEtagFlushDur(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -285,7 +285,7 @@ func TestPolicyExpireMargin(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -320,7 +320,7 @@ func TestPolicyEtagFlushDur(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -355,7 +355,7 @@ func TestPolicyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -390,7 +390,7 @@ func TestCacheExp(t *testing.T) {
 				d: time.Duration(time.Hour * 2),
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{
+				prov := &authorizer{
 					cache: gache.New(),
 				}
 				if err := opt(prov); err != nil {
@@ -427,7 +427,7 @@ func TestTransport(t *testing.T) {
 				t: &http.Transport{},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -443,7 +443,7 @@ func TestTransport(t *testing.T) {
 				t: nil,
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
