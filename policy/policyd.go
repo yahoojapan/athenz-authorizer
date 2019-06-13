@@ -103,29 +103,19 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		p.rolePolicies.StartExpired(ctx, time.Hour*24)
 		ticker := time.NewTicker(p.refreshDuration)
-		ebuf := errors.New("")
 		for {
 			select {
 			case <-ctx.Done():
 				glg.Info("Stopping policyd updater")
 				ticker.Stop()
 				ech <- ctx.Err()
-				if ebuf.Error() != "" {
-					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
-				} else {
-					ech <- ctx.Err()
-				}
 				return
 			case <-fch:
 				if err := p.Update(ctx); err != nil {
-					err = errors.Wrap(err, "error update policy")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
+					ech <- errors.Wrap(err, "error update policy")
+
 					time.Sleep(p.errRetryInterval)
+
 					select {
 					case fch <- struct{}{}:
 					default:
@@ -134,13 +124,8 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 				}
 			case <-ticker.C:
 				if err := p.Update(ctx); err != nil {
-					err = errors.Wrap(err, "error update policy")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
+					ech <- errors.Wrap(err, "error update policy")
+
 					select {
 					case fch <- struct{}{}:
 					default:
@@ -324,11 +309,10 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 
 func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	rp := gache.New()
-	defer rp.Clear()
-
 	eg := errgroup.Group{}
 	mu := new(sync.Mutex)
 	assm := new(sync.Map)
+
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
 		eg.Go(func() error {
@@ -381,18 +365,6 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return retErr
 	}
 
-	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
-		return true
-	})
-
-	p.rolePolicies.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		_, ok := rp.Get(k)
-		if !ok {
-			p.rolePolicies.Delete(k)
-		}
-		return true
-	})
-
+	p.rolePolicies = rp
 	return nil
 }
