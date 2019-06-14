@@ -42,10 +42,13 @@ type Policyd interface {
 }
 
 type policyd struct {
-	expireMargin     time.Duration // expire margin force update policy when the policy expire time hit the margin
-	rolePolicies     gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
-	refreshDuration  time.Duration
+	expireMargin time.Duration // expire margin force update policy when the policy expire time hit the margin
+	rolePolicies gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
+
+	refreshDuration time.Duration
+	//flushDur time.Duration
 	errRetryInterval time.Duration
+	rpCancelFunc     context.CancelFunc // role policies cancel func
 
 	pkp pubkey.Provider
 
@@ -100,8 +103,12 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 	go func() {
 		defer close(fch)
 		defer close(ech)
+
+		rpCtx, rpCancelFunc := context.WithCancel(ctx)
+		p.rpCancelFunc = rpCancelFunc
+		p.rolePolicies.StartExpired(rpCtx, time.Minute)
+
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
-		p.rolePolicies.StartExpired(ctx, time.Hour*24)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
 			select {
@@ -365,13 +372,17 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return retErr
 	}
 
-	oldRp := p.rolePolicies
-	p.rolePolicies = rp
-	// cleanup
-	go func() {
+	// cleanup old role policies
+	defer func(oldRp gache.Gache, oldRpCancelFunc context.CancelFunc) {
+		oldRpCancelFunc()
 		oldRp.DisableExpiredHook()
 		oldRp.Clear()
-	}()
+	}(p.rolePolicies, p.rpCancelFunc)
+
+	rpCtx, rpCancelFunc := context.WithCancel(ctx)
+	rp.StartExpired(rpCtx, time.Minute)
+	p.rolePolicies = rp
+	p.rpCancelFunc = rpCancelFunc
 
 	return nil
 }
