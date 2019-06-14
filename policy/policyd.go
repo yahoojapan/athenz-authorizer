@@ -365,6 +365,13 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return retErr
 	}
 
+	oldRp := p.rolePolicies
 	p.rolePolicies = rp
+	// cleanup
+	go func() {
+		oldRp.DisableExpiredHook()
+		oldRp.Clear()
+	}()
+
 	return nil
 }
