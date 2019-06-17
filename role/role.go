@@ -20,6 +20,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
@@ -30,7 +31,8 @@ type Processor interface {
 }
 
 type rtp struct {
-	pkp pubkey.Provider
+	pkp  pubkey.Provider
+	jwkp jwk.Provider
 }
 
 // New returns the Role instance.
@@ -42,7 +44,7 @@ func New(prov pubkey.Provider) Processor {
 
 func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
 	tok, err := jwt.ParseWithClaims(cred, &Claim{}, func(token *jwt.Token) (interface{}, error) {
-		// TODO token verify with jwk
+		token.Method.Verify(token.SigningString(), token.Signature, r.jwkp(token.Method.Alg(), token.Header["kid"]))
 		return nil, nil
 	})
 

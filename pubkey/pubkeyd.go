@@ -26,10 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"golang.org/x/sync/errgroup"
 )
@@ -106,42 +105,35 @@ func New(opts ...Option) (Pubkeyd, error) {
 }
 
 // Start starts the pubkey daemon to retrive the public key periodically
-func (c *pubkeyd) Start(ctx context.Context) <-chan error {
+func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting pubkey updator")
+
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := c.Update(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update athenz pubkey")
+	if err := p.Update(ctx); err != nil {
+		ech <- errors.Wrap(err, "error update pubkey")
 		fch <- struct{}{}
 	}
 
 	go func() {
 		defer close(fch)
 		defer close(ech)
-		c.etagCache.StartExpired(ctx, c.etagFlushDur)
-		ticker := time.NewTicker(c.refreshDuration)
-		ebuf := errors.New("")
+
+		p.etagCache.StartExpired(ctx, p.etagFlushDur)
+		ticker := time.NewTicker(p.refreshDuration)
 		for {
 			select {
 			case <-ctx.Done():
-				glg.Info("Stopping pubkeyd")
+				glg.Info("Stopping pubkey updater")
 				ticker.Stop()
-				if ebuf.Error() != "" {
-					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
-				} else {
-					ech <- ctx.Err()
-				}
+				ech <- ctx.Err()
 				return
 			case <-fch:
-				if err := c.Update(ctx); err != nil {
-					err = errors.Wrap(err, "error update athenz pubkey")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
-					time.Sleep(c.errRetryInterval)
+				if err := p.Update(ctx); err != nil {
+					ech <- errors.Wrap(err, "error update pubkey")
+
+					time.Sleep(p.errRetryInterval)
+
 					select {
 					case fch <- struct{}{}:
 					default:
@@ -149,14 +141,9 @@ func (c *pubkeyd) Start(ctx context.Context) <-chan error {
 					}
 				}
 			case <-ticker.C:
-				if err := c.Update(ctx); err != nil {
-					err = errors.Wrap(err, "error update athenz pubkey")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
+				if err := p.Update(ctx); err != nil {
+					ech <- errors.Wrap(err, "error update pubkey")
+
 					select {
 					case fch <- struct{}{}:
 					default:

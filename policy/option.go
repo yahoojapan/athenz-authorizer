@@ -28,9 +28,10 @@ var (
 		ExpireMargin("3h"),
 		EtagFlushDur("12h"),
 		EtagExpTime("24h"),
+		PolicyExpiredDuration("1m"),
 		RefreshDuration("30m"),
 		ErrRetryInterval("1m"),
-		HTTPClient(&http.Client{}),
+		HTTPClient(http.DefaultClient),
 	}
 )
 
@@ -100,6 +101,21 @@ func AthenzDomains(doms ...string) Option {
 			return nil
 		}
 		pol.athenzDomains = doms
+		return nil
+	}
+}
+
+// PolicyExpiredDuration represents a PolicyExpiredDuration functional option
+func PolicyExpiredDuration(t string) Option {
+	return func(pol *policyd) error {
+		if t == "" {
+			return nil
+		}
+		rd, err := time.ParseDuration(t)
+		if err != nil {
+			return errors.Wrap(err, "invalid refresh duration")
+		}
+		pol.policyExpiredDuration = rd
 		return nil
 	}
 }
