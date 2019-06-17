@@ -48,7 +48,6 @@ type policyd struct {
 	refreshDuration time.Duration
 	//flushDur time.Duration
 	errRetryInterval time.Duration
-	rpCancelFunc     context.CancelFunc // role policies cancel func
 
 	pkp pubkey.Provider
 
@@ -104,10 +103,7 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		rpCtx, rpCancelFunc := context.WithCancel(ctx)
-		p.rpCancelFunc = rpCancelFunc
-		p.rolePolicies.StartExpired(rpCtx, time.Minute)
-
+		p.rolePolicies.StartExpired(ctx, time.Minute)
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
@@ -373,16 +369,14 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	}
 
 	// cleanup old role policies
-	defer func(oldRp gache.Gache, oldRpCancelFunc context.CancelFunc) {
-		oldRpCancelFunc()
+	defer func(oldRp gache.Gache) {
 		oldRp.DisableExpiredHook()
+		oldRp.Stop()
 		oldRp.Clear()
-	}(p.rolePolicies, p.rpCancelFunc)
+	}(p.rolePolicies)
 
-	rpCtx, rpCancelFunc := context.WithCancel(ctx)
-	rp.StartExpired(rpCtx, time.Minute)
+	rp.StartExpired(ctx, time.Minute)
 	p.rolePolicies = rp
-	p.rpCancelFunc = rpCancelFunc
 
 	return nil
 }
