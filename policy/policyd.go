@@ -39,6 +39,7 @@ type Policyd interface {
 	Start(context.Context) <-chan error
 	Update(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
+	GetPolicyCache(context.Context) map[string]interface{}
 }
 
 type policyd struct {
@@ -374,4 +375,8 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	p.rolePolicies.StartExpired(ctx, p.policyExpiredDuration)
 
 	return nil
+}
+
+func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return p.rolePolicies.ToMap(ctx)
 }
