@@ -82,8 +82,7 @@ func New(opts ...Option) (Policyd, error) {
 	})
 
 	for _, opt := range append(defaultOptions, opts...) {
-		err := opt(p)
-		if err != nil {
+		if err := opt(p); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
 	}
@@ -97,6 +96,7 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
 	if err := p.Update(ctx); err != nil {
+		glg.Debugf("Error initialize policy data, err: %v", err)
 		ech <- errors.Wrap(err, "error update policy")
 		fch <- struct{}{}
 	}
@@ -226,16 +226,19 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 	if err != nil {
+		glg.Debugf("fetch policy failed, err: %v", err)
 		return errors.Wrap(err, "error fetch policy")
 	}
+	glg.Debugf("fetch policy success, updated: %v", upd)
 
 	if upd {
-		if glg.Get().GetCurrentMode(glg.DEBG) != glg.NONE {
+		glg.DebugFunc(func() string {
 			rawpol, _ := json.Marshal(spd)
-			glg.Debugf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
-		}
+			return fmt.Sprintf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
+		})
 
 		if err = p.simplifyAndCache(ctx, spd); err != nil {
+			glg.Debugf("simplify and cache error: %v", err)
 			return errors.Wrap(err, "error simplify and cache")
 		}
 	}
@@ -248,9 +251,10 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
 	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", p.athenzURL, domain)
 
+	glg.Debugf("fetching policy, url: %v", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		glg.Errorf("Fetch policy error, domain: %s, error: %v", domain, err)
+		glg.Errorf("fetch policy error, domain: %s, error: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error creating fetch policy request")
 	}
 
@@ -315,7 +319,6 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
 	rp := gache.New()
 	eg := errgroup.Group{}
-	mu := new(sync.Mutex)
 	assm := new(sync.Map) // assertion map
 
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
@@ -351,20 +354,18 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		ass := val.(*util.Assertion)
 		a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
 		if err != nil {
-			glg.Debug("error adding assertion to the cache, err: %v", err)
+			glg.Debugf("error adding assertion to the cache, err: %v", err)
 			retErr = err
 			return false
 		}
-		var asss []*Assertion
 
-		mu.Lock()
+		var asss []*Assertion
 		if r, ok := rp.Get(ass.Role); ok {
 			asss = append(r.([]*Assertion), a)
 		} else {
 			asss = []*Assertion{a}
 		}
 		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
-		mu.Unlock()
 
 		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true
