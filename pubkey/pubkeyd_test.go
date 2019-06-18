@@ -1017,7 +1017,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 					goter := <-ch
 					cancel()
 
-					want := "error update athenz pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
+					want := "error update pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
 					if goter.Error() != want {
 						return errors.Errorf("got: %s, want: %s", goter, want)
 					}

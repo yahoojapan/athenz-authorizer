@@ -330,6 +330,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 					if _, ok := assm.Load(km); !ok {
 						assm.Store(km, ass)
 					} else {
+						// deny policy will override allow policy, and also remove duplication
 						if strings.EqualFold("deny", ass.Effect) {
 							assm.Store(km, ass)
 						}
@@ -350,6 +351,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		ass := val.(*util.Assertion)
 		a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
 		if err != nil {
+			glg.Debug("error adding assertion to the cache, err: %v", err)
 			retErr = err
 			return false
 		}
@@ -364,6 +366,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
 		mu.Unlock()
 
+		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true
 	})
 	if retErr != nil {
