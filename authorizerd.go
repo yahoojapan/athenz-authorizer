@@ -37,12 +37,13 @@ type Authorizerd interface {
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
+	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
 
 type authorizer struct {
 	//
-	pubkeyd    pubkey.Pubkeyd
-	policyd    policy.Policyd
+	pubkeyd       pubkey.Pubkeyd
+	policyd       policy.Policyd
 	roleProcessor role.Processor
 
 	// common parameters
@@ -239,4 +240,9 @@ func (p *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	}
 
 	return errors.Wrap(err, "role certificates unauthorizate")
+}
+
+func (a *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return a.policyd.GetPolicyCache(ctx)
+
 }

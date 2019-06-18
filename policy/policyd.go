@@ -316,7 +316,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	rp := gache.New()
 	eg := errgroup.Group{}
 	mu := new(sync.Mutex)
-	assm := new(sync.Map)
+	assm := new(sync.Map) // assertion map
 
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
@@ -334,7 +334,6 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 							assm.Store(km, ass)
 						}
 					}
-
 				}
 			}
 
@@ -364,6 +363,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		}
 		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
 		mu.Unlock()
+
 		return true
 	})
 	if retErr != nil {
@@ -378,5 +378,5 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 }
 
 func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return p.rolePolicies.ToMap(ctx)
+	return p.rolePolicies.ToRawMap(ctx)
 }
