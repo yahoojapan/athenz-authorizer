@@ -168,7 +168,7 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 		dec := new(authcore.YBase64)
 		pubKeys, upded, err := c.fetchPubKeyEntries(ctx, env)
 		if err != nil {
-			glg.Errorf("Error updating athenz pubkey, error: %v", err)
+			glg.Errorf("Error updating athenz pubkey, env: %v, error: %v", env, err)
 			return errors.Wrap(err, "error fetch public key entries")
 		}
 		if !upded {
@@ -177,19 +177,19 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 		}
 
 		for _, key := range pubKeys.PublicKeys {
-			glg.Debugf("Decoding key, keyID: %v", key.ID)
+			glg.Debugf("Decoding key,env: %v,  keyID: %v", env, key.ID)
 			decKey, err := dec.DecodeString(key.Key)
 			if err != nil {
-				glg.Errorf("error decoding key, error: %v", err)
+				glg.Errorf("error decoding key, env: %v, error: %v", env, err)
 				return errors.Wrap(err, "error decoding key")
 			}
 			ver, err := authcore.NewVerifier(decKey)
 			if err != nil {
-				glg.Errorf("error initializing verifier, error: %v", err)
+				glg.Errorf("error initializing verifier, env: %v, error: %v", env, err)
 				return errors.Wrap(err, "error initializing verifier")
 			}
 			cm.Store(key.ID, ver)
-			glg.Debugf("Successfully decode key, keyID: %v", key.ID)
+			glg.Debugf("Successfully decode key, env: %v, keyID: %v", env, key.ID)
 		}
 		cm.Range(func(key interface{}, val interface{}) bool {
 			cache.Store(key, val)
