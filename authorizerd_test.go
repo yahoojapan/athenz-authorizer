@@ -22,6 +22,7 @@ import (
 
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/policy"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/role"
@@ -112,6 +113,7 @@ func TestStart(t *testing.T) {
 	type fields struct {
 		pubkeyd  pubkey.Pubkeyd
 		policyd  policy.Policyd
+		jwkd     jwk.Daemon
 		cache    gache.Gache
 		cacheExp time.Duration
 	}
@@ -134,11 +136,13 @@ func TestStart(t *testing.T) {
 			pm := &PolicydMock{
 				policydExp: time.Second,
 			}
+			jd := &JwkdMock{}
 			return test{
 				name: "test context done",
 				fields: fields{
 					pubkeyd:  cm,
 					policyd:  pm,
+					jwkd:     jd,
 					cache:    gache.New(),
 					cacheExp: time.Minute,
 				},
@@ -164,11 +168,13 @@ func TestStart(t *testing.T) {
 			pm := &PolicydMock{
 				policydExp: time.Second,
 			}
+			jd := &JwkdMock{}
 			return test{
 				name: "test context pubkey updater returns error",
 				fields: fields{
 					pubkeyd:  cm,
 					policyd:  pm,
+					jwkd:     jd,
 					cache:    gache.New(),
 					cacheExp: time.Minute,
 				},
@@ -194,11 +200,13 @@ func TestStart(t *testing.T) {
 			pm := &PolicydMock{
 				policydExp: time.Millisecond * 10,
 			}
+			jd := &JwkdMock{}
 			return test{
 				name: "test policyd returns error",
 				fields: fields{
 					pubkeyd:  cm,
 					policyd:  pm,
+					jwkd:     jd,
 					cache:    gache.New(),
 					cacheExp: time.Minute,
 				},

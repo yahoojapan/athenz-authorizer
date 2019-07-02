@@ -67,3 +67,30 @@ type TokenMock struct {
 func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
 	return rm.rt, rm.wantErr
 }
+
+type JwkdMock struct {
+	StartFunc       func(context.Context) <-chan error
+	UpdateFunc      func(context.Context) error
+	GetProviderFunc func() Provider
+}
+
+func (jm *JwkdMock) Start(ctx context.Context) <-chan error {
+	if jm.StartFunc != nil {
+		return jm.StartFunc(ctx)
+	}
+	return nil
+}
+
+func (jm *JwkdMock) Update(ctx context.Context) error {
+	if jm.UpdateFunc != nil {
+		return jm.UpdateFunc(ctx)
+	}
+	return nil
+}
+
+func (jm *JwkdMock) GetProvider() Provider {
+	if jm.GetProviderFunc != nil {
+		return jm.GetProviderFunc()
+	}
+	return nil
+}

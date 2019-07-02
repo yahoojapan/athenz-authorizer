@@ -27,7 +27,7 @@ import (
 
 func TestNew(t *testing.T) {
 	type args struct {
-		prov pubkey.Provider
+		opts []Option
 	}
 	type test struct {
 		name string
@@ -35,25 +35,20 @@ func TestNew(t *testing.T) {
 		want Processor
 	}
 	tests := []test{
-		func() test {
-			/*		p := pubkey.Provider(func(pubkey.AthenzEnv, string) authcore.Verifier {
-					return nil
-				})*/
-			return test{
-				name: "new success",
-				args: args{
-					nil,
-				},
-				want: &rtp{
-					nil,
-					nil,
-				},
-			}
-		}(),
+		{
+			name: "new success",
+			args: args{
+				opts: nil,
+			},
+			want: &rtp{
+				nil,
+				nil,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.prov); !reflect.DeepEqual(got, tt.want) {
+			if got := New(tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
