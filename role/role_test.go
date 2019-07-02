@@ -31,7 +31,6 @@ func TestNew(t *testing.T) {
 	}
 	type test struct {
 		name string
-		args args
 		want Processor
 	}
 	tests := []test{

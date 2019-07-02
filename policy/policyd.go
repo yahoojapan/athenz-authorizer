@@ -35,7 +35,7 @@ import (
 )
 
 // Policyd represent the daemon to retrieve policy data from Athenz.
-type Policyd interface {
+type Daemon interface {
 	Start(context.Context) <-chan error
 	Update(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
@@ -70,7 +70,7 @@ type etagCache struct {
 }
 
 // New represent the constructor of Policyd
-func New(opts ...Option) (Policyd, error) {
+func New(opts ...Option) (Daemon, error) {
 	p := &policyd{
 		rolePolicies: gache.New(),
 		etagCache:    gache.New(),
