@@ -26,12 +26,8 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	type args struct {
-		prov pubkey.Provider
-	}
 	type test struct {
 		name string
-		args args
 		want Processor
 	}
 	tests := []test{
@@ -41,9 +37,6 @@ func TestNew(t *testing.T) {
 				})*/
 			return test{
 				name: "new success",
-				args: args{
-					nil,
-				},
 				want: &rtp{
 					nil,
 					nil,
@@ -53,7 +46,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.prov); !reflect.DeepEqual(got, tt.want) {
+			if got := New(nil); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
