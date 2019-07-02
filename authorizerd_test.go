@@ -60,7 +60,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "test new success with options",
 			args: args{
-				[]Option{AthenzURL("www.dummy.com")},
+				[]Option{WithAthenzURL("www.dummy.com")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
 				if err != nil {
@@ -75,7 +75,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "test New returns error",
 			args: args{
-				[]Option{PubkeyEtagExpTime("dummy")},
+				[]Option{WithPubkeyEtagExpTime("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
 				want := "error create pubkeyd: invalid etag expire time: time: invalid duration dummy"
@@ -88,7 +88,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "test NewPolicy returns error",
 			args: args{
-				[]Option{PolicyEtagExpTime("dummy")},
+				[]Option{WithPolicyEtagExpTime("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
 				if err.Error() != "error create policyd: error create policyd: invalid etag expire time: time: invalid duration dummy" {
@@ -243,9 +243,9 @@ func TestVerifyRoleToken(t *testing.T) {
 		res string
 	}
 	type fields struct {
-		policyd         policy.Policyd
-		cache           gache.Gache
-		cacheExp        time.Duration
+		policyd            policy.Policyd
+		cache              gache.Gache
+		cacheExp           time.Duration
 		roleTokenProcessor role.Processor
 	}
 	type test struct {
@@ -274,10 +274,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "",
 				checkFunc: func(prov *authorizer) error {
@@ -308,10 +308,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "",
 			}
@@ -335,10 +335,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
 			}
@@ -362,10 +362,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
 			}
@@ -385,10 +385,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "error verify role token: cannot parse roletoken",
 			}
@@ -410,10 +410,10 @@ func TestVerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:         cm,
+					policyd:            cm,
 					roleTokenProcessor: rm,
-					cache:           c,
-					cacheExp:        time.Minute,
+					cache:              c,
+					cacheExp:           time.Minute,
 				},
 				wantErr: "role token unauthorizate: deny",
 			}
@@ -422,10 +422,10 @@ func TestVerifyRoleToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			prov := &authorizer{
-				policyd:    tt.fields.policyd,
+				policyd:       tt.fields.policyd,
 				roleProcessor: tt.fields.roleTokenProcessor,
-				cache:      tt.fields.cache,
-				cacheExp:   tt.fields.cacheExp,
+				cache:         tt.fields.cache,
+				cacheExp:      tt.fields.cacheExp,
 			}
 			err := prov.VerifyRoleToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {

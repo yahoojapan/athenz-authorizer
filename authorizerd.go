@@ -93,25 +93,25 @@ func New(opts ...Option) (Authorizerd, error) {
 	}
 
 	if prov.pubkeyd, err = pubkey.New(
-		pubkey.AthenzURL(prov.athenzURL),
-		pubkey.SysAuthDomain(prov.pubkeySysAuthDomain),
-		pubkey.ETagExpTime(prov.pubkeyEtagExpTime),
-		pubkey.ETagFlushDur(prov.pubkeyEtagFlushDur),
-		pubkey.RefreshDuration(prov.pubkeyRefreshDuration),
-		pubkey.HTTPClient(prov.client),
+		pubkey.WithAthenzURL(prov.athenzURL),
+		pubkey.WithSysAuthDomain(prov.pubkeySysAuthDomain),
+		pubkey.WithEtagExpTime(prov.pubkeyEtagExpTime),
+		pubkey.WithEtagFlushDuration(prov.pubkeyEtagFlushDur),
+		pubkey.WithRefreshDuration(prov.pubkeyRefreshDuration),
+		pubkey.WithHTTPClient(prov.client),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create pubkeyd")
 	}
 
 	if prov.policyd, err = policy.New(
-		policy.ExpireMargin(prov.policyExpireMargin),
-		policy.EtagFlushDur(prov.policyEtagFlushDur),
-		policy.EtagExpTime(prov.policyEtagExpTime),
-		policy.AthenzURL(prov.athenzURL),
-		policy.AthenzDomains(prov.athenzDomains...),
-		policy.RefreshDuration(prov.policyRefreshDuration),
-		policy.HTTPClient(prov.client),
-		policy.PubKeyProvider(prov.pubkeyd.GetProvider()),
+		policy.WithExpireMargin(prov.policyExpireMargin),
+		policy.WithEtagFlushDuration(prov.policyEtagFlushDur),
+		policy.WithEtagExpTime(prov.policyEtagExpTime),
+		policy.WithAthenzURL(prov.athenzURL),
+		policy.WithAthenzDomains(prov.athenzDomains...),
+		policy.WithRefreshDuration(prov.policyRefreshDuration),
+		policy.WithHTTPClient(prov.client),
+		policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create policyd")
 	}

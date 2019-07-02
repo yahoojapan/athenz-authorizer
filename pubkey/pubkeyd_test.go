@@ -61,8 +61,8 @@ func Test_pubkey_New(t *testing.T) {
 			name: "new athenz pubkeyd success with options",
 			args: args{
 				opts: []Option{
-					SysAuthDomain("dummyd"),
-					AthenzURL("dummyURL"),
+					WithSysAuthDomain("dummyd"),
+					WithAthenzURL("dummyURL"),
 				},
 			},
 			checkFunc: func(got Pubkeyd, err error) error {
@@ -79,9 +79,9 @@ func Test_pubkey_New(t *testing.T) {
 			name: "new athenz pubkeyd success with invalid options",
 			args: args{
 				opts: []Option{
-					SysAuthDomain("dummyd"),
-					AthenzURL("dummyURL"),
-					ETagExpTime("invalid"),
+					WithSysAuthDomain("dummyd"),
+					WithAthenzURL("dummyURL"),
+					WithEtagExpTime("invalid"),
 				},
 			},
 			checkFunc: func(got Pubkeyd, err error) error {

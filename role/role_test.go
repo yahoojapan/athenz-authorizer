@@ -46,6 +46,7 @@ func TestNew(t *testing.T) {
 				},
 				want: &rtp{
 					nil,
+					nil,
 				},
 			}
 		}(),

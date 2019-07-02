@@ -15,18 +15,70 @@ limitations under the License.
 */
 package jwk
 
+import (
+	"net/http"
+	"time"
+
+	"github.com/pkg/errors"
+)
+
 var (
 	defaultOptions = []Option{
-		Sample("sample"),
+		WithAthenzURL("www.athenz.com/zts/v1"),
+		WithRefreshDuration("60m"),
+		WithErrRetryInterval("10s"),
+		WithHTTPClient(http.DefaultClient),
 	}
 )
 
 // Option represents a functional options pattern interface
 type Option func(*jwkd) error
 
-// Sample represents a Sample functional option
-func Sample(t string) Option {
+// WithAthenzURL represents set athenzURL functional option
+func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
+		if url == "" {
+			return nil
+		}
+		j.athenzURL = url
+		return nil
+	}
+}
+
+// WithRefreshDuration represents a RefreshDuration functional option
+func WithRefreshDuration(t string) Option {
+	return func(j *jwkd) error {
+		if t == "" {
+			return nil
+		}
+		rd, err := time.ParseDuration(t)
+		if err != nil {
+			return errors.Wrap(err, "invalid refresh duration")
+		}
+		j.refreshDuration = rd
+		return nil
+	}
+}
+
+// WithErrRetryInterval represents a ErrRetryInterval functional option
+func WithErrRetryInterval(i string) Option {
+	return func(j *jwkd) error {
+		if i == "" {
+			return nil
+		}
+		ri, err := time.ParseDuration(i)
+		if err != nil {
+			return errors.Wrap(err, "invalid err retry interval")
+		}
+		j.errRetryInterval = ri
+		return nil
+	}
+}
+
+// WithHTTPClient represents a HTTPClient functional option
+func WithHTTPClient(cl *http.Client) Option {
+	return func(j *jwkd) error {
+		j.client = cl
 		return nil
 	}
 }

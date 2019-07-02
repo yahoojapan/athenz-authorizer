@@ -25,21 +25,21 @@ import (
 
 var (
 	defaultOptions = []Option{
-		ExpireMargin("3h"),
-		EtagFlushDur("12h"),
-		EtagExpTime("24h"),
-		PolicyExpiredDuration("1m"),
-		RefreshDuration("30m"),
-		ErrRetryInterval("1m"),
-		HTTPClient(http.DefaultClient),
+		WithExpireMargin("3h"),
+		WithEtagFlushDuration("12h"),
+		WithEtagExpTime("24h"),
+		WithPolicyExpiredDuration("1m"),
+		WithRefreshDuration("30m"),
+		WithErrRetryInterval("1m"),
+		WithHTTPClient(http.DefaultClient),
 	}
 )
 
 // Option represents a functional options pattern interface
 type Option func(*policyd) error
 
-// EtagFlushDur represents a ETagFlushDur functional option
-func EtagFlushDur(t string) Option {
+// WithEtagFlushDuration represents a ETagFlushDur functional option
+func WithEtagFlushDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
 			return nil
@@ -53,8 +53,8 @@ func EtagFlushDur(t string) Option {
 	}
 }
 
-// ExpireMargin represents a ExpiryMargin functional option
-func ExpireMargin(t string) Option {
+// WithExpireMargin represents a ExpiryMargin functional option
+func WithExpireMargin(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
 			return nil
@@ -68,8 +68,8 @@ func ExpireMargin(t string) Option {
 	}
 }
 
-// EtagExpTime represents a EtagExpTime functional option
-func EtagExpTime(t string) Option {
+// WithEtagExpTime represents a EtagExpTime functional option
+func WithEtagExpTime(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
 			return nil
@@ -83,8 +83,8 @@ func EtagExpTime(t string) Option {
 	}
 }
 
-// AthenzURL represents a AthenzURL functional option
-func AthenzURL(url string) Option {
+// WithAthenzURL represents a AthenzURL functional option
+func WithAthenzURL(url string) Option {
 	return func(pol *policyd) error {
 		if url == "" {
 			return nil
@@ -94,8 +94,8 @@ func AthenzURL(url string) Option {
 	}
 }
 
-// AthenzDomains represents a AthenzDomain functional option
-func AthenzDomains(doms ...string) Option {
+// WithAthenzDomains represents a AthenzDomain functional option
+func WithAthenzDomains(doms ...string) Option {
 	return func(pol *policyd) error {
 		if doms == nil {
 			return nil
@@ -105,8 +105,8 @@ func AthenzDomains(doms ...string) Option {
 	}
 }
 
-// PolicyExpiredDuration represents a PolicyExpiredDuration functional option
-func PolicyExpiredDuration(t string) Option {
+// WithPolicyExpiredDuration represents a PolicyExpiredDuration functional option
+func WithPolicyExpiredDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
 			return nil
@@ -120,8 +120,8 @@ func PolicyExpiredDuration(t string) Option {
 	}
 }
 
-// RefreshDuration represents a RefreshDuration functional option
-func RefreshDuration(t string) Option {
+// WithRefreshDuration represents a RefreshDuration functional option
+func WithRefreshDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
 			return nil
@@ -135,8 +135,8 @@ func RefreshDuration(t string) Option {
 	}
 }
 
-// HTTPClient represents a HttpClient functional option
-func HTTPClient(c *http.Client) Option {
+// WithHTTPClient represents a HttpClient functional option
+func WithHTTPClient(c *http.Client) Option {
 	return func(pol *policyd) error {
 		if c != nil {
 			pol.client = c
@@ -145,8 +145,8 @@ func HTTPClient(c *http.Client) Option {
 	}
 }
 
-// PubKeyProvider represents a PubKeyProvider functional option
-func PubKeyProvider(pkp pubkey.Provider) Option {
+// WithPubKeyProvider represents a PubKeyProvider functional option
+func WithPubKeyProvider(pkp pubkey.Provider) Option {
 	return func(pol *policyd) error {
 		if pkp != nil {
 			pol.pkp = pkp
@@ -155,8 +155,8 @@ func PubKeyProvider(pkp pubkey.Provider) Option {
 	}
 }
 
-// ErrRetryInterval represents a ErrRetryInterval functional option
-func ErrRetryInterval(i string) Option {
+// WithErrRetryInterval represents a ErrRetryInterval functional option
+func WithErrRetryInterval(i string) Option {
 	return func(pol *policyd) error {
 		if i == "" {
 			return nil

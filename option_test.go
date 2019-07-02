@@ -25,7 +25,7 @@ import (
 	"github.com/kpango/gache"
 )
 
-func TestPolicyRefreshDuration(t *testing.T) {
+func TestWithPolicyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -53,14 +53,14 @@ func TestPolicyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyRefreshDuration(tt.args.t)
+			got := WithPolicyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyRefreshDuration() error = %v", err)
+				t.Errorf("WithPolicyRefreshDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyRefreshDuration(t *testing.T) {
+func TestWithPubkeyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -88,14 +88,14 @@ func TestPubkeyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyRefreshDuration(tt.args.t)
+			got := WithPubkeyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyRefreshDuration() error = %v", err)
+				t.Errorf("WithPubkeyRefreshDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzURL(t *testing.T) {
+func TestWithAthenzURL(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -123,14 +123,14 @@ func TestAthenzURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzURL(tt.args.t)
+			got := WithAthenzURL(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzURL() error = %v", err)
+				t.Errorf("WithAthenzURL() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzDomains(t *testing.T) {
+func TestWithAthenzDomains(t *testing.T) {
 	type args struct {
 		t []string
 	}
@@ -158,14 +158,15 @@ func TestAthenzDomains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzDomains(tt.args.t...)
+			got := WithAthenzDomains(tt.args.t...)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzDomains() error = %v", err)
+				t.Errorf("WithAthenzDomains() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeySysAuthDomain(t *testing.T) {
+
+func TestWithPubkeySysAuthDomain(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -193,14 +194,15 @@ func TestPubkeySysAuthDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeySysAuthDomain(tt.args.t)
+			got := WithPubkeySysAuthDomain(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeySysAuthDomain() error = %v", err)
+				t.Errorf("WithPubkeySysAuthDomain() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyEtagExpTime(t *testing.T) {
+
+func TestWithPubkeyEtagExpTime(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -228,14 +230,14 @@ func TestPubkeyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyEtagExpTime(tt.args.t)
+			got := WithPubkeyEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyEtagExpTime() error = %v", err)
+				t.Errorf("WithPubkeyEtagExpTime() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyEtagFlushDur(t *testing.T) {
+func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -263,14 +265,14 @@ func TestPubkeyEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyEtagFlushDur(tt.args.t)
+			got := WithPubkeyEtagFlushDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyEtagFlushDur() error = %v", err)
+				t.Errorf("WithPubkeyEtagFlushDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestPolicyExpireMargin(t *testing.T) {
+func TestWithPolicyExpireMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -298,14 +300,14 @@ func TestPolicyExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyExpireMargin(tt.args.t)
+			got := WithPolicyExpireMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyExpireMargin() error = %v", err)
+				t.Errorf("WithPolicyExpireMargin() error = %v", err)
 			}
 		})
 	}
 }
-func TestPolicyEtagFlushDur(t *testing.T) {
+func TestWithPolicyEtagFlushDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -333,9 +335,9 @@ func TestPolicyEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyEtagFlushDur(tt.args.t)
+			got := WithPolicyEtagFlushDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyEtagFlushDur() error = %v", err)
+				t.Errorf("WithPolicyEtagFlushDuration() error = %v", err)
 			}
 		})
 	}
@@ -368,9 +370,9 @@ func TestPolicyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyEtagExpTime(tt.args.t)
+			got := WithPolicyEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyEtagExpTime() error = %v", err)
+				t.Errorf("WithPolicyEtagExpTime() error = %v", err)
 			}
 		})
 	}
@@ -405,9 +407,9 @@ func TestCacheExp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CacheExp(tt.args.d)
+			got := WithCacheExp(tt.args.d)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("CacheExp() error = %v", err)
+				t.Errorf("WithCacheExp() error = %v", err)
 			}
 		})
 	}
@@ -459,9 +461,9 @@ func TestTransport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Transport(tt.args.t)
+			got := WithTransport(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("Transport() error = %v", err)
+				t.Errorf("WithTransport() error = %v", err)
 			}
 		})
 	}

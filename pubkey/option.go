@@ -24,20 +24,20 @@ import (
 
 var (
 	defaultOptions = []Option{
-		SysAuthDomain("sys.auth"),
-		ETagExpTime("168h"), // 1 week
-		ETagFlushDur("84h"),
-		RefreshDuration("24h"),
-		ErrRetryInterval("1m"),
-		HTTPClient(&http.Client{}),
+		WithSysAuthDomain("sys.auth"),
+		WithEtagExpTime("168h"), // With1 week
+		WithEtagFlushDuration("84h"),
+		WithRefreshDuration("24h"),
+		WithErrRetryInterval("1m"),
+		WithHTTPClient(&http.Client{}),
 	}
 )
 
 // Option represents a functional options pattern interface
 type Option func(*pubkeyd) error
 
-// AthenzURL represents a AthenzURL functional option
-func AthenzURL(url string) Option {
+// WithAthenzURL represents a AthenzURL functional option
+func WithAthenzURL(url string) Option {
 	return func(c *pubkeyd) error {
 		if url == "" {
 			return nil
@@ -47,8 +47,8 @@ func AthenzURL(url string) Option {
 	}
 }
 
-// SysAuthDomain represents a SysAuthDomain functional option
-func SysAuthDomain(d string) Option {
+// WithSysAuthDomain represents a SysAuthDomain functional option
+func WithSysAuthDomain(d string) Option {
 	return func(c *pubkeyd) error {
 		if d == "" {
 			return nil
@@ -58,8 +58,8 @@ func SysAuthDomain(d string) Option {
 	}
 }
 
-// ETagExpTime represents a ETagExpTime functional option
-func ETagExpTime(t string) Option {
+// WithEtagExpTime represents a EtagExpTime functional option
+func WithEtagExpTime(t string) Option {
 	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
@@ -74,8 +74,8 @@ func ETagExpTime(t string) Option {
 	}
 }
 
-// ETagFlushDur represents a ETagFlushDur functional option
-func ETagFlushDur(t string) Option {
+// WithEtagFlushDuration represents a EtagFlushDur functional option
+func WithEtagFlushDuration(t string) Option {
 	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
@@ -90,8 +90,8 @@ func ETagFlushDur(t string) Option {
 	}
 }
 
-// RefreshDuration represents a RefreshDuration functional option
-func RefreshDuration(t string) Option {
+// WithRefreshDuration represents a RefreshDuration functional option
+func WithRefreshDuration(t string) Option {
 	return func(c *pubkeyd) error {
 		if t == "" {
 			return nil
@@ -106,8 +106,8 @@ func RefreshDuration(t string) Option {
 	}
 }
 
-// HTTPClient represents a HTTPClient functional option
-func HTTPClient(cl *http.Client) Option {
+// WithHTTPClient represents a HTTPClient functional option
+func WithHTTPClient(cl *http.Client) Option {
 	return func(c *pubkeyd) error {
 		if c != nil {
 			c.client = cl
@@ -116,8 +116,8 @@ func HTTPClient(cl *http.Client) Option {
 	}
 }
 
-// ErrRetryInterval represents a ErrRetryInterval functional option
-func ErrRetryInterval(i string) Option {
+// WithErrRetryInterval represents a ErrRetryInterval functional option
+func WithErrRetryInterval(i string) Option {
 	return func(c *pubkeyd) error {
 		if i == "" {
 			return nil

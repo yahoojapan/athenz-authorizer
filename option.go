@@ -22,10 +22,10 @@ import (
 
 var (
 	defaultOptions = []Option{
-		AthenzURL("www.athenz.com/zts/v1"),
-		Transport(nil),
-		CacheExp(time.Minute),
-		RoleCertURIPrefix("athenz://role/"),
+		WithAthenzURL("www.athenz.com/zts/v1"),
+		WithTransport(nil),
+		WithCacheExp(time.Minute),
+		WithRoleCertURIPrefix("athenz://role/"),
 	}
 )
 
@@ -33,7 +33,7 @@ var (
 type Option func(*authorizer) error
 
 // AthenzURL represents a AthenzURL functional option
-func AthenzURL(url string) Option {
+func WithAthenzURL(url string) Option {
 	return func(prov *authorizer) error {
 		prov.athenzURL = url
 		return nil
@@ -41,7 +41,7 @@ func AthenzURL(url string) Option {
 }
 
 // AthenzDomains represents a AthenzDomains functional option
-func AthenzDomains(domains ...string) Option {
+func WithAthenzDomains(domains ...string) Option {
 	return func(prov *authorizer) error {
 		prov.athenzDomains = domains
 		return nil
@@ -49,7 +49,7 @@ func AthenzDomains(domains ...string) Option {
 }
 
 // Transport represents a Transport functional option
-func Transport(t *http.Transport) Option {
+func WithTransport(t *http.Transport) Option {
 	return func(prov *authorizer) error {
 		if t == nil {
 			prov.client = &http.Client{
@@ -65,7 +65,7 @@ func Transport(t *http.Transport) Option {
 }
 
 // CacheExp represents the cache expiration time
-func CacheExp(exp time.Duration) Option {
+func WithCacheExp(exp time.Duration) Option {
 	return func(prov *authorizer) error {
 		prov.cache.SetDefaultExpire(exp)
 		prov.cacheExp = exp
@@ -74,7 +74,7 @@ func CacheExp(exp time.Duration) Option {
 }
 
 // RoleCertURIPrefix represents a RoleCertURIPrefix functional option
-func RoleCertURIPrefix(t string) Option {
+func WithRoleCertURIPrefix(t string) Option {
 	return func(prov *authorizer) error {
 		prov.roleCertURIPrefix = t
 		return nil
@@ -86,7 +86,7 @@ func RoleCertURIPrefix(t string) Option {
 */
 
 // PubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
-func PubkeyRefreshDuration(t string) Option {
+func WithPubkeyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyRefreshDuration = t
 		return nil
@@ -94,7 +94,7 @@ func PubkeyRefreshDuration(t string) Option {
 }
 
 // PubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
-func PubkeySysAuthDomain(domain string) Option {
+func WithPubkeySysAuthDomain(domain string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeySysAuthDomain = domain
 		return nil
@@ -102,15 +102,15 @@ func PubkeySysAuthDomain(domain string) Option {
 }
 
 // PubkeyEtagExpTime represents a PubkeyEtagExpTime functional option
-func PubkeyEtagExpTime(t string) Option {
+func WithPubkeyEtagExpTime(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyEtagExpTime = t
 		return nil
 	}
 }
 
-// PubkeyEtagFlushDur represents a PubkeyEtagFlushDur functional option
-func PubkeyEtagFlushDur(t string) Option {
+// PubkeyEtagFlushDuration represents a PubkeyEtagFlushDur functional option
+func WithPubkeyEtagFlushDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyEtagFlushDur = t
 		return nil
@@ -122,7 +122,7 @@ func PubkeyEtagFlushDur(t string) Option {
 */
 
 // PolicyRefreshDuration represents a PolicyRefreshDuration functional option
-func PolicyRefreshDuration(t string) Option {
+func WithPolicyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyRefreshDuration = t
 		return nil
@@ -130,7 +130,7 @@ func PolicyRefreshDuration(t string) Option {
 }
 
 // PolicyExpireMargin represents a PolicyExpireMargin functional option
-func PolicyExpireMargin(t string) Option {
+func WithPolicyExpireMargin(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyExpireMargin = t
 		return nil
@@ -138,15 +138,15 @@ func PolicyExpireMargin(t string) Option {
 }
 
 // PolicyEtagExpTime represents a PolicyEtagExpTime functional option
-func PolicyEtagExpTime(t string) Option {
+func WithPolicyEtagExpTime(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyEtagExpTime = t
 		return nil
 	}
 }
 
-// PolicyEtagFlushDur represents a PolicyEtagFlushDur functional option
-func PolicyEtagFlushDur(t string) Option {
+// PolicyEtagFlushDuration represents a PolicyEtagFlushDur functional option
+func WithPolicyEtagFlushDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyEtagFlushDur = t
 		return nil

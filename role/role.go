@@ -44,8 +44,12 @@ func New(prov pubkey.Provider) Processor {
 
 func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
 	tok, err := jwt.ParseWithClaims(cred, &Claim{}, func(token *jwt.Token) (interface{}, error) {
-		token.Method.Verify(token.SigningString(), token.Signature, r.jwkp(token.Method.Alg(), token.Header["kid"]))
-		return nil, nil
+		keyID := token.Header["kid"].(string)
+		raw, err := token.SigningString()
+		if err != nil {
+			return nil, err
+		}
+		return nil, token.Method.Verify(raw, token.Signature, r.jwkp(keyID))
 	})
 
 	if err != nil {

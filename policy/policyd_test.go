@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "new success with options",
 			args: args{
-				opts: []Option{ExpireMargin("5s")},
+				opts: []Option{WithExpireMargin("5s")},
 			},
 			checkFunc: func(got Policyd) error {
 				p := got.(*policyd)
@@ -74,7 +74,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "new error due to options",
 			args: args{
-				opts: []Option{EtagExpTime("dummy")},
+				opts: []Option{WithEtagExpTime("dummy")},
 			},
 			wantErr: true,
 		},
