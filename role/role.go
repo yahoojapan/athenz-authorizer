@@ -36,10 +36,12 @@ type rtp struct {
 }
 
 // New returns the Role instance.
-func New(prov pubkey.Provider) Processor {
-	return &rtp{
-		pkp: prov,
+func New(opts ...Option) Processor {
+	r := new(rtp)
+	for _, opt := range append(defaultOptions, opts...) {
+		opt(r)
 	}
+	return r
 }
 
 func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {

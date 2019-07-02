@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type JWKD interface {
+type Daemon interface {
 	Start(ctx context.Context) <-chan error
 	Update(context.Context) error
 	GetProvider() Provider
@@ -47,7 +47,7 @@ type jwkd struct {
 type Provider func(keyID string) interface{}
 
 // New represent the constructor of Policyd
-func New(opts ...Option) (JWKD, error) {
+func New(opts ...Option) (Daemon, error) {
 	j := new(jwkd)
 	for _, opt := range append(defaultOptions, opts...) {
 		err := opt(j)

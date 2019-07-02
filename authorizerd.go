@@ -26,6 +26,7 @@ import (
 	"github.com/kpango/glg"
 
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/policy"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/role"
@@ -44,6 +45,7 @@ type authorizer struct {
 	//
 	pubkeyd       pubkey.Pubkeyd
 	policyd       policy.Policyd
+	jwkd          jwk.Daemon
 	roleProcessor role.Processor
 
 	// common parameters
@@ -116,7 +118,17 @@ func New(opts ...Option) (Authorizerd, error) {
 		return nil, errors.Wrap(err, "error create policyd")
 	}
 
-	prov.roleProcessor = role.New(prov.pubkeyd.GetProvider())
+	if prov.jwkd, err = jwk.New(
+		jwk.WithAthenzURL(prov.athenzURL),
+		jwk.WithRefreshDuration(prov.pubkeyRefreshDuration),
+		jwk.WithHTTPClient(prov.client),
+	); err != nil {
+		return nil, errors.Wrap(err, "error create jwkd")
+	}
+
+	prov.roleProcessor = role.New(
+		role.WithPubkeyProvider(prov.pubkeyd.GetProvider()),
+		role.WithJWKProvider(prov.jwkd.GetProvider()))
 
 	return prov, nil
 }
@@ -129,6 +141,7 @@ func (p *authorizer) Start(ctx context.Context) <-chan error {
 
 	cech := p.pubkeyd.Start(ctx)
 	pech := p.policyd.Start(ctx)
+	jech := p.jwkd.Start(ctx)
 
 	go func() {
 		for {
@@ -144,6 +157,10 @@ func (p *authorizer) Start(ctx context.Context) <-chan error {
 			case err := <-pech:
 				if err != nil {
 					ech <- errors.Wrap(err, "update policy error")
+				}
+			case err := <-jech:
+				if err != nil {
+					ech <- errors.Wrap(err, "update jwk error")
 				}
 			}
 		}

@@ -24,9 +24,8 @@ import (
 
 var (
 	defaultOptions = []Option{
-		WithAthenzURL("www.athenz.com/zts/v1"),
-		WithRefreshDuration("60m"),
-		WithErrRetryInterval("10s"),
+		WithRefreshDuration("24h"),
+		WithErrRetryInterval("1ms"),
 		WithHTTPClient(http.DefaultClient),
 	}
 )
