@@ -26,7 +26,7 @@ import (
 )
 
 type ConfdMock struct {
-	pubkey.Pubkeyd
+	pubkey.Daemon
 	confdExp time.Duration
 }
 
@@ -40,7 +40,8 @@ func (cm *ConfdMock) Start(ctx context.Context) <-chan error {
 }
 
 type PolicydMock struct {
-	policy.Policyd
+	policy.Daemon
+
 	policydExp time.Duration
 	wantErr    error
 }

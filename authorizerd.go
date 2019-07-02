@@ -43,8 +43,8 @@ type Authorizerd interface {
 
 type authorizer struct {
 	//
-	pubkeyd       pubkey.Pubkeyd
-	policyd       policy.Policyd
+	pubkeyd       pubkey.Daemon
+	policyd       policy.Daemon
 	jwkd          jwk.Daemon
 	roleProcessor role.Processor
 

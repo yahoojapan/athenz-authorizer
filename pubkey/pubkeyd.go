@@ -33,8 +33,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Pubkeyd represent the daemon to retrieve public key data.
-type Pubkeyd interface {
+// Daemon represent the daemon to retrieve public key data.
+type Daemon interface {
 	Start(ctx context.Context) <-chan error
 	Update(context.Context) error
 	GetProvider() Provider
@@ -86,7 +86,7 @@ var (
 )
 
 // New represent the constructor of Pubkeyd
-func New(opts ...Option) (Pubkeyd, error) {
+func New(opts ...Option) (Daemon, error) {
 	c := &pubkeyd{
 		confCache: &AthenzConfig{
 			ZMSPubKeys: new(sync.Map),

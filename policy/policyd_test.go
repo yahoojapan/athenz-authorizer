@@ -41,8 +41,8 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      args
-		want      Policyd
-		checkFunc func(got Policyd) error
+		want      Daemon
+		checkFunc func(got Daemon) error
 		wantErr   bool
 	}{
 		{
@@ -50,7 +50,7 @@ func TestNew(t *testing.T) {
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got Policyd) error {
+			checkFunc: func(got Daemon) error {
 				p := got.(*policyd)
 				if p.expireMargin != time.Hour*3 {
 					return errors.New("invalid expireMargin")
@@ -63,7 +63,7 @@ func TestNew(t *testing.T) {
 			args: args{
 				opts: []Option{WithExpireMargin("5s")},
 			},
-			checkFunc: func(got Policyd) error {
+			checkFunc: func(got Daemon) error {
 				p := got.(*policyd)
 				if p.expireMargin != time.Second*5 {
 					return errors.New("invalid expireMargin")

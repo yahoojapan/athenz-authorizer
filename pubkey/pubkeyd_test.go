@@ -39,7 +39,7 @@ func Test_pubkey_New(t *testing.T) {
 	type test struct {
 		name      string
 		args      args
-		checkFunc func(Pubkeyd, error) error
+		checkFunc func(Daemon, error) error
 	}
 	tests := []test{
 		{
@@ -47,7 +47,7 @@ func Test_pubkey_New(t *testing.T) {
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if err != nil {
 					return err
 				}
@@ -65,7 +65,7 @@ func Test_pubkey_New(t *testing.T) {
 					WithAthenzURL("dummyURL"),
 				},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if err != nil {
 					return err
 				}
@@ -84,9 +84,9 @@ func Test_pubkey_New(t *testing.T) {
 					WithEtagExpTime("invalid"),
 				},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if got != nil {
-					return errors.New("get invalid Pubkeyd")
+					return errors.New("get invalid Daemon")
 				}
 				if err.Error() != "invalid etag expire time: time: invalid duration invalid" {
 					return errors.Wrap(err, "unexpected error")

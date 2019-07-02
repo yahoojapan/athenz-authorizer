@@ -110,8 +110,8 @@ func TestNew(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	type fields struct {
-		pubkeyd  pubkey.Pubkeyd
-		policyd  policy.Policyd
+		pubkeyd  pubkey.Daemon
+		policyd  policy.Daemon
 		cache    gache.Gache
 		cacheExp time.Duration
 	}
