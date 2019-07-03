@@ -115,13 +115,12 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
 	url := fmt.Sprintf("https://%s/oauth2/keys", j.athenzURL)
-	keys, err := jwk.Fetch(url, jwk.WithHTTPClient(j.client))
+	keys, err := jwk.FetchHTTP(url, jwk.WithHTTPClient(j.client))
 	if err != nil {
 		return err
 	}
 
 	j.keys.Store(keys)
-
 	return nil
 }
 
@@ -130,6 +129,10 @@ func (j *jwkd) GetProvider() Provider {
 }
 
 func (j *jwkd) getKey(keyID string) interface{} {
+	if keyID == "" {
+		return nil
+	}
+
 	for _, keys := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
 		raw, err := keys.Materialize()
 		if err == nil {

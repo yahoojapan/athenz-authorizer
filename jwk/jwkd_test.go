@@ -17,11 +17,18 @@ package jwk
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/pkg/errors"
 )
 
 func TestNew(t *testing.T) {
@@ -118,13 +125,77 @@ func Test_jwkd_Update(t *testing.T) {
 	type args struct {
 		ctx context.Context
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(*jwkd) error
+		wantErr   bool
+	}
+	tests := []test{
+		func() test {
+			k := `{
+      "e":"AQAB",
+      "kty":"RSA",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+				w.Write([]byte(k))
+			}))
+
+			return test{
+				name: "Update success",
+				fields: fields{
+					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					client:    srv.Client(),
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(j *jwkd) error {
+					val := j.keys.Load()
+					if val == nil {
+						return errors.New("keys is empty")
+					}
+
+					s := val.(*jwk.Set)
+					if _, ok := s.Keys[0].(*jwk.RSAPublicKey); !ok {
+						return errors.Errorf("Unexpected type: %v", reflect.TypeOf(s.Keys[0]))
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			k := `{
+      "e":"AQAB",
+      "kty":"dummy",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+				w.Write([]byte(k))
+			}))
+
+			return test{
+				name: "Update fail",
+				fields: fields{
+					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					client:    srv.Client(),
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(j *jwkd) error {
+					if j.keys.Load() != nil {
+						return errors.Errorf("keys expected nil")
+					}
+					return nil
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -137,6 +208,11 @@ func Test_jwkd_Update(t *testing.T) {
 			}
 			if err := j.Update(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("jwkd.Update() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(j); err != nil {
+					t.Errorf("jwkd.Update() error = %v", err)
+				}
 			}
 		})
 	}
@@ -151,11 +227,19 @@ func Test_jwkd_GetProvider(t *testing.T) {
 		keys             atomic.Value
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   Provider
+		name      string
+		fields    fields
+		checkFunc func(Provider) error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "get success",
+			checkFunc: func(p Provider) error {
+				if p == nil {
+					return errors.New("GetProvider return nil")
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -166,8 +250,9 @@ func Test_jwkd_GetProvider(t *testing.T) {
 				client:           tt.fields.client,
 				keys:             tt.fields.keys,
 			}
-			if got := j.GetProvider(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("jwkd.GetProvider() = %v, want %v", got, tt.want)
+			got := j.GetProvider()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("jwkd.GetProvider() err %v", err)
 			}
 		})
 	}
@@ -184,13 +269,119 @@ func Test_jwkd_getKey(t *testing.T) {
 	type args struct {
 		keyID string
 	}
-	tests := []struct {
+	type test struct {
 		name   string
 		fields fields
 		args   args
 		want   interface{}
-	}{
-		// TODO: Add test cases.
+	}
+	genKey := func() *rsa.PrivateKey {
+		k, _ := rsa.GenerateKey(rand.Reader, 2048)
+		return k
+	}
+	newKey := func(k interface{}, keyID string) jwk.Key {
+		jwkKey, _ := jwk.New(k)
+		jwkKey.Set(jwk.KeyIDKey, keyID)
+		return jwkKey
+	}
+	tests := []test{
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "dummyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get key success",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "dummyID",
+				},
+				want: rsaKey,
+			}
+		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "dummyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get key not found",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "not exists",
+				},
+				want: nil,
+			}
+		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get key id empty return nil",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "",
+				},
+				want: nil,
+			}
+		}(),
+		func() test {
+			rsaKey1 := genKey()
+			k1 := newKey(rsaKey1, "dummyID1")
+
+			rsaKey2 := genKey()
+			k2 := newKey(rsaKey2, "dummyID2")
+
+			rsaKey3 := genKey()
+			k3 := newKey(rsaKey3, "dummyID3")
+
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k1, k2, k3,
+				},
+			}
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get key success from multiple key",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "dummyID2",
+				},
+				want: rsaKey2,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
