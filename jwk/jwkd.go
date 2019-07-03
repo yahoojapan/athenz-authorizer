@@ -126,13 +126,15 @@ func (j *jwkd) Update(ctx context.Context) (err error) {
 }
 
 func (j *jwkd) GetProvider() Provider {
-	return func(keyID string) interface{} {
-		for _, keys := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
-			raw, err := keys.Materialize()
-			if err == nil {
-				return raw
-			}
+	return j.getKey
+}
+
+func (j *jwkd) getKey(keyID string) interface{} {
+	for _, keys := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
+		raw, err := keys.Materialize()
+		if err == nil {
+			return raw
 		}
-		return nil
 	}
+	return nil
 }

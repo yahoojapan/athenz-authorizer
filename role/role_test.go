@@ -22,6 +22,7 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
@@ -288,6 +289,41 @@ func Test_rtp_validate(t *testing.T) {
 			}
 			if err := r.validate(tt.args.rt); (err != nil) != tt.wantErr {
 				t.Errorf("rtp.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
+	type fields struct {
+		pkp  pubkey.Provider
+		jwkp jwk.Provider
+	}
+	type args struct {
+		cred string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *Claim
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:  tt.fields.pkp,
+				jwkp: tt.fields.jwkp,
+			}
+			got, err := r.ParseAndValidateRoleJWT(tt.args.cred)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("rtp.ParseAndValidateRoleJWT() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("rtp.ParseAndValidateRoleJWT() = %v, want %v", got, tt.want)
 			}
 		})
 	}
