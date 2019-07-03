@@ -132,7 +132,7 @@ func Test_policy_Start(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
-				name: "Start updator success",
+				name: "Start success",
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
@@ -190,7 +190,7 @@ func Test_policy_Start(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
-				name: "Start updator can update cache",
+				name: "Start can update cache",
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
@@ -264,7 +264,7 @@ func Test_policy_Start(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
-				name: "Start updator retry update",
+				name: "Start retry update",
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
@@ -487,7 +487,7 @@ func Test_policy_Update(t *testing.T) {
 
 			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
 			return test{
-				name: "Update policy success",
+				name: "Update error, context timeout",
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,

@@ -25,7 +25,7 @@ import (
 var (
 	defaultOptions = []Option{
 		WithSysAuthDomain("sys.auth"),
-		WithEtagExpTime("168h"), // With1 week
+		WithEtagExpTime("168h"), // 1 week
 		WithEtagFlushDuration("84h"),
 		WithRefreshDuration("24h"),
 		WithErrRetryInterval("1m"),

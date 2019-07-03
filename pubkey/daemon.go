@@ -177,7 +177,7 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 		}
 
 		for _, key := range pubKeys.PublicKeys {
-			glg.Debugf("Decoding key,env: %v,  keyID: %v", env, key.ID)
+			glg.Debugf("Decoding key, env: %v, keyID: %v", env, key.ID)
 			decKey, err := dec.DecodeString(key.Key)
 			if err != nil {
 				glg.Errorf("error decoding key, env: %v, error: %v", env, err)

@@ -65,7 +65,7 @@ func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
 	return nil, errors.New("error invalid jwt token")
 }
 
-// ParseAndValidateRoleToken return the parsed and validiated role token, and return any parsing and validate errors.
+// ParseAndValidateRoleToken return the parsed and validated role token, and return any parsing and validate errors.
 func (r *rtp) ParseAndValidateRoleToken(tok string) (*Token, error) {
 	rt, err := r.parseToken(tok)
 	if err != nil {
