@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/policy"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/role"
@@ -72,7 +73,7 @@ func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) 
 type JwkdMock struct {
 	StartFunc       func(context.Context) <-chan error
 	UpdateFunc      func(context.Context) error
-	GetProviderFunc func() Provider
+	GetProviderFunc func() jwk.Provider
 }
 
 func (jm *JwkdMock) Start(ctx context.Context) <-chan error {
@@ -89,7 +90,7 @@ func (jm *JwkdMock) Update(ctx context.Context) error {
 	return nil
 }
 
-func (jm *JwkdMock) GetProvider() Provider {
+func (jm *JwkdMock) GetProvider() jwk.Provider {
 	if jm.GetProviderFunc != nil {
 		return jm.GetProviderFunc()
 	}

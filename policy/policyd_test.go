@@ -98,17 +98,18 @@ func TestNew(t *testing.T) {
 
 func Test_policy_Start(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
 	}
 	type args struct {
 		ctx context.Context
@@ -133,14 +134,15 @@ func Test_policy_Start(t *testing.T) {
 			return test{
 				name: "Start updator success",
 				fields: fields{
-					rolePolicies:    gache.New(),
-					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:       gache.New(),
-					etagExpTime:     time.Minute,
-					etagFlushDur:    time.Second,
-					refreshDuration: time.Second,
-					expireMargin:    time.Hour,
-					client:          srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					etagFlushDur:          time.Second,
+					refreshDuration:       time.Second,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -190,14 +192,15 @@ func Test_policy_Start(t *testing.T) {
 			return test{
 				name: "Start updator can update cache",
 				fields: fields{
-					rolePolicies:    gache.New(),
-					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:       gache.New(),
-					etagExpTime:     time.Minute,
-					etagFlushDur:    time.Second,
-					refreshDuration: time.Millisecond * 30,
-					expireMargin:    time.Hour,
-					client:          srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					etagFlushDur:          time.Second,
+					refreshDuration:       time.Millisecond * 30,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -263,15 +266,16 @@ func Test_policy_Start(t *testing.T) {
 			return test{
 				name: "Start updator retry update",
 				fields: fields{
-					rolePolicies:     gache.New(),
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:        gache.New(),
-					etagExpTime:      time.Minute,
-					etagFlushDur:     time.Second,
-					refreshDuration:  time.Minute,
-					errRetryInterval: time.Millisecond * 5,
-					expireMargin:     time.Hour,
-					client:           srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					etagFlushDur:          time.Second,
+					refreshDuration:       time.Minute,
+					errRetryInterval:      time.Millisecond * 5,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -325,17 +329,18 @@ func Test_policy_Start(t *testing.T) {
 				defer tt.afterFunc()
 			}
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
 			}
 			ch := p.Start(tt.args.ctx)
 			if tt.checkFunc != nil {
@@ -349,17 +354,18 @@ func Test_policy_Start(t *testing.T) {
 
 func Test_policy_Update(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
 	}
 	type args struct {
 		ctx context.Context
@@ -385,12 +391,13 @@ func Test_policy_Update(t *testing.T) {
 			return test{
 				name: "Update policy success",
 				fields: fields{
-					rolePolicies: gache.New(),
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -482,12 +489,13 @@ func Test_policy_Update(t *testing.T) {
 			return test{
 				name: "Update policy success",
 				fields: fields{
-					rolePolicies: gache.New(),
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -517,17 +525,18 @@ func Test_policy_Update(t *testing.T) {
 			}
 
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
 			}
 			if tt.beforeFunc != nil {
 				tt.beforeFunc()
@@ -761,17 +770,18 @@ func Test_policy_CheckPolicy(t *testing.T) {
 
 func Test_policy_fetchAndCachePolicy(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
 	}
 	type args struct {
 		ctx context.Context
@@ -796,12 +806,13 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 			return test{
 				name: "fetch policy success with updated policy",
 				fields: fields{
-					rolePolicies: gache.New(),
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -837,12 +848,13 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 			return test{
 				name: "fetch policy failed",
 				fields: fields{
-					rolePolicies: gache.New(),
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -869,12 +881,13 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 			return test{
 				name: "simplifyAndCache failed",
 				fields: fields{
-					rolePolicies: gache.New(),
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -894,17 +907,18 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
 			}
 			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.dom); (err != nil) != tt.wantErr {
 				t.Errorf("policy.fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
@@ -920,17 +934,18 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 
 func Test_policy_fetchPolicy(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
 	}
 	type args struct {
 		ctx    context.Context
@@ -954,11 +969,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch success",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1013,11 +1029,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch error url",
 				fields: fields{
-					athenzURL:    " ",
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Second,
-					client:       srv.Client(),
+					athenzURL:             " ",
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Second,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1075,11 +1092,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test etag exists but not modified",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    etagCac,
-					etagExpTime:  time.Minute,
-					expireMargin: time.Second,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             etagCac,
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Second,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1147,11 +1165,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test etag exists but modified",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    etagCac,
-					etagExpTime:  time.Minute,
-					expireMargin: time.Second,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             etagCac,
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Second,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1205,11 +1224,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch error make https request",
 				fields: fields{
-					athenzURL:    "dummyURL",
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					athenzURL:             "dummyURL",
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1247,11 +1267,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch error return not ok",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1290,11 +1311,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch error decode policy",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1333,11 +1355,12 @@ func Test_policy_fetchPolicy(t *testing.T) {
 			return test{
 				name: "test fetch verify error",
 				fields: fields{
-					athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:    gache.New(),
-					etagExpTime:  time.Minute,
-					expireMargin: time.Hour,
-					client:       srv.Client(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					policyExpiredDuration: time.Minute * 30,
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
 							VerifyFunc: func(d, s string) error {
@@ -1370,17 +1393,18 @@ func Test_policy_fetchPolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
 			}
 			got, got1, err := p.fetchPolicy(tt.args.ctx, tt.args.domain)
 
@@ -1393,17 +1417,18 @@ func Test_policy_fetchPolicy(t *testing.T) {
 
 func Test_policy_simplifyAndCache(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
 	}
 	type args struct {
 		ctx context.Context
@@ -1429,7 +1454,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache success with data",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1524,7 +1550,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "test context done",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: ctx,
@@ -1584,7 +1611,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache deny overwrite allow",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1671,7 +1699,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache success with no data",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1692,7 +1721,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache failed with invalid assertion",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1727,7 +1757,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache success with no data",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1748,7 +1779,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache failed with invalid assertion",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1791,7 +1823,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache replace by new assertion",
 				fields: fields{
-					rolePolicies: rp,
+					rolePolicies:          rp,
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1853,7 +1886,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache delete",
 				fields: fields{
-					rolePolicies: rp,
+					rolePolicies:          rp,
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1914,7 +1948,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache success with 100x100 data",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -1974,7 +2009,8 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 			return test{
 				name: "cache success with no race condition with 100x100 data",
 				fields: fields{
-					rolePolicies: gache.New(),
+					rolePolicies:          gache.New(),
+					policyExpiredDuration: time.Minute * 30,
 				},
 				args: args{
 					ctx: context.Background(),
@@ -2034,17 +2070,18 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
 			}
 			if err := p.simplifyAndCache(tt.args.ctx, tt.args.sp); (err != nil) != tt.wantErr {
 				t.Errorf("policy.simplifyAndCache() error = %v, wantErr %v", err, tt.wantErr)

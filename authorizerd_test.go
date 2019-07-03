@@ -111,8 +111,8 @@ func TestNew(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	type fields struct {
-		pubkeyd  pubkey.Pubkeyd
-		policyd  policy.Policyd
+		pubkeyd  pubkey.Daemon
+		policyd  policy.Daemon
 		jwkd     jwk.Daemon
 		cache    gache.Gache
 		cacheExp time.Duration
@@ -230,6 +230,7 @@ func TestStart(t *testing.T) {
 			prov := &authorizer{
 				pubkeyd:  tt.fields.pubkeyd,
 				policyd:  tt.fields.policyd,
+				jwkd:     tt.fields.jwkd,
 				cache:    tt.fields.cache,
 				cacheExp: tt.fields.cacheExp,
 			}
@@ -251,7 +252,7 @@ func TestVerifyRoleToken(t *testing.T) {
 		res string
 	}
 	type fields struct {
-		policyd            policy.Policyd
+		policyd            policy.Daemon
 		cache              gache.Gache
 		cacheExp           time.Duration
 		roleTokenProcessor role.Processor
