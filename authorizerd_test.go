@@ -17,6 +17,9 @@ package authorizerd
 
 import (
 	"context"
+	"crypto/x509"
+	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -452,6 +455,260 @@ func TestVerifyRoleToken(t *testing.T) {
 				if err := tt.checkFunc(prov); err != nil {
 					t.Errorf("VerifyRoleToken() error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func Test_authorizer_VerifyRoleJWT(t *testing.T) {
+	type fields struct {
+		pubkeyd               pubkey.Daemon
+		policyd               policy.Daemon
+		jwkd                  jwk.Daemon
+		roleProcessor         role.Processor
+		athenzURL             string
+		client                *http.Client
+		cache                 gache.Gache
+		cacheExp              time.Duration
+		roleCertURIPrefix     string
+		pubkeyRefreshDuration string
+		pubkeySysAuthDomain   string
+		pubkeyEtagExpTime     string
+		pubkeyEtagFlushDur    string
+		policyExpireMargin    string
+		athenzDomains         []string
+		policyRefreshDuration string
+		policyEtagFlushDur    string
+		policyEtagExpTime     string
+	}
+	type args struct {
+		ctx context.Context
+		tok string
+		act string
+		res string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &authorizer{
+				pubkeyd:               tt.fields.pubkeyd,
+				policyd:               tt.fields.policyd,
+				jwkd:                  tt.fields.jwkd,
+				roleProcessor:         tt.fields.roleProcessor,
+				athenzURL:             tt.fields.athenzURL,
+				client:                tt.fields.client,
+				cache:                 tt.fields.cache,
+				cacheExp:              tt.fields.cacheExp,
+				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
+				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
+				policyExpireMargin:    tt.fields.policyExpireMargin,
+				athenzDomains:         tt.fields.athenzDomains,
+				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
+				policyEtagExpTime:     tt.fields.policyEtagExpTime,
+			}
+			if err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.VerifyRoleJWT() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_authorizer_verify(t *testing.T) {
+	type fields struct {
+		pubkeyd               pubkey.Daemon
+		policyd               policy.Daemon
+		jwkd                  jwk.Daemon
+		roleProcessor         role.Processor
+		athenzURL             string
+		client                *http.Client
+		cache                 gache.Gache
+		cacheExp              time.Duration
+		roleCertURIPrefix     string
+		pubkeyRefreshDuration string
+		pubkeySysAuthDomain   string
+		pubkeyEtagExpTime     string
+		pubkeyEtagFlushDur    string
+		policyExpireMargin    string
+		athenzDomains         []string
+		policyRefreshDuration string
+		policyEtagFlushDur    string
+		policyEtagExpTime     string
+	}
+	type args struct {
+		ctx context.Context
+		m   mode
+		tok string
+		act string
+		res string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &authorizer{
+				pubkeyd:               tt.fields.pubkeyd,
+				policyd:               tt.fields.policyd,
+				jwkd:                  tt.fields.jwkd,
+				roleProcessor:         tt.fields.roleProcessor,
+				athenzURL:             tt.fields.athenzURL,
+				client:                tt.fields.client,
+				cache:                 tt.fields.cache,
+				cacheExp:              tt.fields.cacheExp,
+				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
+				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
+				policyExpireMargin:    tt.fields.policyExpireMargin,
+				athenzDomains:         tt.fields.athenzDomains,
+				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
+				policyEtagExpTime:     tt.fields.policyEtagExpTime,
+			}
+			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_authorizer_VerifyRoleCert(t *testing.T) {
+	type fields struct {
+		pubkeyd               pubkey.Daemon
+		policyd               policy.Daemon
+		jwkd                  jwk.Daemon
+		roleProcessor         role.Processor
+		athenzURL             string
+		client                *http.Client
+		cache                 gache.Gache
+		cacheExp              time.Duration
+		roleCertURIPrefix     string
+		pubkeyRefreshDuration string
+		pubkeySysAuthDomain   string
+		pubkeyEtagExpTime     string
+		pubkeyEtagFlushDur    string
+		policyExpireMargin    string
+		athenzDomains         []string
+		policyRefreshDuration string
+		policyEtagFlushDur    string
+		policyEtagExpTime     string
+	}
+	type args struct {
+		ctx       context.Context
+		peerCerts []*x509.Certificate
+		act       string
+		res       string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &authorizer{
+				pubkeyd:               tt.fields.pubkeyd,
+				policyd:               tt.fields.policyd,
+				jwkd:                  tt.fields.jwkd,
+				roleProcessor:         tt.fields.roleProcessor,
+				athenzURL:             tt.fields.athenzURL,
+				client:                tt.fields.client,
+				cache:                 tt.fields.cache,
+				cacheExp:              tt.fields.cacheExp,
+				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
+				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
+				policyExpireMargin:    tt.fields.policyExpireMargin,
+				athenzDomains:         tt.fields.athenzDomains,
+				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
+				policyEtagExpTime:     tt.fields.policyEtagExpTime,
+			}
+			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_authorizer_GetPolicyCache(t *testing.T) {
+	type fields struct {
+		pubkeyd               pubkey.Daemon
+		policyd               policy.Daemon
+		jwkd                  jwk.Daemon
+		roleProcessor         role.Processor
+		athenzURL             string
+		client                *http.Client
+		cache                 gache.Gache
+		cacheExp              time.Duration
+		roleCertURIPrefix     string
+		pubkeyRefreshDuration string
+		pubkeySysAuthDomain   string
+		pubkeyEtagExpTime     string
+		pubkeyEtagFlushDur    string
+		policyExpireMargin    string
+		athenzDomains         []string
+		policyRefreshDuration string
+		policyEtagFlushDur    string
+		policyEtagExpTime     string
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   map[string]interface{}
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				pubkeyd:               tt.fields.pubkeyd,
+				policyd:               tt.fields.policyd,
+				jwkd:                  tt.fields.jwkd,
+				roleProcessor:         tt.fields.roleProcessor,
+				athenzURL:             tt.fields.athenzURL,
+				client:                tt.fields.client,
+				cache:                 tt.fields.cache,
+				cacheExp:              tt.fields.cacheExp,
+				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
+				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
+				policyExpireMargin:    tt.fields.policyExpireMargin,
+				athenzDomains:         tt.fields.athenzDomains,
+				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
+				policyEtagExpTime:     tt.fields.policyEtagExpTime,
+			}
+			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)
 			}
 		})
 	}

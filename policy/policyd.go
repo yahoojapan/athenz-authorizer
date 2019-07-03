@@ -223,6 +223,10 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 	return err
 }
 
+func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return p.rolePolicies.ToRawMap(ctx)
+}
+
 func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 	if err != nil {
@@ -379,8 +383,4 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	p.rolePolicies.StartExpired(ctx, p.policyExpiredDuration)
 
 	return nil
-}
-
-func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return p.rolePolicies.ToRawMap(ctx)
 }

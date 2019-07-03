@@ -44,27 +44,6 @@ func New(opts ...Option) Processor {
 	return r
 }
 
-func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
-	tok, err := jwt.ParseWithClaims(cred, &Claim{}, func(token *jwt.Token) (interface{}, error) {
-		keyID := token.Header["kid"].(string)
-		raw, err := token.SigningString()
-		if err != nil {
-			return nil, err
-		}
-		return nil, token.Method.Verify(raw, token.Signature, r.jwkp(keyID))
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := tok.Claims.(*Claim); ok && tok.Valid {
-		return claims, nil
-	}
-
-	return nil, errors.New("error invalid jwt token")
-}
-
 // ParseAndValidateRoleToken return the parsed and validated role token, and return any parsing and validate errors.
 func (r *rtp) ParseAndValidateRoleToken(tok string) (*Token, error) {
 	rt, err := r.parseToken(tok)
@@ -98,6 +77,27 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 		}
 	}
 	return rt, nil
+}
+
+func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
+	tok, err := jwt.ParseWithClaims(cred, &Claim{}, func(token *jwt.Token) (interface{}, error) {
+		keyID := token.Header["kid"].(string)
+		raw, err := token.SigningString()
+		if err != nil {
+			return nil, err
+		}
+		return nil, token.Method.Verify(raw, token.Signature, r.jwkp(keyID))
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := tok.Claims.(*Claim); ok && tok.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("error invalid jwt token")
 }
 
 func (r *rtp) validate(rt *Token) error {

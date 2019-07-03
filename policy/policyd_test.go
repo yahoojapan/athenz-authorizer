@@ -2094,3 +2094,52 @@ func Test_policy_simplifyAndCache(t *testing.T) {
 		})
 	}
 }
+
+func Test_policyd_GetPolicyCache(t *testing.T) {
+	type fields struct {
+		expireMargin          time.Duration
+		rolePolicies          gache.Gache
+		policyExpiredDuration time.Duration
+		refreshDuration       time.Duration
+		errRetryInterval      time.Duration
+		pkp                   pubkey.Provider
+		etagCache             gache.Gache
+		etagFlushDur          time.Duration
+		etagExpTime           time.Duration
+		athenzURL             string
+		athenzDomains         []string
+		client                *http.Client
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   map[string]interface{}
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &policyd{
+				expireMargin:          tt.fields.expireMargin,
+				rolePolicies:          tt.fields.rolePolicies,
+				policyExpiredDuration: tt.fields.policyExpiredDuration,
+				refreshDuration:       tt.fields.refreshDuration,
+				errRetryInterval:      tt.fields.errRetryInterval,
+				pkp:                   tt.fields.pkp,
+				etagCache:             tt.fields.etagCache,
+				etagFlushDur:          tt.fields.etagFlushDur,
+				etagExpTime:           tt.fields.etagExpTime,
+				athenzURL:             tt.fields.athenzURL,
+				athenzDomains:         tt.fields.athenzDomains,
+				client:                tt.fields.client,
+			}
+			if got := p.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("policyd.GetPolicyCache() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
