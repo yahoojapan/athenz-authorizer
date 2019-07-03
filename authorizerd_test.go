@@ -427,7 +427,7 @@ func TestVerifyRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "role token unauthorizate: deny",
+				wantErr: "token unauthorizate: deny",
 			}
 		}(),
 	}
@@ -487,13 +487,176 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		act string
 		res string
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		args      args
+		fields    fields
+		wantErr   string
+		checkFunc func(*authorizer) error
+	}
+	tests := []test{
+		func() test {
+			c := gache.New()
+			rm := &TokenMock{
+				c:       &role.Claim{},
+				wantErr: nil,
+			}
+			cm := &PolicydMock{
+				wantErr: nil,
+			}
+			return test{
+				name: "test verify success",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "",
+				checkFunc: func(prov *authorizer) error {
+					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.Set("dummyTokdummyActdummyRes", "dummy")
+			rm := &TokenMock{
+				c:       &role.Claim{},
+				wantErr: nil,
+			}
+			cm := &PolicydMock{
+				wantErr: nil,
+			}
+			return test{
+				name: "test use cache success",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.Set("dummyTokdummyActdummyRes", "dummy")
+			rm := &TokenMock{
+				c:       &role.Claim{},
+				wantErr: nil,
+			}
+			cm := &PolicydMock{
+				wantErr: nil,
+			}
+			return test{
+				name: "test empty action",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.Set("dummyTokdummyActdummyRes", "dummy")
+			rm := &TokenMock{
+				c:       &role.Claim{},
+				wantErr: nil,
+			}
+			cm := &PolicydMock{
+				wantErr: nil,
+			}
+			return test{
+				name: "test empty res",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			rm := &TokenMock{
+				wantErr: errors.New("cannot parse role jwt"),
+			}
+			cm := &PolicydMock{}
+			return test{
+				name: "test parse role jwt error",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "error verify role jwt: cannot parse role jwt",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			rm := &TokenMock{
+				c: &role.Claim{},
+			}
+			cm := &PolicydMock{
+				wantErr: errors.New("deny"),
+			}
+			return test{
+				name: "test return deny",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       cm,
+					roleProcessor: rm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "token unauthorizate: deny",
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -517,8 +680,22 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 				policyEtagExpTime:     tt.fields.policyEtagExpTime,
 			}
-			if err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.VerifyRoleJWT() error = %v, wantErr %v", err, tt.wantErr)
+			err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("VerifyRoleJWT() unexpected error want:%s, result:%s", tt.wantErr, err.Error())
+					return
+				}
+			} else {
+				if tt.wantErr != "" {
+					t.Errorf("VerifyRoleJWT() return nil. want %s", tt.wantErr)
+					return
+				}
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(p); err != nil {
+					t.Errorf("VerifyRoleJWT() error: %v", err)
+				}
 			}
 		})
 	}
@@ -683,7 +860,16 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		args   args
 		want   map[string]interface{}
 	}{
-		// TODO: Add test cases.
+		{
+			name: "GetPolicyCache success",
+			fields: fields{
+				policyd: &PolicydMock{},
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

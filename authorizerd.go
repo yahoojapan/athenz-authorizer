@@ -216,7 +216,7 @@ func (p *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 
 	if err := p.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
 		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "role token unauthorizate")
+		return errors.Wrap(err, "token unauthorizate")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
 	p.cache.SetWithExpire(tok+act+res, struct{}{}, p.cacheExp)

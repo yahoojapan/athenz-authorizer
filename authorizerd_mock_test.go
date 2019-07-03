@@ -43,8 +43,9 @@ func (cm *ConfdMock) Start(ctx context.Context) <-chan error {
 type PolicydMock struct {
 	policy.Daemon
 
-	policydExp time.Duration
-	wantErr    error
+	policydExp  time.Duration
+	wantErr     error
+	policyCache map[string]interface{}
 }
 
 func (pm *PolicydMock) Start(context.Context) <-chan error {
@@ -60,14 +61,23 @@ func (pm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []s
 	return pm.wantErr
 }
 
+func (pm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return pm.policyCache
+}
+
 type TokenMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
+	c       *role.Claim
 }
 
 func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
 	return rm.rt, rm.wantErr
+}
+
+func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.Claim, error) {
+	return rm.c, rm.wantErr
 }
 
 type JwkdMock struct {
