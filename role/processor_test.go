@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
@@ -302,14 +303,29 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 	type args struct {
 		cred string
 	}
-	tests := []struct {
+	type test struct {
 		name    string
 		fields  fields
 		args    args
 		want    *Claim
 		wantErr bool
-	}{
-		// TODO: Add test cases.
+	}
+	tests := []test{
+		/*
+			func() test {
+				return test{
+					name: "parse and valid jwt success",
+					fields: fields{
+						jwkp: jwk.Provider(func(kid string) interface{} {
+							return nil
+						}),
+					},
+					args: args{
+						cred: "",
+					},
+				}
+			}(),
+		*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -324,6 +340,96 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("rtp.ParseAndValidateRoleJWT() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_rtp_keyFunc(t *testing.T) {
+	type fields struct {
+		pkp  pubkey.Provider
+		jwkp jwk.Provider
+	}
+	type args struct {
+		token *jwt.Token
+	}
+	type test struct {
+		name    string
+		fields  fields
+		args    args
+		want    interface{}
+		wantErr bool
+	}
+	tests := []test{
+		{
+			name: "key return success",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					if kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+					},
+				},
+			},
+			want: "key",
+		},
+		{
+			name: "key header not found",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					if kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "key not found",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					if kid == "1" {
+						return nil
+					}
+					return "key"
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:  tt.fields.pkp,
+				jwkp: tt.fields.jwkp,
+			}
+			got, err := r.keyFunc(tt.args.token)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("rtp.keyFunc() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("rtp.keyFunc() = %v, want %v", got, tt.want)
 			}
 		})
 	}

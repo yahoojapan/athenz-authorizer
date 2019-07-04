@@ -80,15 +80,7 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 }
 
 func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
-	tok, err := jwt.ParseWithClaims(cred, &Claim{}, func(token *jwt.Token) (interface{}, error) {
-		keyID := token.Header["kid"].(string)
-		raw, err := token.SigningString()
-		if err != nil {
-			return nil, err
-		}
-		return nil, token.Method.Verify(raw, token.Signature, r.jwkp(keyID))
-	})
-
+	tok, err := jwt.ParseWithClaims(cred, &Claim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -109,4 +101,19 @@ func (r *rtp) validate(rt *Token) error {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
+}
+
+// keyFunc extract the key id from the token, and return corresponding key
+func (r *rtp) keyFunc(token *jwt.Token) (interface{}, error) {
+	keyID, ok := token.Header["kid"]
+	if !ok {
+		return nil, errors.New("kid not written in header")
+	}
+
+	key := r.jwkp(keyID.(string))
+	if key == nil {
+		return nil, errors.Errorf("key with keyID %s cannot be found", keyID)
+	}
+
+	return key, nil
 }
