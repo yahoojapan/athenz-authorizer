@@ -112,7 +112,7 @@ func (r *rtp) keyFunc(token *jwt.Token) (interface{}, error) {
 
 	key := r.jwkp(keyID.(string))
 	if key == nil {
-		return nil, errors.Errorf("key with keyID %s cannot be found", keyID)
+		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
 	}
 
 	return key, nil

@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -90,16 +91,153 @@ func Test_jwkd_Start(t *testing.T) {
 	type args struct {
 		ctx context.Context
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   <-chan error
-	}{
-		// TODO: Add test cases.
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		checkFunc func(*jwkd, <-chan error) error
+		afterFunc func()
+	}
+	tests := []test{
+		func() test {
+			k := `{
+      "e":"AQAB",
+      "kty":"RSA",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+				w.Write([]byte(k))
+			}))
+			ctx, cancel := context.WithCancel(context.Background())
+
+			return test{
+				name: "Start success",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					refreshDuration:  time.Millisecond * 10,
+					errRetryInterval: time.Millisecond,
+					client:           srv.Client(),
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(j *jwkd, ch <-chan error) error {
+					time.Sleep(time.Millisecond * 100)
+					cancel()
+					if k := j.keys.Load(); k == nil {
+						return errors.New("cannot update keys")
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
+		func() test {
+			i := 1
+			k := `{
+      "e":"AQAB",
+      "kty":"RSA",
+	  "kid" :"%s",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+				w.Write([]byte(fmt.Sprintf(k, i)))
+				i = i + 1
+			}))
+			ctx, cancel := context.WithCancel(context.Background())
+
+			return test{
+				name: "Start can update",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					refreshDuration:  time.Millisecond * 10,
+					errRetryInterval: time.Millisecond,
+					client:           srv.Client(),
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(j *jwkd, ch <-chan error) error {
+					time.Sleep(time.Millisecond * 100)
+					k1 := j.keys.Load()
+					if k1 == nil {
+						return errors.New("cannot update keys")
+					}
+
+					time.Sleep(time.Millisecond * 30)
+					cancel()
+
+					k2 := j.keys.Load()
+					if k2 == nil {
+						return errors.New("cannot update keys")
+					}
+
+					if k1 == k2 {
+						return errors.Errorf("key do not update after it starts, k1: %s, k2: %s", k1, k2)
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
+		func() test {
+			i := 1
+			k := `{
+      "e":"AQAB",
+      "kty":"RSA",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if i < 3 {
+					i++
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(200)
+				w.Write([]byte(k))
+				i = i + 1
+			}))
+			ctx, cancel := context.WithCancel(context.Background())
+
+			return test{
+				name: "Start retry update",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					refreshDuration:  time.Millisecond * 10,
+					errRetryInterval: time.Millisecond,
+					client:           srv.Client(),
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(j *jwkd, ch <-chan error) error {
+					time.Sleep(time.Millisecond * 100)
+					cancel()
+					if k := j.keys.Load(); k == nil {
+						return errors.New("cannot update keys")
+					}
+
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.afterFunc != nil {
+				defer tt.afterFunc()
+			}
 			j := &jwkd{
 				athenzURL:        tt.fields.athenzURL,
 				refreshDuration:  tt.fields.refreshDuration,
@@ -107,8 +245,11 @@ func Test_jwkd_Start(t *testing.T) {
 				client:           tt.fields.client,
 				keys:             tt.fields.keys,
 			}
-			if got := j.Start(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("jwkd.Start() = %v, want %v", got, tt.want)
+			got := j.Start(tt.args.ctx)
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(j, got); err != nil {
+					t.Errorf("jwkd.Start() error = %v", err)
+				}
 			}
 		})
 	}
