@@ -378,9 +378,18 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return retErr
 	}
 
-	p.rolePolicies.Stop()
-	p.rolePolicies = rp
-	p.rolePolicies.StartExpired(ctx, p.policyExpiredDuration)
+	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
+		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
+		return true
+	})
+
+	p.rolePolicies.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
+		_, ok := rp.Get(k)
+		if !ok {
+			p.rolePolicies.Delete(k)
+		}
+		return true
+	})
 
 	return nil
 }
