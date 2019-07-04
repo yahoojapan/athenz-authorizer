@@ -6,7 +6,7 @@ require (
 	github.com/ardielle/ardielle-go v1.5.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/go-cmp v0.3.0
-	github.com/kpango/gache v1.1.18
+	github.com/kpango/gache v1.1.19
 	github.com/kpango/glg v1.4.5
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/pkg/errors v0.8.1
