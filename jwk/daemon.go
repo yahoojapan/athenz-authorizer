@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Daemon represents the daemon to retrieve jwk from Athenz.
 type Daemon interface {
 	Start(ctx context.Context) <-chan error
 	Update(context.Context) error

@@ -158,7 +158,7 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 }
 
 // Update updates and cache athenz public key data
-func (c *pubkeyd) Update(ctx context.Context) error {
+func (p *pubkeyd) Update(ctx context.Context) error {
 	glg.Info("Updating athenz pubkey")
 	eg := errgroup.Group{}
 
@@ -166,7 +166,7 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 	updConf := func(env AthenzEnv, cache *sync.Map) error {
 		cm := new(sync.Map)
 		dec := new(authcore.YBase64)
-		pubKeys, upded, err := c.fetchPubKeyEntries(ctx, env)
+		pubKeys, upded, err := p.fetchPubKeyEntries(ctx, env)
 		if err != nil {
 			glg.Errorf("Error updating athenz pubkey, env: %v, error: %v", env, err)
 			return errors.Wrap(err, "error fetch public key entries")
@@ -208,7 +208,7 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 
 	eg.Go(func() error {
 		glg.Info("Updating ZTS athenz pubkey")
-		if err := updConf(EnvZTS, c.confCache.ZTSPubKeys); err != nil {
+		if err := updConf(EnvZTS, p.confCache.ZTSPubKeys); err != nil {
 			return errors.Wrap(err, "Error updating ZTS athenz pubkey")
 		}
 		glg.Info("Update ZTS athenz pubkey success")
@@ -217,7 +217,7 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 
 	eg.Go(func() error {
 		glg.Info("Updating ZMS athenz pubkey")
-		if err := updConf(EnvZMS, c.confCache.ZMSPubKeys); err != nil {
+		if err := updConf(EnvZMS, p.confCache.ZMSPubKeys); err != nil {
 			return errors.Wrap(err, "Error updating ZMS athenz pubkey")
 		}
 		glg.Info("Update ZMS athenz pubkey success")
@@ -232,14 +232,14 @@ func (c *pubkeyd) Update(ctx context.Context) error {
 }
 
 // GetProvider returns the public key provider for user to get the public key
-func (c *pubkeyd) GetProvider() Provider {
-	return c.getPubKey
+func (p *pubkeyd) GetProvider() Provider {
+	return p.getPubKey
 }
 
-func (c *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAuthConfig, bool, error) {
+func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAuthConfig, bool, error) {
 	glg.Info("Fetching public key entries")
 	// https://{www.athenz.com/zts/v1}/domain/sys.auth/service/zts
-	url := fmt.Sprintf("https://%s/domain/%s/service/%s", c.athenzURL, c.sysAuthDomain, env)
+	url := fmt.Sprintf("https://%s/domain/%s/service/%s", p.athenzURL, p.sysAuthDomain, env)
 	glg.Debugf("Fetching public key from %s", url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -249,14 +249,14 @@ func (c *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	}
 
 	// etag header
-	t, ok := c.etagCache.Get(string(env))
+	t, ok := p.etagCache.Get(string(env))
 	if ok {
 		eTag := t.(*confCache).eTag
 		glg.Debugf("ETag %v found in the cache", eTag)
 		req.Header.Set("If-None-Match", eTag)
 	}
 
-	r, err := c.client.Do(req.WithContext(ctx))
+	r, err := p.client.Do(req.WithContext(ctx))
 	if err != nil {
 		glg.Errorf("Error making HTTP request, error: %v", err)
 		return nil, false, errors.Wrap(err, "error make http request")
@@ -292,16 +292,16 @@ func (c *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	eTag := r.Header.Get("ETag")
 	if eTag != "" {
 		glg.Debugf("Setting ETag %v", eTag)
-		c.etagCache.SetWithExpire(string(env), &confCache{eTag, sac}, c.etagExpTime)
+		p.etagCache.SetWithExpire(string(env), &confCache{eTag, sac}, p.etagExpTime)
 	}
 
 	glg.Info("Fetch public key entries success")
 	return sac, true, nil
 }
 
-func (c *pubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier {
+func (p *pubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier {
 	if env == EnvZTS {
-		ver, ok := c.confCache.ZTSPubKeys.Load(keyID)
+		ver, ok := p.confCache.ZTSPubKeys.Load(keyID)
 		if !ok {
 			glg.Warnf("ZTS PubKey Load Failed keyID[%s]  getZTSPubKey %v", keyID, ver)
 			return nil
@@ -309,7 +309,7 @@ func (c *pubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier {
 		return ver.(authcore.Verifier)
 	}
 
-	ver, ok := c.confCache.ZMSPubKeys.Load(keyID)
+	ver, ok := p.confCache.ZMSPubKeys.Load(keyID)
 	if !ok {
 		glg.Warnf("ZMS PubKey Load Failed keyID[%s]  getZMSPubKey %v", keyID, ver)
 		return nil

@@ -40,7 +40,7 @@ func WithAthenzURL(url string) Option {
 	}
 }
 
-// AthenzDomains represents a AthenzDomains functional option
+// WithAthenzDomains represents a AthenzDomains functional option
 func WithAthenzDomains(domains ...string) Option {
 	return func(prov *authorizer) error {
 		prov.athenzDomains = domains
@@ -48,7 +48,7 @@ func WithAthenzDomains(domains ...string) Option {
 	}
 }
 
-// Transport represents a Transport functional option
+// WithTransport represents a Transport functional option
 func WithTransport(t *http.Transport) Option {
 	return func(prov *authorizer) error {
 		if t == nil {
@@ -64,7 +64,7 @@ func WithTransport(t *http.Transport) Option {
 	}
 }
 
-// CacheExp represents the cache expiration time
+// WithCacheExp represents the cache expiration time
 func WithCacheExp(exp time.Duration) Option {
 	return func(prov *authorizer) error {
 		prov.cache.SetDefaultExpire(exp)
@@ -73,7 +73,7 @@ func WithCacheExp(exp time.Duration) Option {
 	}
 }
 
-// RoleCertURIPrefix represents a RoleCertURIPrefix functional option
+// WithRoleCertURIPrefix represents a RoleCertURIPrefix functional option
 func WithRoleCertURIPrefix(t string) Option {
 	return func(prov *authorizer) error {
 		prov.roleCertURIPrefix = t
@@ -85,7 +85,7 @@ func WithRoleCertURIPrefix(t string) Option {
 	Pubkeyd parameters
 */
 
-// PubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
+// WithPubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
 func WithPubkeyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyRefreshDuration = t
@@ -93,7 +93,7 @@ func WithPubkeyRefreshDuration(t string) Option {
 	}
 }
 
-// PubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
+// WithPubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
 func WithPubkeySysAuthDomain(domain string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeySysAuthDomain = domain
@@ -101,7 +101,7 @@ func WithPubkeySysAuthDomain(domain string) Option {
 	}
 }
 
-// PubkeyEtagExpTime represents a PubkeyEtagExpTime functional option
+// WithPubkeyEtagExpTime represents a PubkeyEtagExpTime functional option
 func WithPubkeyEtagExpTime(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyEtagExpTime = t
@@ -109,7 +109,7 @@ func WithPubkeyEtagExpTime(t string) Option {
 	}
 }
 
-// PubkeyEtagFlushDuration represents a PubkeyEtagFlushDur functional option
+// WithPubkeyEtagFlushDuration represents a PubkeyEtagFlushDur functional option
 func WithPubkeyEtagFlushDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.pubkeyEtagFlushDur = t
@@ -121,7 +121,7 @@ func WithPubkeyEtagFlushDuration(t string) Option {
 	policyd parameters
 */
 
-// PolicyRefreshDuration represents a PolicyRefreshDuration functional option
+// WithPolicyRefreshDuration represents a PolicyRefreshDuration functional option
 func WithPolicyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyRefreshDuration = t
@@ -129,7 +129,7 @@ func WithPolicyRefreshDuration(t string) Option {
 	}
 }
 
-// PolicyExpireMargin represents a PolicyExpireMargin functional option
+// WithPolicyExpireMargin represents a PolicyExpireMargin functional option
 func WithPolicyExpireMargin(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyExpireMargin = t
@@ -137,7 +137,7 @@ func WithPolicyExpireMargin(t string) Option {
 	}
 }
 
-// PolicyEtagExpTime represents a PolicyEtagExpTime functional option
+// WithPolicyEtagExpTime represents a PolicyEtagExpTime functional option
 func WithPolicyEtagExpTime(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyEtagExpTime = t
@@ -145,7 +145,7 @@ func WithPolicyEtagExpTime(t string) Option {
 	}
 }
 
-// PolicyEtagFlushDuration represents a PolicyEtagFlushDur functional option
+// WithPolicyEtagFlushDuration represents a PolicyEtagFlushDur functional option
 func WithPolicyEtagFlushDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyEtagFlushDur = t

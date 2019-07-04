@@ -259,7 +259,7 @@ func (p *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	return errors.Wrap(err, "role certificates unauthorizate")
 }
 
-func (a *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return a.policyd.GetPolicyCache(ctx)
+func (p *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return p.policyd.GetPolicyCache(ctx)
 
 }
