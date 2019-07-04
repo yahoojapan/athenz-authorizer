@@ -44,7 +44,6 @@ type PolicydMock struct {
 	CheckPolicyFunc func(ctx context.Context, domain string, roles []string, action, resource string) error
 
 	policydExp  time.Duration
-	wantErr     error
 	policyCache map[string]interface{}
 }
 

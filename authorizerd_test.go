@@ -228,6 +228,47 @@ func TestStart(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*500))
+			cm := &ConfdMock{
+				confdExp: time.Second,
+			}
+			pm := &PolicydMock{
+				policydExp: time.Second,
+			}
+			jd := &JwkdMock{
+				StartFunc: func(ctx context.Context) <-chan error {
+					ch := make(chan error, 1)
+					go func() {
+						time.Sleep(time.Millisecond * 20)
+						ch <- errors.New("dummy")
+					}()
+					return ch
+				},
+			}
+			return test{
+				name: "test jwkd returns error",
+				fields: fields{
+					pubkeyd:  cm,
+					policyd:  pm,
+					jwkd:     jd,
+					cache:    gache.New(),
+					cacheExp: time.Minute,
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(prov Authorizerd, err error) error {
+					if err.Error() != "update jwk error: dummy" {
+						return errors.Errorf("unexpected error: %s", err)
+					}
+					return nil
+				},
+				afterFunc: func() {
+					cancel()
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
