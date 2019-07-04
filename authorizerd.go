@@ -245,7 +245,7 @@ func (p *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	}
 
 	if len(domainRoles) == 0 {
-		return errors.New("no valid role certificate")
+		return errors.New("not valid role certificate")
 	}
 
 	var err error

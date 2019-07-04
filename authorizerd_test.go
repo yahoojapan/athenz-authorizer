@@ -18,6 +18,7 @@ package authorizerd
 import (
 	"context"
 	"crypto/x509"
+	"encoding/pem"
 	"net/http"
 	"reflect"
 	"testing"
@@ -274,9 +275,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test verify success",
 				args: args{
@@ -308,9 +307,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test use cache success",
 				args: args{
@@ -335,9 +332,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test empty action",
 				args: args{
@@ -362,9 +357,7 @@ func TestVerifyRoleToken(t *testing.T) {
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test empty res",
 				args: args{
@@ -411,7 +404,9 @@ func TestVerifyRoleToken(t *testing.T) {
 				rt: &role.Token{},
 			}
 			cm := &PolicydMock{
-				wantErr: errors.New("deny"),
+				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
+					return errors.New("deny")
+				},
 			}
 			return test{
 				name: "test return deny",
@@ -501,9 +496,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				c:       &role.Claim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test verify success",
 				args: args{
@@ -535,9 +528,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				c:       &role.Claim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test use cache success",
 				args: args{
@@ -562,9 +553,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				c:       &role.Claim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test empty action",
 				args: args{
@@ -589,9 +578,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				c:       &role.Claim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{
-				wantErr: nil,
-			}
+			cm := &PolicydMock{}
 			return test{
 				name: "test empty res",
 				args: args{
@@ -638,7 +625,9 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				c: &role.Claim{},
 			}
 			cm := &PolicydMock{
-				wantErr: errors.New("deny"),
+				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
+					return errors.New("deny")
+				},
 			}
 			return test{
 				name: "test return deny",
@@ -793,13 +782,152 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		act       string
 		res       string
 	}
-	tests := []struct {
+	type test struct {
 		name    string
 		fields  fields
 		args    args
 		wantErr bool
-	}{
-		// TODO: Add test cases.
+	}
+	tests := []test{
+		func() test {
+			crt := `-----BEGIN CERTIFICATE-----
+MIICGTCCAcOgAwIBAgIJALLML3PdJAZ1MA0GCSqGSIb3DQEBCwUAMFwxCzAJBgNV
+BAYTAlVTMQswCQYDVQQIEwJDQTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5U
+ZXN0aW5nIERvbWFpbjEWMBQGA1UEAxMNYXRoZW56LnN5bmNlcjAeFw0xOTA0Mjcw
+MjQ2MjNaFw0yOTA0MjQwMjQ2MjNaMFwxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJD
+QTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5UZXN0aW5nIERvbWFpbjEWMBQG
+A1UEAxMNYXRoZW56LnN5bmNlcjBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvv27a
+SNAnK0vcN8fqqQgMHwb0EhfVWMwoRTBQFrCmA9mH/84QgI/0kR3ZI+DlDNBCgDHd
+rEJZVPyX2V41VOX3AgMBAAGjaDBmMGQGA1UdEQRdMFuGGXNwaWZmZTovL2F0aGVu
+ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
+ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
+Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
+bu80CwTnWhmdBo36Ig==
+-----END CERTIFICATE-----
+`
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			pm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+					containRole := func(r string) bool {
+						for _, role := range roles {
+							if role == r {
+								return true
+							}
+						}
+						return false
+					}
+					if domain != "coretech" {
+						return errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
+					}
+					if !containRole("readers") || !containRole("writers") {
+						return errors.Errorf("invalid role, got: %s", roles)
+					}
+					return nil
+				},
+			}
+
+			return test{
+				name: "parse and verify role cert success",
+				fields: fields{
+					roleCertURIPrefix: "athenz://role/",
+					policyd:           pm,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+					act: "abc",
+					res: "def",
+				},
+			}
+		}(),
+		func() test {
+			crt := `
+-----BEGIN CERTIFICATE-----
+MIICLjCCAZegAwIBAgIBADANBgkqhkiG9w0BAQ0FADA0MQswCQYDVQQGEwJ1czEL
+MAkGA1UECAwCSEsxCzAJBgNVBAoMAkhLMQswCQYDVQQDDAJISzAeFw0xOTA3MDQw
+NjU2MTJaFw0yMDA3MDMwNjU2MTJaMDQxCzAJBgNVBAYTAnVzMQswCQYDVQQIDAJI
+SzELMAkGA1UECgwCSEsxCzAJBgNVBAMMAkhLMIGfMA0GCSqGSIb3DQEBAQUAA4GN
+ADCBiQKBgQDdUHpdYo/UeYvzB4Z3WvUe2yHsuxrhh7x/D2A5OPb19+ZZy4cdMDUW
+qd3hw/tvBWxSUYueL75AifVAQdncUJ+7of3WByFYVSemDrdlD9K/+PyGFZotA+Xj
+GmNWjAsGBYuU5roxJZI2c78vJzKj2DU1a9hq/PJ9WGvX4i1Xwf0FKwIDAQABo1Aw
+TjAdBgNVHQ4EFgQUiLEo7+nigzdGft2ZEbpkZFxgU+MwHwYDVR0jBBgwFoAUiLEo
+7+nigzdGft2ZEbpkZFxgU+MwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOB
+gQCiedWe2DXuE0ak1oGV+28qLpyc/Ff9RNNwUbCKB6L/+OWoROVdaz/DoZjfE9vr
+ilcIAqkugYyMzW4cY2RexOLYrkyyjLjMj5C2ff4m13gqRLHU0rFpaKpjYr8KYiGD
+KSdPh6TRd/kYpv7t6cVm1Orll4O5jh+IdoguGkOCxheMaQ==
+-----END CERTIFICATE-----`
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			pm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+					return nil
+				},
+			}
+
+			return test{
+				name: "invalid athenz role certificate",
+				fields: fields{
+					roleCertURIPrefix: "athenz://role/",
+					policyd:           pm,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+					act: "abc",
+					res: "def",
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			crt := `-----BEGIN CERTIFICATE-----
+MIICGTCCAcOgAwIBAgIJALLML3PdJAZ1MA0GCSqGSIb3DQEBCwUAMFwxCzAJBgNV
+BAYTAlVTMQswCQYDVQQIEwJDQTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5U
+ZXN0aW5nIERvbWFpbjEWMBQGA1UEAxMNYXRoZW56LnN5bmNlcjAeFw0xOTA0Mjcw
+MjQ2MjNaFw0yOTA0MjQwMjQ2MjNaMFwxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJD
+QTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5UZXN0aW5nIERvbWFpbjEWMBQG
+A1UEAxMNYXRoZW56LnN5bmNlcjBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvv27a
+SNAnK0vcN8fqqQgMHwb0EhfVWMwoRTBQFrCmA9mH/84QgI/0kR3ZI+DlDNBCgDHd
+rEJZVPyX2V41VOX3AgMBAAGjaDBmMGQGA1UdEQRdMFuGGXNwaWZmZTovL2F0aGVu
+ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
+ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
+Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
+bu80CwTnWhmdBo36Ig==
+-----END CERTIFICATE-----
+`
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			pm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+					return errors.New("dummy")
+				},
+			}
+
+			return test{
+				name: "parse and verify role cert success",
+				fields: fields{
+					roleCertURIPrefix: "athenz://role/",
+					policyd:           pm,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+					act: "abc",
+					res: "def",
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/jwk"
-	"github.com/yahoojapan/athenz-authorizer/policy"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/role"
 )
@@ -41,7 +40,8 @@ func (cm *ConfdMock) Start(ctx context.Context) <-chan error {
 }
 
 type PolicydMock struct {
-	policy.Daemon
+	UpdateFunc      func(context.Context) error
+	CheckPolicyFunc func(ctx context.Context, domain string, roles []string, action, resource string) error
 
 	policydExp  time.Duration
 	wantErr     error
@@ -57,8 +57,18 @@ func (pm *PolicydMock) Start(context.Context) <-chan error {
 	return ech
 }
 
+func (pm *PolicydMock) Update(ctx context.Context) error {
+	if pm.UpdateFunc != nil {
+		return pm.UpdateFunc(ctx)
+	}
+	return nil
+}
+
 func (pm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	return pm.wantErr
+	if pm.CheckPolicyFunc != nil {
+		return pm.CheckPolicyFunc(ctx, domain, roles, action, resource)
+	}
+	return nil
 }
 
 func (pm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface{} {
