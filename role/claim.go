@@ -16,6 +16,9 @@ limitations under the License.
 package role
 
 import (
+	"fmt"
+	"time"
+
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -31,4 +34,32 @@ type Claim struct {
 	UserName string `json:"n"`
 	Version  string `json:"v"`
 	jwt.StandardClaims
+}
+
+// copy from source code, and change c.VerifyExpiresAt parameter.
+func (c *Claim) Valid() error {
+	vErr := new(jwt.ValidationError)
+	now := jwt.TimeFunc().Unix()
+
+	if c.VerifyExpiresAt(now, true) == false {
+		delta := time.Unix(now, 0).Sub(time.Unix(c.ExpiresAt, 0))
+		vErr.Inner = fmt.Errorf("token is expired by %v", delta)
+		vErr.Errors |= jwt.ValidationErrorExpired
+	}
+
+	if c.VerifyIssuedAt(now, false) == false {
+		vErr.Inner = fmt.Errorf("Token used before issued")
+		vErr.Errors |= jwt.ValidationErrorIssuedAt
+	}
+
+	if c.VerifyNotBefore(now, false) == false {
+		vErr.Inner = fmt.Errorf("token is not valid yet")
+		vErr.Errors |= jwt.ValidationErrorNotValidYet
+	}
+
+	if vErr.Errors == 0 {
+		return nil
+	}
+
+	return vErr
 }
