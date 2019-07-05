@@ -16,7 +16,9 @@ limitations under the License.
 package role
 
 import (
+	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
@@ -310,33 +312,34 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 		want    *Claim
 		wantErr bool
 	}
-	/*
-			rsaPrivateKey := `-----BEGIN RSA PRIVATE KEY-----
-		MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
-		-----END RSA PRIVATE KEY-----`
-				   	rsaPubKey := `-----BEGIN PUBLIC KEY-----
-				   MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQAB
-				   -----END PUBLIC KEY-----  `
-				jwt := `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ`
 
-			jwt := `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.W3uWAF-_z_ejMR9yC_BTNxNTvW-mkn6GWFsDki2UE3M`
-	*/
+	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
+		keyData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
+		if e != nil {
+			panic(e.Error())
+		}
+		return key
+	}
+
 	tests := []test{
-		/*
-			func() test {
-				return test{
-					name: "parse and valid jwt success",
-					fields: fields{
-						jwkp: jwk.Provider(func(kid string) interface{} {
-							return rsaPrivateKey
-						}),
-					},
-					args: args{
-						cred: jwt,
-					},
-				}
-			}(),
-		*/
+		func() test {
+			return test{
+				name: "parse and valid jwt success",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZX0.UtLx_xg2OWF7_sk9P7jcBsS9WqE4st_gvSskRoG92ktDXjSsBa-p2LmArFnFHp-cb3qnXUwc3_Ksg9w10r0iVpxg8lZfGUCmIfauaaoCuxRdogWIAaY4mIXyglQcSgIruo17wMJ-kHyJxr50lWMiyxFYf6ANUE8W2FaiDgwQuGraF4UQKDwmytGai1mHnc8_u5CanEmETWdax-Pe37BikPorljCIoYIyMTpIfdjM3A8s5Ipo8SHagnUPU0a-jS1sU2UjLo4vnDnPwur_6d5im9XuZD6DGHgaQRo4Zh-ZdvEJR8QTtdb2op14jzTaQGLYJNbPiH8yklBhtKMCAPHFuw`,
+				},
+				want: &Claim{},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -350,7 +353,7 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("rtp.ParseAndValidateRoleJWT() = %v, want %v", got, tt.want)
+				t.Errorf("rtp.ParseAndValidateRoleJWT() = %+v, want %v", got, tt.want)
 			}
 		})
 	}
