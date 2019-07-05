@@ -373,6 +373,34 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			return test{
+				name: "verify jwt fail, invalid signature",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZSwiZXhwIjoxfQ.h5jrpuSZDjpqo8Ri-yUzq22qis_CIMuTQE6WR5myHW8Z8VhEOLInZU59kmu5Ardud3gjjtMI6kIJrUcVeYBcmE_MG4iMiah767hB-09Bm_lmh6mdEK3wP_m8_JX4OWKHqHyZSZgjJKGNCT-yHZEXuOLpydCLpIaL7znAA3-eDAnyUjZcVipA0J-BwS1I27zHOW6NumQEuXQMau2f1pH4Z77e3etNGA3yG7yG30YaqaSEWfah9BMZwgLx2fnuHAbcyNEpSl5nHZYdTyINtMsurUkDuou8c1G0WIvu4Rn2Wksey0GWdVNsclqeNaFsgsHyVwKsOVFvslQ3qTcwSjw73Qe`,
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify jwt fail, invalid jwt format",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `dummy`,
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
