@@ -2119,7 +2119,19 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		args   args
 		want   map[string]interface{}
 	}{
-		// TODO: Add test cases.
+		{
+			name: "get policy cache success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					return g
+				}(),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: make(map[string]interface{}),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
