@@ -78,12 +78,15 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 		update := func() {
 			if err := j.Update(ctx); err != nil {
 				err = errors.Wrap(err, "error update athenz json web key")
+				time.Sleep(j.errRetryInterval)
+
 				select {
 				case ech <- errors.Wrap(ebuf, err.Error()):
 					ebuf = errors.New("")
 				default:
 					ebuf = errors.Wrap(ebuf, err.Error())
 				}
+
 				select {
 				case fch <- struct{}{}:
 				default:
