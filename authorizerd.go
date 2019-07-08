@@ -176,6 +176,7 @@ func (p *authorizer) Start(ctx context.Context) <-chan error {
 		for {
 			select {
 			case <-ctx.Done():
+				g.Stop()
 				g.Clear()
 				ech <- ctx.Err()
 				return

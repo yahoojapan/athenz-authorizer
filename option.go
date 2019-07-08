@@ -26,6 +26,9 @@ var (
 		WithTransport(nil),
 		WithCacheExp(time.Minute),
 		WithRoleCertURIPrefix("athenz://role/"),
+		WithEnablePubkeyd(),
+		WithEnablePolicyd(),
+		WithEnableJwkd(),
 	}
 )
 
@@ -85,10 +88,18 @@ func WithRoleCertURIPrefix(t string) Option {
 	Pubkeyd parameters
 */
 
-// WithDisablePubkeyd represents a DisablePubkey functional optiond
-func WithDisablePubkeyd(e bool) Option {
+// WithEnablePubkeyd represents a EnablePubkey functional optiond
+func WithEnablePubkeyd() Option {
 	return func(prov *authorizer) error {
-		prov.disablePubkeyd = e
+		prov.disablePubkeyd = false
+		return nil
+	}
+}
+
+// WithDisablePubkeyd represents a DisablePubkey functional optiond
+func WithDisablePubkeyd() Option {
+	return func(prov *authorizer) error {
+		prov.disablePubkeyd = true
 		return nil
 	}
 }
@@ -129,10 +140,18 @@ func WithPubkeyEtagFlushDuration(t string) Option {
 	policyd parameters
 */
 
-// WithDisablePolicyd represents a DisablePolicyd functional optiond
-func WithDisablePolicyd(e bool) Option {
+// WithEnablePolicyd represents a EnablePolicyd functional optiond
+func WithEnablePolicyd() Option {
 	return func(prov *authorizer) error {
-		prov.disablePolicyd = e
+		prov.disablePolicyd = false
+		return nil
+	}
+}
+
+// WithDisablePolicyd represents a DisablePolicyd functional optiond
+func WithDisablePolicyd() Option {
+	return func(prov *authorizer) error {
+		prov.disablePolicyd = true
 		return nil
 	}
 }
@@ -173,10 +192,18 @@ func WithPolicyEtagFlushDuration(t string) Option {
 	jwkd parameters
 */
 
-// WithDisableJwkd represents a DisableJwkd functional optiond
-func WithDisableJwkd(e bool) Option {
+// WithEnableJwkd represents a EnableJwkd functional optiond
+func WithEnableJwkd() Option {
 	return func(prov *authorizer) error {
-		prov.disableJwkd = e
+		prov.disableJwkd = false
+		return nil
+	}
+}
+
+// WithDisableJwkd represents a DisableJwkd functional optiond
+func WithDisableJwkd() Option {
+	return func(prov *authorizer) error {
+		prov.disableJwkd = true
 		return nil
 	}
 }
