@@ -85,6 +85,14 @@ func WithRoleCertURIPrefix(t string) Option {
 	Pubkeyd parameters
 */
 
+// WithDisablePubkeyd represents a DisablePubkey functional optiond
+func WithDisablePubkeyd(e bool) Option {
+	return func(prov *authorizer) error {
+		prov.disablePubkeyd = e
+		return nil
+	}
+}
+
 // WithPubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
 func WithPubkeyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
@@ -121,6 +129,14 @@ func WithPubkeyEtagFlushDuration(t string) Option {
 	policyd parameters
 */
 
+// WithDisablePolicyd represents a DisablePolicyd functional optiond
+func WithDisablePolicyd(e bool) Option {
+	return func(prov *authorizer) error {
+		prov.disablePolicyd = e
+		return nil
+	}
+}
+
 // WithPolicyRefreshDuration represents a PolicyRefreshDuration functional option
 func WithPolicyRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
@@ -149,6 +165,18 @@ func WithPolicyEtagExpTime(t string) Option {
 func WithPolicyEtagFlushDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.policyEtagFlushDur = t
+		return nil
+	}
+}
+
+/*
+	jwkd parameters
+*/
+
+// WithDisableJwkd represents a DisableJwkd functional optiond
+func WithDisableJwkd(e bool) Option {
+	return func(prov *authorizer) error {
+		prov.disableJwkd = e
 		return nil
 	}
 }

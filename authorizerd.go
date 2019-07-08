@@ -60,17 +60,22 @@ type authorizer struct {
 	roleCertURIPrefix string
 
 	// pubkeyd parameters
+	disablePubkeyd        bool
 	pubkeyRefreshDuration string
 	pubkeySysAuthDomain   string
 	pubkeyEtagExpTime     string
 	pubkeyEtagFlushDur    string
 
 	// policyd parameters
+	disablePolicyd        bool
 	policyExpireMargin    string
 	athenzDomains         []string
 	policyRefreshDuration string
 	policyEtagFlushDur    string
 	policyEtagExpTime     string
+
+	// jwkd parameters
+	disableJwkd bool
 }
 
 type mode uint8
@@ -83,65 +88,88 @@ const (
 // New return Authorizerd
 // This function will initialize the Authorizerd object with the options
 func New(opts ...Option) (Authorizerd, error) {
-	prov := &authorizer{
-		cache: gache.New(),
-	}
+	var (
+		prov = &authorizer{
+			cache: gache.New(),
+		}
+		err error
 
-	var err error
+		pubkeyProvider pubkey.Provider
+		jwkProvider    jwk.Provider
+	)
+
 	for _, opt := range append(defaultOptions, opts...) {
 		if err = opt(prov); err != nil {
 			return nil, errors.Wrap(err, "error creating authorizerd")
 		}
 	}
 
-	if prov.pubkeyd, err = pubkey.New(
-		pubkey.WithAthenzURL(prov.athenzURL),
-		pubkey.WithSysAuthDomain(prov.pubkeySysAuthDomain),
-		pubkey.WithEtagExpTime(prov.pubkeyEtagExpTime),
-		pubkey.WithEtagFlushDuration(prov.pubkeyEtagFlushDur),
-		pubkey.WithRefreshDuration(prov.pubkeyRefreshDuration),
-		pubkey.WithHTTPClient(prov.client),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create pubkeyd")
+	if !prov.disablePubkeyd {
+		if prov.pubkeyd, err = pubkey.New(
+			pubkey.WithAthenzURL(prov.athenzURL),
+			pubkey.WithSysAuthDomain(prov.pubkeySysAuthDomain),
+			pubkey.WithEtagExpTime(prov.pubkeyEtagExpTime),
+			pubkey.WithEtagFlushDuration(prov.pubkeyEtagFlushDur),
+			pubkey.WithRefreshDuration(prov.pubkeyRefreshDuration),
+			pubkey.WithHTTPClient(prov.client),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create pubkeyd")
+		}
+
+		pubkeyProvider = prov.pubkeyd.GetProvider()
 	}
 
-	if prov.policyd, err = policy.New(
-		policy.WithExpireMargin(prov.policyExpireMargin),
-		policy.WithEtagFlushDuration(prov.policyEtagFlushDur),
-		policy.WithEtagExpTime(prov.policyEtagExpTime),
-		policy.WithAthenzURL(prov.athenzURL),
-		policy.WithAthenzDomains(prov.athenzDomains...),
-		policy.WithRefreshDuration(prov.policyRefreshDuration),
-		policy.WithHTTPClient(prov.client),
-		policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create policyd")
+	if !prov.disablePolicyd {
+		if prov.policyd, err = policy.New(
+			policy.WithExpireMargin(prov.policyExpireMargin),
+			policy.WithEtagFlushDuration(prov.policyEtagFlushDur),
+			policy.WithEtagExpTime(prov.policyEtagExpTime),
+			policy.WithAthenzURL(prov.athenzURL),
+			policy.WithAthenzDomains(prov.athenzDomains...),
+			policy.WithRefreshDuration(prov.policyRefreshDuration),
+			policy.WithHTTPClient(prov.client),
+			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create policyd")
+		}
 	}
 
-	if prov.jwkd, err = jwk.New(
-		jwk.WithAthenzURL(prov.athenzURL),
-		jwk.WithRefreshDuration(prov.pubkeyRefreshDuration),
-		jwk.WithHTTPClient(prov.client),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create jwkd")
+	if !prov.disableJwkd {
+		if prov.jwkd, err = jwk.New(
+			jwk.WithAthenzURL(prov.athenzURL),
+			jwk.WithRefreshDuration(prov.pubkeyRefreshDuration),
+			jwk.WithHTTPClient(prov.client),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create jwkd")
+		}
+
+		jwkProvider = prov.jwkd.GetProvider()
 	}
 
 	prov.roleProcessor = role.New(
-		role.WithPubkeyProvider(prov.pubkeyd.GetProvider()),
-		role.WithJWKProvider(prov.jwkd.GetProvider()))
+		role.WithPubkeyProvider(pubkeyProvider),
+		role.WithJWKProvider(jwkProvider))
 
 	return prov, nil
 }
 
 // Start starts authorizer daemon.
 func (p *authorizer) Start(ctx context.Context) <-chan error {
-	ech := make(chan error, 200)
+	var (
+		ech              = make(chan error, 200)
+		g                = p.cache.StartExpired(ctx, p.cacheExp/2)
+		cech, pech, jech <-chan error
+	)
 
-	g := p.cache.StartExpired(ctx, p.cacheExp/2)
-
-	cech := p.pubkeyd.Start(ctx)
-	pech := p.policyd.Start(ctx)
-	jech := p.jwkd.Start(ctx)
+	if !p.disablePubkeyd {
+		cech = p.pubkeyd.Start(ctx)
+	}
+	if !p.disablePolicyd {
+		pech = p.policyd.Start(ctx)
+	}
+	if !p.disableJwkd {
+		jech = p.jwkd.Start(ctx)
+	}
 
 	go func() {
 		for {
