@@ -177,8 +177,8 @@ func Test_jwkd_Start(t *testing.T) {
 						return errors.New("cannot update keys")
 					}
 
-					if k1 == k2 {
-						return errors.Errorf("key do not update after it starts, k1: %s, k2: %s", k1, k2)
+					if k1.(*jwk.Set).Keys[0].KeyID() == k2.(*jwk.Set).Keys[0].KeyID() {
+						return errors.Errorf("key do not update after it starts, k1.KeyID: %v equals k2.KeyID: %v", k1.(*jwk.Set).Keys[0].KeyID(), k2.(*jwk.Set).Keys[0].KeyID())
 					}
 
 					return nil
