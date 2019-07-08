@@ -36,7 +36,7 @@ type Claim struct {
 	jwt.StandardClaims
 }
 
-// copy from source code, and change c.VerifyExpiresAt parameter.
+// Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
 func (c *Claim) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
