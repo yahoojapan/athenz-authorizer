@@ -180,3 +180,11 @@ func WithDisableJwkd(e bool) Option {
 		return nil
 	}
 }
+
+// WithJwkRefreshDuration represents a JwkRefreshDuration functional option
+func WithJwkRefreshDuration(t string) Option {
+	return func(prov *authorizer) error {
+		prov.jwkRefreshDuration = t
+		return nil
+	}
+}

@@ -75,7 +75,8 @@ type authorizer struct {
 	policyEtagExpTime     string
 
 	// jwkd parameters
-	disableJwkd bool
+	disableJwkd        bool
+	jwkRefreshDuration string
 }
 
 type mode uint8
@@ -137,7 +138,7 @@ func New(opts ...Option) (Authorizerd, error) {
 	if !prov.disableJwkd {
 		if prov.jwkd, err = jwk.New(
 			jwk.WithAthenzURL(prov.athenzURL),
-			jwk.WithRefreshDuration(prov.pubkeyRefreshDuration),
+			jwk.WithRefreshDuration(prov.jwkRefreshDuration),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create jwkd")
