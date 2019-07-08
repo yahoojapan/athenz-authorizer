@@ -2120,10 +2120,43 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		want   map[string]interface{}
 	}{
 		{
+			name: "get empty policy cache success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					return g
+				}(),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: make(map[string]interface{}),
+		},
+		{
 			name: "get policy cache success",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
+					g.Set("key", "value")
+					return g
+				}(),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: map[string]interface{}{
+				"key": "value",
+			},
+		},
+		{
+			name: "get policy cache without expired success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.SetWithExpire("key", "value", time.Duration(1)*time.Nanosecond)
+					// time.Sleep(time.Duration(2) * time.Nanosecond) // not working
+					time.Sleep(time.Duration(2) * time.Millisecond)
+					g.DeleteExpired(context.Background())
 					return g
 				}(),
 			},
