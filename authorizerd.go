@@ -246,7 +246,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 
 	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
 		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "token unauthorizate")
+		return errors.Wrap(err, "token unauthorized")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
 	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
@@ -286,7 +286,7 @@ func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 		}
 	}
 
-	return errors.Wrap(err, "role certificates unauthorizate")
+	return errors.Wrap(err, "role certificates unauthorized")
 }
 
 func (a *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {

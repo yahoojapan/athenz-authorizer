@@ -463,7 +463,7 @@ func TestVerifyRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "token unauthorizate: deny",
+				wantErr: "token unauthorized: deny",
 			}
 		}(),
 	}
@@ -684,7 +684,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
-				wantErr: "token unauthorizate: deny",
+				wantErr: "token unauthorized: deny",
 			}
 		}(),
 	}
