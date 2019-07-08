@@ -18,29 +18,35 @@ package role
 import (
 	"strings"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/jwk"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
-// RoleTokenParser represents the role token parser interface.
-type RoleTokenParser interface {
-	ParseAndValidateRoleToken(tok string) (*RoleToken, error)
+// Processor represents the role token parser interface.
+type Processor interface {
+	ParseAndValidateRoleToken(tok string) (*Token, error)
+	ParseAndValidateRoleJWT(cred string) (*Claim, error)
 }
 
 type rtp struct {
-	pkp pubkey.Provider
+	pkp  pubkey.Provider
+	jwkp jwk.Provider
 }
 
-// NewRoleTokenParser returns the RoleTokenParser instance.
-func NewRoleTokenParser(prov pubkey.Provider) RoleTokenParser {
-	return &rtp{
-		pkp: prov,
+// New returns the Role instance.
+func New(opts ...Option) Processor {
+	r := new(rtp)
+	for _, opt := range append(defaultOptions, opts...) {
+		opt(r)
 	}
+	return r
 }
 
-// ParseAndValidateRoleToken return the parsed and validiated role token, and return any parsing and validate errors.
-func (r *rtp) ParseAndValidateRoleToken(tok string) (*RoleToken, error) {
-	rt, err := r.parseRoleToken(tok)
+// ParseAndValidateRoleToken return the parsed and validated role token, and return any parsing and validate errors.
+func (r *rtp) ParseAndValidateRoleToken(tok string) (*Token, error) {
+	rt, err := r.parseToken(tok)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parse role token")
 	}
@@ -51,13 +57,13 @@ func (r *rtp) ParseAndValidateRoleToken(tok string) (*RoleToken, error) {
 	return rt, nil
 }
 
-func (r *rtp) parseRoleToken(tok string) (*RoleToken, error) {
+func (r *rtp) parseToken(tok string) (*Token, error) {
 	st := strings.SplitN(tok, ";s=", 2)
 	if len(st) != 2 {
 		return nil, errors.Wrap(ErrRoleTokenInvalid, "no signature found")
 	}
 
-	rt := &RoleToken{
+	rt := &Token{
 		UnsignedToken: st[0],
 	}
 
@@ -73,7 +79,20 @@ func (r *rtp) parseRoleToken(tok string) (*RoleToken, error) {
 	return rt, nil
 }
 
-func (r *rtp) validate(rt *RoleToken) error {
+func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
+	tok, err := jwt.ParseWithClaims(cred, &Claim{}, r.keyFunc)
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := tok.Claims.(*Claim); ok && tok.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("error invalid jwt token")
+}
+
+func (r *rtp) validate(rt *Token) error {
 	if rt.Expired() {
 		return errors.Wrapf(ErrRoleTokenExpired, "token expired")
 	}
@@ -82,4 +101,19 @@ func (r *rtp) validate(rt *RoleToken) error {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
+}
+
+// keyFunc extract the key id from the token, and return corresponding key
+func (r *rtp) keyFunc(token *jwt.Token) (interface{}, error) {
+	keyID, ok := token.Header["kid"]
+	if !ok {
+		return nil, errors.New("kid not written in header")
+	}
+
+	key := r.jwkp(keyID.(string))
+	if key == nil {
+		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
+	}
+
+	return key, nil
 }

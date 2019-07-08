@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package providerd
+package authorizerd
 
 import (
 	"fmt"
@@ -25,7 +25,65 @@ import (
 	"github.com/kpango/gache"
 )
 
-func TestPolicyRefreshDuration(t *testing.T) {
+func TestWithEnablePubkeyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePubkeyd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnablePubkeyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnablePubkeyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisablePubkeyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePubkeyd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisablePubkeyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisablePubkeyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -40,7 +98,7 @@ func TestPolicyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -53,14 +111,14 @@ func TestPolicyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyRefreshDuration(tt.args.t)
+			got := WithPolicyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyRefreshDuration() error = %v", err)
+				t.Errorf("WithPolicyRefreshDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyRefreshDuration(t *testing.T) {
+func TestWithPubkeyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -75,7 +133,7 @@ func TestPubkeyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -88,14 +146,14 @@ func TestPubkeyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyRefreshDuration(tt.args.t)
+			got := WithPubkeyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyRefreshDuration() error = %v", err)
+				t.Errorf("WithPubkeyRefreshDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzURL(t *testing.T) {
+func TestWithAthenzURL(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -110,7 +168,7 @@ func TestAthenzURL(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -123,14 +181,14 @@ func TestAthenzURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzURL(tt.args.t)
+			got := WithAthenzURL(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzURL() error = %v", err)
+				t.Errorf("WithAthenzURL() error = %v", err)
 			}
 		})
 	}
 }
-func TestAthenzDomains(t *testing.T) {
+func TestWithAthenzDomains(t *testing.T) {
 	type args struct {
 		t []string
 	}
@@ -145,7 +203,7 @@ func TestAthenzDomains(t *testing.T) {
 				t: []string{"dummy1", "dummy2"},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -158,14 +216,15 @@ func TestAthenzDomains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzDomains(tt.args.t...)
+			got := WithAthenzDomains(tt.args.t...)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzDomains() error = %v", err)
+				t.Errorf("WithAthenzDomains() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeySysAuthDomain(t *testing.T) {
+
+func TestWithPubkeySysAuthDomain(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -180,7 +239,7 @@ func TestPubkeySysAuthDomain(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -193,14 +252,15 @@ func TestPubkeySysAuthDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeySysAuthDomain(tt.args.t)
+			got := WithPubkeySysAuthDomain(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeySysAuthDomain() error = %v", err)
+				t.Errorf("WithPubkeySysAuthDomain() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyEtagExpTime(t *testing.T) {
+
+func TestWithPubkeyEtagExpTime(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -215,7 +275,7 @@ func TestPubkeyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -228,14 +288,14 @@ func TestPubkeyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyEtagExpTime(tt.args.t)
+			got := WithPubkeyEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyEtagExpTime() error = %v", err)
+				t.Errorf("WithPubkeyEtagExpTime() error = %v", err)
 			}
 		})
 	}
 }
-func TestPubkeyEtagFlushDur(t *testing.T) {
+func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -250,7 +310,7 @@ func TestPubkeyEtagFlushDur(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -263,14 +323,73 @@ func TestPubkeyEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubkeyEtagFlushDur(tt.args.t)
+			got := WithPubkeyEtagFlushDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubkeyEtagFlushDur() error = %v", err)
+				t.Errorf("WithPubkeyEtagFlushDuration() error = %v", err)
 			}
 		})
 	}
 }
-func TestPolicyExpireMargin(t *testing.T) {
+
+func TestWithEnablePolicyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePolicyd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnablePolicyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnablePolicyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisablePolicyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePolicyd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisablePolicyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisablePolicyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyExpireMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -285,7 +404,7 @@ func TestPolicyExpireMargin(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -298,14 +417,14 @@ func TestPolicyExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyExpireMargin(tt.args.t)
+			got := WithPolicyExpireMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyExpireMargin() error = %v", err)
+				t.Errorf("WithPolicyExpireMargin() error = %v", err)
 			}
 		})
 	}
 }
-func TestPolicyEtagFlushDur(t *testing.T) {
+func TestWithPolicyEtagFlushDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -320,7 +439,7 @@ func TestPolicyEtagFlushDur(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -333,9 +452,9 @@ func TestPolicyEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyEtagFlushDur(tt.args.t)
+			got := WithPolicyEtagFlushDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyEtagFlushDur() error = %v", err)
+				t.Errorf("WithPolicyEtagFlushDuration() error = %v", err)
 			}
 		})
 	}
@@ -355,7 +474,7 @@ func TestPolicyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -368,9 +487,9 @@ func TestPolicyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PolicyEtagExpTime(tt.args.t)
+			got := WithPolicyEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PolicyEtagExpTime() error = %v", err)
+				t.Errorf("WithPolicyEtagExpTime() error = %v", err)
 			}
 		})
 	}
@@ -390,7 +509,7 @@ func TestCacheExp(t *testing.T) {
 				d: time.Duration(time.Hour * 2),
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{
+				prov := &authorizer{
 					cache: gache.New(),
 				}
 				if err := opt(prov); err != nil {
@@ -405,9 +524,9 @@ func TestCacheExp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CacheExp(tt.args.d)
+			got := WithCacheExp(tt.args.d)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("CacheExp() error = %v", err)
+				t.Errorf("WithCacheExp() error = %v", err)
 			}
 		})
 	}
@@ -427,7 +546,7 @@ func TestTransport(t *testing.T) {
 				t: &http.Transport{},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -443,7 +562,7 @@ func TestTransport(t *testing.T) {
 				t: nil,
 			},
 			checkFunc: func(opt Option) error {
-				prov := &provider{}
+				prov := &authorizer{}
 				if err := opt(prov); err != nil {
 					return err
 				}
@@ -459,9 +578,103 @@ func TestTransport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Transport(tt.args.t)
+			got := WithTransport(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("Transport() error = %v", err)
+				t.Errorf("WithTransport() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithEnableJwkd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disableJwkd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnableJwkd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnableJwkd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisableJwkd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disableJwkd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisableJwkd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisableJwkd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithJwkRefreshDuration(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.jwkRefreshDuration != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithJwkRefreshDuration(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithJwkRefreshDuration() error = %v", err)
 			}
 		})
 	}

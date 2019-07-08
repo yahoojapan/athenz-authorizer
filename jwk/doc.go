@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package authorizerd represents the policy updater daemon.
-package authorizerd
+// Package jwk represents the jwk daemon fetching logic and the interface
+package jwk

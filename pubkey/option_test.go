@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-func TestAthenzURL(t *testing.T) {
+func TestWithAthenzURL(t *testing.T) {
 	type args struct {
 		athenzURL string
 	}
@@ -38,7 +38,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "" {
@@ -53,7 +53,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -68,7 +68,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "http://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -83,7 +83,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "https://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "dummy" {
@@ -98,7 +98,7 @@ func TestAthenzURL(t *testing.T) {
 				athenzURL: "ftp://dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.athenzURL != "ftp://dummy" {
@@ -110,19 +110,19 @@ func TestAthenzURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzURL(tt.args.athenzURL)
+			got := WithAthenzURL(tt.args.athenzURL)
 			if got == nil {
-				t.Errorf("AthenzURL() = nil")
+				t.Errorf("WithAthenzURL() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzURL() = %v", err)
+				t.Errorf("WithAthenzURL() = %v", err)
 			}
 		})
 	}
 }
 
-func TestSysAuthDomain(t *testing.T) {
+func TestWithSysAuthDomain(t *testing.T) {
 	type args struct {
 		domain string
 	}
@@ -137,7 +137,7 @@ func TestSysAuthDomain(t *testing.T) {
 				domain: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.sysAuthDomain != "dummy" {
@@ -152,7 +152,7 @@ func TestSysAuthDomain(t *testing.T) {
 				domain: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 				if c.sysAuthDomain != "" {
 					return fmt.Errorf("invalid domain wasset")
@@ -163,19 +163,19 @@ func TestSysAuthDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := SysAuthDomain(tt.args.domain)
+			got := WithSysAuthDomain(tt.args.domain)
 			if got == nil {
-				t.Errorf("SysAuthDomain() = nil")
+				t.Errorf("WithSysAuthDomain() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("SysAuthDomain() = %v", err)
+				t.Errorf("WithSysAuthDomain() = %v", err)
 			}
 		})
 	}
 }
 
-func TestETagExpTime(t *testing.T) {
+func TestWithEtagExpTime(t *testing.T) {
 	type args struct {
 		time string
 	}
@@ -190,7 +190,7 @@ func TestETagExpTime(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.etagExpTime != time.Duration(time.Hour*2) {
@@ -205,9 +205,9 @@ func TestETagExpTime(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -219,7 +219,7 @@ func TestETagExpTime(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -231,19 +231,19 @@ func TestETagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ETagExpTime(tt.args.time)
+			got := WithEtagExpTime(tt.args.time)
 			if got == nil {
-				t.Errorf("ETagExpTime() = nil")
+				t.Errorf("WithEtagExpTime() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("ETagExpTime() = %v", err)
+				t.Errorf("WithEtagExpTime() = %v", err)
 			}
 		})
 	}
 }
 
-func TestErrRetryInterval(t *testing.T) {
+func TestWithErrRetryInterval(t *testing.T) {
 	type args struct {
 		time string
 	}
@@ -258,7 +258,7 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.errRetryInterval != time.Duration(time.Hour*2) {
@@ -273,9 +273,9 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -287,7 +287,7 @@ func TestErrRetryInterval(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -299,19 +299,19 @@ func TestErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ErrRetryInterval(tt.args.time)
+			got := WithErrRetryInterval(tt.args.time)
 			if got == nil {
-				t.Errorf("ErrRetryInterval() = nil")
+				t.Errorf("WithErrRetryInterval() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("ErrRetryInterval() = %v", err)
+				t.Errorf("WithErrRetryInterval() = %v", err)
 			}
 		})
 	}
 }
 
-func TestETagFlushDur(t *testing.T) {
+func TestWithEtagFlushDuration(t *testing.T) {
 	type args struct {
 		dur string
 	}
@@ -326,7 +326,7 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.etagFlushDur != time.Duration(time.Hour*2) {
@@ -341,7 +341,7 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -356,9 +356,9 @@ func TestETagFlushDur(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -367,19 +367,19 @@ func TestETagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ETagFlushDur(tt.args.dur)
+			got := WithEtagFlushDuration(tt.args.dur)
 			if got == nil {
-				t.Errorf("ETagFlushDur() = nil")
+				t.Errorf("WithEtagFlushDuration() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("ETagFlushDur() = %v", err)
+				t.Errorf("WithEtagFlushDuration() = %v", err)
 			}
 		})
 	}
 }
 
-func TestRefreshDuration(t *testing.T) {
+func TestWithRefreshDuration(t *testing.T) {
 	type args struct {
 		dur string
 	}
@@ -394,7 +394,7 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
 
 				if c.refreshDuration != time.Duration(time.Hour*2) {
@@ -409,7 +409,7 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				err := got(c)
 
 				if err == nil {
@@ -424,9 +424,9 @@ func TestRefreshDuration(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &athenzPubkeyd{}
+				c := &pubkeyd{}
 				got(c)
-				if !reflect.DeepEqual(c, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(c, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", c)
 				}
 				return nil
@@ -435,19 +435,19 @@ func TestRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := RefreshDuration(tt.args.dur)
+			got := WithRefreshDuration(tt.args.dur)
 			if got == nil {
-				t.Errorf("RefreshDuration() = nil")
+				t.Errorf("WithRefreshDuration() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("RefreshDuration() = %v", err)
+				t.Errorf("WithRefreshDuration() = %v", err)
 			}
 		})
 	}
 }
 
-func TestHTTPClient(t *testing.T) {
+func TestWithHTTPClient(t *testing.T) {
 	type args struct {
 		c *http.Client
 	}
@@ -465,7 +465,7 @@ func TestHTTPClient(t *testing.T) {
 					c: c,
 				},
 				checkFunc: func(opt Option) error {
-					cd := &athenzPubkeyd{}
+					cd := &pubkeyd{}
 					if err := opt(cd); err != nil {
 						return err
 					}
@@ -483,11 +483,11 @@ func TestHTTPClient(t *testing.T) {
 				nil,
 			},
 			checkFunc: func(opt Option) error {
-				cd := &athenzPubkeyd{}
+				cd := &pubkeyd{}
 				if err := opt(cd); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(cd, &athenzPubkeyd{}) {
+				if !reflect.DeepEqual(cd, &pubkeyd{}) {
 					return fmt.Errorf("expected no changes, but got %v", cd)
 				}
 				return nil
@@ -496,9 +496,9 @@ func TestHTTPClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPClient(tt.args.c)
+			got := WithHTTPClient(tt.args.c)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("HTTPClient() error = %v", err)
+				t.Errorf("WithHTTPClient() error = %v", err)
 			}
 		})
 	}

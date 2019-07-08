@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package providerd
+package authorizerd
 
 import (
 	"errors"
 
-	"github.com/yahoojapan/athenz-policy-updater/policy"
-	"github.com/yahoojapan/athenz-policy-updater/role"
+	"github.com/yahoojapan/athenz-authorizer/policy"
+	"github.com/yahoojapan/athenz-authorizer/role"
 )
 
 var (

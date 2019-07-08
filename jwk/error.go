@@ -13,6 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+package jwk
 
-// Package authorizerd represents the policy updater daemon.
-package authorizerd
+import "github.com/pkg/errors"
+
+var (
+	// ErrFetchAthenzJWK "Fetch athenz json web key error"
+	ErrFetchAthenzJWK = errors.New("Fetch athenz json web key error")
+)

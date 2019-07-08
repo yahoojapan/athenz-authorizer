@@ -23,10 +23,10 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-policy-updater/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
-func TestEtagFlushDur(t *testing.T) {
+func TestWithEtagFlushDur(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -84,15 +84,15 @@ func TestEtagFlushDur(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := EtagFlushDur(tt.args.t)
+			got := WithEtagFlushDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("EtagFlushDur() error = %v", err)
+				t.Errorf("WithEtagFlushDur() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestExpireMargin(t *testing.T) {
+func TestWithExpireMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -150,15 +150,15 @@ func TestExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExpireMargin(tt.args.t)
+			got := WithExpireMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("ExpireMargin() error = %v", err)
+				t.Errorf("WithExpireMargin() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestEtagExpTime(t *testing.T) {
+func TestWithEtagExpTime(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -216,15 +216,15 @@ func TestEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := EtagExpTime(tt.args.t)
+			got := WithEtagExpTime(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("EtagExpTime() error = %v", err)
+				t.Errorf("WithEtagExpTime() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestAthenzURL(t *testing.T) {
+func TestWithAthenzURL(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -269,15 +269,15 @@ func TestAthenzURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzURL(tt.args.t)
+			got := WithAthenzURL(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzURL() error = %v", err)
+				t.Errorf("WithAthenzURL() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestAthenzDomains(t *testing.T) {
+func TestWithAthenzDomains(t *testing.T) {
 	type args struct {
 		t []string
 	}
@@ -322,15 +322,15 @@ func TestAthenzDomains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AthenzDomains(tt.args.t...)
+			got := WithAthenzDomains(tt.args.t...)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("AthenzDomains() error = %v", err)
+				t.Errorf("WithAthenzDomains() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestRefreshDuration(t *testing.T) {
+func TestWithRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -388,15 +388,15 @@ func TestRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := RefreshDuration(tt.args.t)
+			got := WithRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("RefreshDuration() error = %v", err)
+				t.Errorf("WithRefreshDuration() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestHTTPClient(t *testing.T) {
+func TestWithHTTPClient(t *testing.T) {
 	type args struct {
 		c *http.Client
 	}
@@ -445,15 +445,15 @@ func TestHTTPClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPClient(tt.args.c)
+			got := WithHTTPClient(tt.args.c)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("HTTPClient() error = %v", err)
+				t.Errorf("WithHTTPClient() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestPubKeyProvider(t *testing.T) {
+func TestWithPubKeyProvider(t *testing.T) {
 	type args struct {
 		pkp pubkey.Provider
 	}
@@ -504,15 +504,15 @@ func TestPubKeyProvider(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PubKeyProvider(tt.args.pkp)
+			got := WithPubKeyProvider(tt.args.pkp)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("PubKeyProvider() error = %v", err)
+				t.Errorf("WithPubKeyProvider() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestErrRetryInterval(t *testing.T) {
+func TestWithErrRetryInterval(t *testing.T) {
 	type args struct {
 		i string
 	}
@@ -570,9 +570,9 @@ func TestErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ErrRetryInterval(tt.args.i)
+			got := WithErrRetryInterval(tt.args.i)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("ErrRetryInterval() error= %v", err)
+				t.Errorf("WithErrRetryInterval() error= %v", err)
 			}
 		})
 	}

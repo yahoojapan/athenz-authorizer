@@ -26,22 +26,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"golang.org/x/sync/errgroup"
 )
 
-// Pubkeyd represent the daemon to retrieve public key data.
-type Pubkeyd interface {
-	StartPubkeyUpdater(ctx context.Context) <-chan error
-	UpdatePubkey(context.Context) error
+// Daemon represent the daemon to retrieve public key data.
+type Daemon interface {
+	Start(ctx context.Context) <-chan error
+	Update(context.Context) error
 	GetProvider() Provider
 }
 
-type athenzPubkeyd struct {
+type pubkeyd struct {
 	athenzURL        string
 	sysAuthDomain    string
 	refreshDuration  time.Duration
@@ -86,9 +85,9 @@ var (
 	regex = regexp.MustCompile("^(http|https)://")
 )
 
-// NewPubkeyd represent the constructor of Pubkeyd
-func NewPubkeyd(opts ...Option) (Pubkeyd, error) {
-	c := &athenzPubkeyd{
+// New represent the constructor of Pubkeyd
+func New(opts ...Option) (Daemon, error) {
+	c := &pubkeyd{
 		confCache: &AthenzConfig{
 			ZMSPubKeys: new(sync.Map),
 			ZTSPubKeys: new(sync.Map),
@@ -105,43 +104,36 @@ func NewPubkeyd(opts ...Option) (Pubkeyd, error) {
 	return c, nil
 }
 
-// StartPubkeyUpdater starts the pubkey daemon to retrive the public key periodically
-func (c *athenzPubkeyd) StartPubkeyUpdater(ctx context.Context) <-chan error {
+// Start starts the pubkey daemon to retrive the public key periodically
+func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting pubkey updator")
+
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := c.UpdatePubkey(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update athenz pubkey")
+	if err := p.Update(ctx); err != nil {
+		ech <- errors.Wrap(err, "error update pubkey")
 		fch <- struct{}{}
 	}
 
 	go func() {
 		defer close(fch)
 		defer close(ech)
-		c.etagCache.StartExpired(ctx, c.etagFlushDur)
-		ticker := time.NewTicker(c.refreshDuration)
-		ebuf := errors.New("")
+
+		p.etagCache.StartExpired(ctx, p.etagFlushDur)
+		ticker := time.NewTicker(p.refreshDuration)
 		for {
 			select {
 			case <-ctx.Done():
-				glg.Info("Stopping pubkeyd")
+				glg.Info("Stopping pubkey updater")
 				ticker.Stop()
-				if ebuf.Error() != "" {
-					ech <- errors.Wrap(ctx.Err(), ebuf.Error())
-				} else {
-					ech <- ctx.Err()
-				}
+				ech <- ctx.Err()
 				return
 			case <-fch:
-				if err := c.UpdatePubkey(ctx); err != nil {
-					err = errors.Wrap(err, "error update athenz pubkey")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
-					time.Sleep(c.errRetryInterval)
+				if err := p.Update(ctx); err != nil {
+					ech <- errors.Wrap(err, "error update pubkey")
+
+					time.Sleep(p.errRetryInterval)
+
 					select {
 					case fch <- struct{}{}:
 					default:
@@ -149,14 +141,9 @@ func (c *athenzPubkeyd) StartPubkeyUpdater(ctx context.Context) <-chan error {
 					}
 				}
 			case <-ticker.C:
-				if err := c.UpdatePubkey(ctx); err != nil {
-					err = errors.Wrap(err, "error update athenz pubkey")
-					select {
-					case ech <- errors.Wrap(ebuf, err.Error()):
-						ebuf = errors.New("")
-					default:
-						ebuf = errors.Wrap(ebuf, err.Error())
-					}
+				if err := p.Update(ctx); err != nil {
+					ech <- errors.Wrap(err, "error update pubkey")
+
 					select {
 					case fch <- struct{}{}:
 					default:
@@ -170,8 +157,8 @@ func (c *athenzPubkeyd) StartPubkeyUpdater(ctx context.Context) <-chan error {
 	return ech
 }
 
-// UpdatePubkey updates and cache athenz public key data
-func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
+// Update updates and cache athenz public key data
+func (p *pubkeyd) Update(ctx context.Context) error {
 	glg.Info("Updating athenz pubkey")
 	eg := errgroup.Group{}
 
@@ -179,9 +166,9 @@ func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
 	updConf := func(env AthenzEnv, cache *sync.Map) error {
 		cm := new(sync.Map)
 		dec := new(authcore.YBase64)
-		pubKeys, upded, err := c.fetchPubKeyEntries(ctx, env)
+		pubKeys, upded, err := p.fetchPubKeyEntries(ctx, env)
 		if err != nil {
-			glg.Errorf("Error updating athenz pubkey, error: %v", err)
+			glg.Errorf("Error updating athenz pubkey, env: %v, error: %v", env, err)
 			return errors.Wrap(err, "error fetch public key entries")
 		}
 		if !upded {
@@ -190,19 +177,19 @@ func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
 		}
 
 		for _, key := range pubKeys.PublicKeys {
-			glg.Debugf("Decoding key, keyID: %v", key.ID)
+			glg.Debugf("Decoding key, env: %v, keyID: %v", env, key.ID)
 			decKey, err := dec.DecodeString(key.Key)
 			if err != nil {
-				glg.Errorf("error decoding key, error: %v", err)
+				glg.Errorf("error decoding key, env: %v, error: %v", env, err)
 				return errors.Wrap(err, "error decoding key")
 			}
 			ver, err := authcore.NewVerifier(decKey)
 			if err != nil {
-				glg.Errorf("error initializing verifier, error: %v", err)
+				glg.Errorf("error initializing verifier, env: %v, error: %v", env, err)
 				return errors.Wrap(err, "error initializing verifier")
 			}
 			cm.Store(key.ID, ver)
-			glg.Debugf("Successfully decode key, keyID: %v", key.ID)
+			glg.Debugf("Successfully decode key, env: %v, keyID: %v", env, key.ID)
 		}
 		cm.Range(func(key interface{}, val interface{}) bool {
 			cache.Store(key, val)
@@ -221,7 +208,7 @@ func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
 
 	eg.Go(func() error {
 		glg.Info("Updating ZTS athenz pubkey")
-		if err := updConf(EnvZTS, c.confCache.ZTSPubKeys); err != nil {
+		if err := updConf(EnvZTS, p.confCache.ZTSPubKeys); err != nil {
 			return errors.Wrap(err, "Error updating ZTS athenz pubkey")
 		}
 		glg.Info("Update ZTS athenz pubkey success")
@@ -230,7 +217,7 @@ func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
 
 	eg.Go(func() error {
 		glg.Info("Updating ZMS athenz pubkey")
-		if err := updConf(EnvZMS, c.confCache.ZMSPubKeys); err != nil {
+		if err := updConf(EnvZMS, p.confCache.ZMSPubKeys); err != nil {
 			return errors.Wrap(err, "Error updating ZMS athenz pubkey")
 		}
 		glg.Info("Update ZMS athenz pubkey success")
@@ -245,14 +232,14 @@ func (c *athenzPubkeyd) UpdatePubkey(ctx context.Context) error {
 }
 
 // GetProvider returns the public key provider for user to get the public key
-func (c *athenzPubkeyd) GetProvider() Provider {
-	return c.getPubKey
+func (p *pubkeyd) GetProvider() Provider {
+	return p.getPubKey
 }
 
-func (c *athenzPubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAuthConfig, bool, error) {
+func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAuthConfig, bool, error) {
 	glg.Info("Fetching public key entries")
 	// https://{www.athenz.com/zts/v1}/domain/sys.auth/service/zts
-	url := fmt.Sprintf("https://%s/domain/%s/service/%s", c.athenzURL, c.sysAuthDomain, env)
+	url := fmt.Sprintf("https://%s/domain/%s/service/%s", p.athenzURL, p.sysAuthDomain, env)
 	glg.Debugf("Fetching public key from %s", url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -262,14 +249,14 @@ func (c *athenzPubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (
 	}
 
 	// etag header
-	t, ok := c.etagCache.Get(string(env))
+	t, ok := p.etagCache.Get(string(env))
 	if ok {
 		eTag := t.(*confCache).eTag
 		glg.Debugf("ETag %v found in the cache", eTag)
 		req.Header.Set("If-None-Match", eTag)
 	}
 
-	r, err := c.client.Do(req.WithContext(ctx))
+	r, err := p.client.Do(req.WithContext(ctx))
 	if err != nil {
 		glg.Errorf("Error making HTTP request, error: %v", err)
 		return nil, false, errors.Wrap(err, "error make http request")
@@ -305,16 +292,16 @@ func (c *athenzPubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (
 	eTag := r.Header.Get("ETag")
 	if eTag != "" {
 		glg.Debugf("Setting ETag %v", eTag)
-		c.etagCache.SetWithExpire(string(env), &confCache{eTag, sac}, c.etagExpTime)
+		p.etagCache.SetWithExpire(string(env), &confCache{eTag, sac}, p.etagExpTime)
 	}
 
 	glg.Info("Fetch public key entries success")
 	return sac, true, nil
 }
 
-func (c *athenzPubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier {
+func (p *pubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier {
 	if env == EnvZTS {
-		ver, ok := c.confCache.ZTSPubKeys.Load(keyID)
+		ver, ok := p.confCache.ZTSPubKeys.Load(keyID)
 		if !ok {
 			glg.Warnf("ZTS PubKey Load Failed keyID[%s]  getZTSPubKey %v", keyID, ver)
 			return nil
@@ -322,7 +309,7 @@ func (c *athenzPubkeyd) getPubKey(env AthenzEnv, keyID string) authcore.Verifier
 		return ver.(authcore.Verifier)
 	}
 
-	ver, ok := c.confCache.ZMSPubKeys.Load(keyID)
+	ver, ok := p.confCache.ZMSPubKeys.Load(keyID)
 	if !ok {
 		glg.Warnf("ZMS PubKey Load Failed keyID[%s]  getZMSPubKey %v", keyID, ver)
 		return nil

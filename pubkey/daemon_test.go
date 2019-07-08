@@ -32,61 +32,61 @@ import (
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
 
-func Test_pubkey_NewPubkeyd(t *testing.T) {
+func Test_pubkey_New(t *testing.T) {
 	type args struct {
 		opts []Option
 	}
 	type test struct {
 		name      string
 		args      args
-		checkFunc func(Pubkeyd, error) error
+		checkFunc func(Daemon, error) error
 	}
 	tests := []test{
 		{
-			name: "new athenz athenzPubkeyd success",
+			name: "new athenz pubkeyd success",
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if err != nil {
 					return err
 				}
-				if got.(*athenzPubkeyd).sysAuthDomain != "sys.auth" {
+				if got.(*pubkeyd).sysAuthDomain != "sys.auth" {
 					return errors.New("cannot set default options")
 				}
 				return nil
 			},
 		},
 		{
-			name: "new athenz athenzPubkeyd success with options",
+			name: "new athenz pubkeyd success with options",
 			args: args{
 				opts: []Option{
-					SysAuthDomain("dummyd"),
-					AthenzURL("dummyURL"),
+					WithSysAuthDomain("dummyd"),
+					WithAthenzURL("dummyURL"),
 				},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if err != nil {
 					return err
 				}
-				if got.(*athenzPubkeyd).sysAuthDomain != "dummyd" || got.(*athenzPubkeyd).athenzURL != "dummyURL" {
+				if got.(*pubkeyd).sysAuthDomain != "dummyd" || got.(*pubkeyd).athenzURL != "dummyURL" {
 					return errors.New("cannot set optional params")
 				}
 				return nil
 			},
 		},
 		{
-			name: "new athenz athenzPubkeyd success with invalid options",
+			name: "new athenz pubkeyd success with invalid options",
 			args: args{
 				opts: []Option{
-					SysAuthDomain("dummyd"),
-					AthenzURL("dummyURL"),
-					ETagExpTime("invalid"),
+					WithSysAuthDomain("dummyd"),
+					WithAthenzURL("dummyURL"),
+					WithEtagExpTime("invalid"),
 				},
 			},
-			checkFunc: func(got Pubkeyd, err error) error {
+			checkFunc: func(got Daemon, err error) error {
 				if got != nil {
-					return errors.New("get invalid Pubkeyd")
+					return errors.New("get invalid Daemon")
 				}
 				if err.Error() != "invalid etag expire time: time: invalid duration invalid" {
 					return errors.Wrap(err, "unexpected error")
@@ -97,17 +97,17 @@ func Test_pubkey_NewPubkeyd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewPubkeyd(tt.args.opts...)
+			got, err := New(tt.args.opts...)
 			err = tt.checkFunc(got, err)
 			if err != nil {
-				t.Errorf("NewPubkeyd() = %v", err)
+				t.Errorf("New() = %v", err)
 			}
 		})
 	}
 }
 
 func Test_pubkey_getPubKey(t *testing.T) {
-	c := &athenzPubkeyd{
+	c := &pubkeyd{
 		confCache: &AthenzConfig{
 			ZMSPubKeys: new(sync.Map),
 			ZTSPubKeys: new(sync.Map),
@@ -190,7 +190,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error
+		checkFunc func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error
 	}
 	tests := []test{
 		func() test {
@@ -218,7 +218,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -294,7 +294,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -352,7 +352,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					if err != nil {
 						return err
 					}
@@ -406,7 +406,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					wantErr := "http return status not OK: Fetch athenz pubkey error"
 					if err != nil {
 						if err.Error() == wantErr {
@@ -441,7 +441,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					wantErr := `error creating get pubkey request: parse https:// /domain/dummyDom/service/dummyEnv: invalid character " " in host name`
 					if err != nil {
 						if err.Error() == wantErr {
@@ -476,7 +476,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 					ctx: context.Background(),
 					env: "dummyEnv",
 				},
-				checkFunc: func(c *athenzPubkeyd, sac *SysAuthConfig, upd bool, err error) error {
+				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
 					wantErr := "json format not correct: EOF"
 					if err != nil {
 						if err.Error() == wantErr {
@@ -492,7 +492,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &athenzPubkeyd{
+			c := &pubkeyd{
 				refreshDuration:  tt.fields.refreshDuration,
 				errRetryInterval: tt.fields.errRetryInterval,
 				etagCache:        tt.fields.etagCache,
@@ -513,7 +513,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 }
 
 func Test_pubkey_GetProvider(t *testing.T) {
-	c := &athenzPubkeyd{
+	c := &pubkeyd{
 		confCache: &AthenzConfig{},
 	}
 	type test struct {
@@ -536,7 +536,7 @@ func Test_pubkey_GetProvider(t *testing.T) {
 	}
 }
 
-func Test_pubkey_UpdatePubkey(t *testing.T) {
+func Test_pubkey_Update(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -555,7 +555,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(*athenzPubkeyd, error) error
+		checkFunc func(*pubkeyd, error) error
 	}
 	tests := []test{
 		func() test {
@@ -590,7 +590,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *athenzPubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, goter error) error {
 					if goter != nil {
 						return goter
 					}
@@ -685,7 +685,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *athenzPubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, goter error) error {
 					if goter != nil {
 						return goter
 					}
@@ -754,7 +754,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *athenzPubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, goter error) error {
 					wantErr := "error when processing pubkey: Error updating ZMS athenz pubkey: error fetch public key entries: json format not correct: EOF"
 					if goter.Error() != wantErr {
 						return errors.Wrap(goter, "unexpected error")
@@ -795,7 +795,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *athenzPubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, goter error) error {
 					wantErr := "error when processing pubkey: Error updating ZMS athenz pubkey: error decoding key: illegal base64 data at input byte 6"
 					if goter.Error() != wantErr {
 						return errors.Wrap(goter, "unexpected error")
@@ -836,7 +836,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *athenzPubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, goter error) error {
 					wantErr := "error when processing pubkey: Error updating ZTS athenz pubkey: error initializing verifier: Unable to load public key"
 					if goter.Error() != wantErr {
 						return errors.Wrap(goter, "unexpected error")
@@ -849,7 +849,7 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &athenzPubkeyd{
+			c := &pubkeyd{
 				refreshDuration:  tt.fields.refreshDuration,
 				errRetryInterval: tt.fields.errRetryInterval,
 				etagCache:        tt.fields.etagCache,
@@ -860,9 +860,9 @@ func Test_pubkey_UpdatePubkey(t *testing.T) {
 				client:           tt.fields.client,
 				confCache:        tt.fields.confCache,
 			}
-			err := c.UpdatePubkey(tt.args.ctx)
+			err := c.Update(tt.args.ctx)
 			if err = tt.checkFunc(c, err); err != nil {
-				t.Errorf("c.UpdatePubkey() error = %v", err)
+				t.Errorf("c.Update() error = %v", err)
 			}
 		})
 	}
@@ -887,7 +887,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		checkFunc func(*athenzPubkeyd, <-chan error) error
+		checkFunc func(*pubkeyd, <-chan error) error
 	}
 	tests := []test{
 		func() test {
@@ -926,7 +926,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(c *athenzPubkeyd, ch <-chan error) error {
+				checkFunc: func(c *pubkeyd, ch <-chan error) error {
 					cancel()
 					ind := 0
 					var err error
@@ -995,7 +995,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
-				name: "test UpdatePubkey failed",
+				name: "test Update failed",
 				fields: fields{
 					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain:    "dummyDom",
@@ -1013,11 +1013,11 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(c *athenzPubkeyd, ch <-chan error) error {
+				checkFunc: func(c *pubkeyd, ch <-chan error) error {
 					goter := <-ch
 					cancel()
 
-					want := "error update athenz pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
+					want := "error update pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
 					if goter.Error() != want {
 						return errors.Errorf("got: %s, want: %s", goter, want)
 					}
@@ -1073,7 +1073,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 				args: args{
 					ctx: ctx,
 				},
-				checkFunc: func(c *athenzPubkeyd, ch <-chan error) error {
+				checkFunc: func(c *pubkeyd, ch <-chan error) error {
 					go func() {
 						for {
 							<-ch
@@ -1137,7 +1137,7 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &athenzPubkeyd{
+			c := &pubkeyd{
 				refreshDuration:  tt.fields.refreshDuration,
 				errRetryInterval: tt.fields.errRetryInterval,
 				etagCache:        tt.fields.etagCache,
@@ -1148,9 +1148,9 @@ func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
 				client:           tt.fields.client,
 				confCache:        tt.fields.confCache,
 			}
-			ch := c.StartPubkeyUpdater(tt.args.ctx)
+			ch := c.Start(tt.args.ctx)
 			if err := tt.checkFunc(c, ch); err != nil {
-				t.Errorf("c.StartPubkeyUpdater() error = %v", err)
+				t.Errorf("c.Start() error = %v", err)
 			}
 		})
 	}
