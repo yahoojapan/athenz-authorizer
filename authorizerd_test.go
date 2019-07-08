@@ -910,7 +910,7 @@ KSdPh6TRd/kYpv7t6cVm1Orll4O5jh+IdoguGkOCxheMaQ==
 			}
 
 			return test{
-				name: "invalid athenz role certificate",
+				name: "invalid athenz role certificate, invalid SAN",
 				fields: fields{
 					roleCertURIPrefix: "athenz://role/",
 					policyd:           pm,
@@ -951,7 +951,7 @@ bu80CwTnWhmdBo36Ig==
 			}
 
 			return test{
-				name: "parse and verify role cert success",
+				name: "invalid athenz role certificate, deny by policyd",
 				fields: fields{
 					roleCertURIPrefix: "athenz://role/",
 					policyd:           pm,
