@@ -35,7 +35,7 @@ var (
 // Option represents a functional options pattern interface
 type Option func(*authorizer) error
 
-// AthenzURL represents a AthenzURL functional option
+// WithAthenzURL represents a AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(prov *authorizer) error {
 		prov.athenzURL = url
