@@ -25,6 +25,64 @@ import (
 	"github.com/kpango/gache"
 )
 
+func TestWithEnablePubkeyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePubkeyd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnablePubkeyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnablePubkeyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisablePubkeyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePubkeyd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisablePubkeyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisablePubkeyd() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestWithPolicyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
@@ -272,6 +330,65 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestWithEnablePolicyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePolicyd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnablePolicyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnablePolicyd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisablePolicyd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disablePolicyd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisablePolicyd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisablePolicyd() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestWithPolicyExpireMargin(t *testing.T) {
 	type args struct {
 		t string
@@ -464,6 +581,100 @@ func TestTransport(t *testing.T) {
 			got := WithTransport(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithTransport() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithEnableJwkd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disableJwkd != false {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnableJwkd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnableJwkd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithDisableJwkd(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.disableJwkd != true {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisableJwkd()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisableJwkd() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithJwkRefreshDuration(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.jwkRefreshDuration != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithJwkRefreshDuration(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithJwkRefreshDuration() error = %v", err)
 			}
 		})
 	}
