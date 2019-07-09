@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 			want: &jwkd{
 				athenzURL:        "www.dummy.com",
 				refreshDuration:  time.Hour * 24,
-				errRetryInterval: time.Millisecond,
+				errRetryInterval: time.Minute,
 				client:           http.DefaultClient,
 			},
 		},
