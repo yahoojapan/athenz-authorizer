@@ -16,6 +16,8 @@ limitations under the License.
 package policy
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -96,7 +98,7 @@ func TestNewAssertion(t *testing.T) {
 				action:   "act",
 				effect:   "deny",
 			},
-			wantErr: errors.New("assestion format not correct: Access denied due to invalie/empty policy resources"),
+			wantErr: errors.New("assestion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 	}
 	for _, tt := range tests {
@@ -115,7 +117,63 @@ func TestNewAssertion(t *testing.T) {
 				if tt.wantErr == nil {
 					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
 				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("NewAssertio error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestAssertion_MarshalJSON(t *testing.T) {
+	type args struct {
+		action   string
+		resource string
+		effect   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr error
+	}{
+		{
+			name: "encoding JSON: allow policy",
+			args: args{
+				resource: "dom:res",
+				action:   "act",
+				effect:   "allow",
+			},
+			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":true}` + "\n",
+		},
+		{
+			name: "encoding JSON: deny policy",
+			args: args{
+				resource: "dom:res",
+				action:   "act",
+				effect:   "deny",
+			},
+			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":false}` + "\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewAssertion(tt.args.action, tt.args.resource, tt.args.effect)
+
+			b := bytes.NewBuffer(make([]byte, 0))
+			err = json.NewEncoder(b).Encode(got)
+
+			if b.String() != tt.want {
+				t.Errorf("Assertion.MarshalJSON error: %v != %v", b.String(), tt.want)
+			}
+			if err == nil {
+				if tt.wantErr != nil {
+					t.Errorf("Assertion.MarshalJSON = %v, wantErr %v", err, tt.wantErr)
+				}
+			} else {
+				if tt.wantErr == nil {
+					t.Errorf("Assertion.MarshalJSON error = %v, wantErr %v", err, tt.wantErr)
+				} else if err.Error() != tt.wantErr.Error() {
+					t.Errorf("Assertion.MarshalJSON error = %v, wantErr %v", err, tt.wantErr)
 				}
 			}
 		})

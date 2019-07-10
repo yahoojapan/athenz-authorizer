@@ -16,6 +16,7 @@ limitations under the License.
 package policy
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -32,7 +33,7 @@ type Assertion struct {
 	Resource string
 
 	ResourceDomain string
-	Reg            *regexp.Regexp `json:"-"`
+	Reg            *regexp.Regexp
 	Effect         error
 }
 
@@ -63,4 +64,25 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 			return nil
 		}(),
 	}, nil
+}
+
+// AssertionJSON represents json format of Assertion
+type AssertionJSON struct {
+	Action         string `json:"action"`
+	Resource       string `json:"resource"`
+	ResourceDomain string `json:"domain"`
+	Reg            string `json:"reg"`
+	Deny           bool   `json:"deny"`
+}
+
+// MarshalJSON implements the Marshaler interface.
+func (a *Assertion) MarshalJSON() ([]byte, error) {
+	x := &AssertionJSON{
+		Action:         a.Action,
+		Resource:       a.Resource,
+		ResourceDomain: a.ResourceDomain,
+		Reg:            a.Reg.String(),
+		Deny:           a.Effect == nil,
+	}
+	return json.Marshal(x)
 }
