@@ -45,6 +45,9 @@ func TestNewAssertion(t *testing.T) {
 				effect:   "allow",
 			},
 			want: &Assertion{
+				Action:         "act",
+				Resource:       "res",
+				RegexString:    "^act-res$",
 				ResourceDomain: "dom",
 				Reg: func() *regexp.Regexp {
 					r, _ := regexp.Compile("^act-res$")
@@ -68,6 +71,9 @@ func TestNewAssertion(t *testing.T) {
 				effect:   "deny",
 			},
 			want: &Assertion{
+				Action:         "act",
+				Resource:       "res",
+				RegexString:    "^act-res$",
 				ResourceDomain: "dom",
 				Reg: func() *regexp.Regexp {
 					r, _ := regexp.Compile("^act-res$")

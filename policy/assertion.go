@@ -28,8 +28,12 @@ var (
 
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
-	Reg            *regexp.Regexp
+	Action      string
+	Resource    string
+	RegexString string
+
 	ResourceDomain string
+	Reg            *regexp.Regexp `json:"-"`
 	Effect         error
 }
 
@@ -39,14 +43,20 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	if len(domres) < 2 {
 		return nil, errors.Wrap(ErrInvalidPolicyResource, "assestion format not correct")
 	}
+	dom := domres[0]
+	res := domres[1]
 
-	reg, err := regexp.Compile("^" + replacer.Replace(strings.ToLower(action+"-"+domres[1])) + "$")
+	regexStr := "^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$"
+	reg, err := regexp.Compile(regexStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "assestion format not correct")
 	}
 
 	return &Assertion{
-		ResourceDomain: domres[0],
+		Action:         action,
+		Resource:       res,
+		RegexString:    regexStr,
+		ResourceDomain: dom,
 		Reg:            reg,
 		Effect: func() error {
 			if strings.EqualFold("deny", effect) {
