@@ -113,7 +113,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestStart(t *testing.T) {
+func Test_authorizer_Start(t *testing.T) {
 	type fields struct {
 		pubkeyd  pubkey.Daemon
 		policyd  policy.Daemon
@@ -289,7 +289,7 @@ func TestStart(t *testing.T) {
 	}
 }
 
-func TestVerifyRoleToken(t *testing.T) {
+func Test_authorizer_VerifyRoleToken(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		tok string
