@@ -27,8 +27,8 @@ var (
 	// ErrNoMatch "Access denied due to no match to any of the assertions defined in domain policy file"
 	ErrNoMatch = errors.New("Access denied due to no match to any of the assertions defined in domain policy file")
 
-	// ErrInvalidPolicyResource "Access denied due to invalie/empty policy resources"
-	ErrInvalidPolicyResource = errors.New("Access denied due to invalie/empty policy resources")
+	// ErrInvalidPolicyResource "Access denied due to invalid/empty policy resources"
+	ErrInvalidPolicyResource = errors.New("Access denied due to invalid/empty policy resources")
 
 	// ErrDenyByPolicy "Access Check was explicitly denied"
 	ErrDenyByPolicy = errors.New("Access Check was explicitly denied")

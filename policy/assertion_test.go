@@ -98,7 +98,7 @@ func TestNewAssertion(t *testing.T) {
 				action:   "act",
 				effect:   "deny",
 			},
-			wantErr: errors.New("assestion format not correct: Access denied due to invalid/empty policy resources"),
+			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 	}
 	for _, tt := range tests {

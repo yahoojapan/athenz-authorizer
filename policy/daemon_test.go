@@ -96,7 +96,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func Test_policy_Start(t *testing.T) {
+func Test_policyd_Start(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -352,7 +352,7 @@ func Test_policy_Start(t *testing.T) {
 	}
 }
 
-func Test_policy_Update(t *testing.T) {
+func Test_policyd_Update(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -553,7 +553,7 @@ func Test_policy_Update(t *testing.T) {
 	}
 }
 
-func Test_policy_CheckPolicy(t *testing.T) {
+func Test_policyd_CheckPolicy(t *testing.T) {
 	type fields struct {
 		expireMargin     time.Duration
 		rolePolicies     gache.Gache
@@ -768,7 +768,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_fetchAndCachePolicy(t *testing.T) {
+func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -932,7 +932,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_fetchPolicy(t *testing.T) {
+func Test_policyd_fetchPolicy(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -1415,7 +1415,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_simplifyAndCache(t *testing.T) {
+func Test_policyd_simplifyAndCache(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache

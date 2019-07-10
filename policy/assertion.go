@@ -41,7 +41,7 @@ type Assertion struct {
 func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	domres := strings.SplitN(resource, ":", 2)
 	if len(domres) < 2 {
-		return nil, errors.Wrap(ErrInvalidPolicyResource, "assestion format not correct")
+		return nil, errors.Wrap(ErrInvalidPolicyResource, "assertion format not correct")
 	}
 	dom := domres[0]
 	res := domres[1]
@@ -49,7 +49,7 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	regexStr := "^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$"
 	reg, err := regexp.Compile(regexStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "assestion format not correct")
+		return nil, errors.Wrap(err, "assertion format not correct")
 	}
 
 	return &Assertion{
