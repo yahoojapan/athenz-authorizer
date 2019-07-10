@@ -2153,9 +2153,8 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 			fields: fields{
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
-					g.SetWithExpire("key", "value", time.Duration(1)*time.Nanosecond)
-					// time.Sleep(time.Duration(2) * time.Nanosecond) // not working
-					time.Sleep(time.Duration(2) * time.Millisecond)
+					g.SetWithExpire("key", "value", 1*time.Nanosecond)
+					time.Sleep(100 * time.Nanosecond)
 					g.DeleteExpired(context.Background())
 					return g
 				}(),
@@ -2183,7 +2182,7 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 				client:                tt.fields.client,
 			}
 			if got := p.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("policyd.GetPolicyCache() = %v, want %v", got, tt.want)
+				t.Errorf("policyd.GetPolicyCache() = %+v, want %v", got, tt.want)
 			}
 		})
 	}
