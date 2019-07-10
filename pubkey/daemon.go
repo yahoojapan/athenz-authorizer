@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ import (
 
 // Daemon represent the daemon to retrieve public key data.
 type Daemon interface {
-	Start(ctx context.Context) <-chan error
+	Start(ctx context.Context) (<-chan time.Time, <-chan error)
 	Update(context.Context) error
 	GetProvider() Provider
 }
@@ -105,22 +106,33 @@ func New(opts ...Option) (Daemon, error) {
 }
 
 // Start starts the pubkey daemon to retrive the public key periodically
-func (p *pubkeyd) Start(ctx context.Context) <-chan error {
+func (p *pubkeyd) Start(ctx context.Context) (<-chan time.Time, <-chan error) {
 	glg.Info("Starting pubkey updator")
 
+	sch := make(chan time.Time)
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.Update(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update pubkey")
-		fch <- struct{}{}
-	}
 
 	go func() {
 		defer close(fch)
 		defer close(ech)
 
+		updFunc := func() {
+			if err := p.Update(ctx); err != nil {
+				ech <- errors.Wrap(err, "error update pubkey")
+				select {
+				case fch <- struct{}{}:
+				default:
+					glg.Warn("failure queue already full")
+				}
+			} else {
+				sch <- fastime.Now()
+			}
+		}
+
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -129,32 +141,15 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 				ech <- ctx.Err()
 				return
 			case <-fch:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update pubkey")
-
-					time.Sleep(p.errRetryInterval)
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				time.Sleep(p.errRetryInterval)
+				updFunc()
 			case <-ticker.C:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update pubkey")
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				updFunc()
 			}
 		}
 	}()
 
-	return ech
+	return sch, ech
 }
 
 // Update updates and cache athenz public key data

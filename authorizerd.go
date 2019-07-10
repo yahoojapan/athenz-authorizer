@@ -159,17 +159,22 @@ func (p *authorizer) Start(ctx context.Context) <-chan error {
 	var (
 		ech              = make(chan error, 200)
 		g                = p.cache.StartExpired(ctx, p.cacheExp/2)
+		csch             <-chan time.Time
 		cech, pech, jech <-chan error
 	)
 
 	if !p.disablePubkeyd {
-		cech = p.pubkeyd.Start(ctx)
+		csch, cech = p.pubkeyd.Start(ctx)
 	}
 	if !p.disablePolicyd {
 		pech = p.policyd.Start(ctx)
 	}
 	if !p.disableJwkd {
 		jech = p.jwkd.Start(ctx)
+	}
+
+	if !p.disablePubkeyd {
+		<-csch
 	}
 
 	go func() {
