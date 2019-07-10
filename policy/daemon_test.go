@@ -2154,7 +2154,7 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
 					g.SetWithExpire("key", "value", 1*time.Nanosecond)
-					time.Sleep(100 * time.Nanosecond)
+					time.Sleep(5 * time.Millisecond)
 					g.DeleteExpired(context.Background())
 					return g
 				}(),

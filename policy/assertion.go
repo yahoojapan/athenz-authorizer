@@ -28,9 +28,8 @@ var (
 
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
-	Action      string
-	Resource    string
-	RegexString string
+	Action   string
+	Resource string
 
 	ResourceDomain string
 	Reg            *regexp.Regexp `json:"-"`
@@ -55,7 +54,6 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	return &Assertion{
 		Action:         action,
 		Resource:       res,
-		RegexString:    regexStr,
 		ResourceDomain: dom,
 		Reg:            reg,
 		Effect: func() error {
