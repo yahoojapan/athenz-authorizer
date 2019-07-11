@@ -29,6 +29,9 @@ var (
 		WithEnablePubkeyd(),
 		WithEnablePolicyd(),
 		WithEnableJwkd(),
+		WithPolicyErrRetryInterval("1m"),
+		WithPubkeyErrRetryInterval("1m"),
+		WithJwkErrRetryInterval("1m"),
 	}
 )
 
