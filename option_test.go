@@ -83,6 +83,41 @@ func TestWithDisablePubkeyd(t *testing.T) {
 	}
 }
 
+func TestWithPolicyErrRetryInterval(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.policyErrRetryInterval != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyErrRetryInterval(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyErrRetryInterval() error = %v", err)
+			}
+		})
+	}
+}
 func TestWithPolicyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
@@ -149,6 +184,41 @@ func TestWithPubkeyRefreshDuration(t *testing.T) {
 			got := WithPubkeyRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithPubkeyRefreshDuration() error = %v", err)
+			}
+		})
+	}
+}
+func TestWithPubkeyErrRetryInterval(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.pubkeyErrRetryInterval != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPubkeyErrRetryInterval(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPubkeyErrRetryInterval() error = %v", err)
 			}
 		})
 	}
@@ -675,6 +745,42 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 			got := WithJwkRefreshDuration(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithJwkRefreshDuration() error = %v", err)
+			}
+		})
+	}
+}
+func TestWithJwkErrRetryInterval(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				prov := &authorizer{}
+				if err := opt(prov); err != nil {
+					return err
+				}
+				if prov.jwkErrRetryInterval != "dummy" {
+
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithJwkErrRetryInterval(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithJwkErrRetryInterval() error = %v", err)
 			}
 		})
 	}

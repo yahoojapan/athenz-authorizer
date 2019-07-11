@@ -60,23 +60,26 @@ type authorizer struct {
 	roleCertURIPrefix string
 
 	// pubkeyd parameters
-	disablePubkeyd        bool
-	pubkeyRefreshDuration string
-	pubkeySysAuthDomain   string
-	pubkeyEtagExpTime     string
-	pubkeyEtagFlushDur    string
+	disablePubkeyd         bool
+	pubkeyRefreshDuration  string
+	pubkeyErrRetryInterval string
+	pubkeySysAuthDomain    string
+	pubkeyEtagExpTime      string
+	pubkeyEtagFlushDur     string
 
 	// policyd parameters
-	disablePolicyd        bool
-	policyExpireMargin    string
-	athenzDomains         []string
-	policyRefreshDuration string
-	policyEtagFlushDur    string
-	policyEtagExpTime     string
+	disablePolicyd         bool
+	policyExpireMargin     string
+	athenzDomains          []string
+	policyRefreshDuration  string
+	policyErrRetryInterval string
+	policyEtagFlushDur     string
+	policyEtagExpTime      string
 
 	// jwkd parameters
-	disableJwkd        bool
-	jwkRefreshDuration string
+	disableJwkd         bool
+	jwkRefreshDuration  string
+	jwkErrRetryInterval string
 }
 
 type mode uint8
@@ -112,6 +115,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			pubkey.WithEtagExpTime(prov.pubkeyEtagExpTime),
 			pubkey.WithEtagFlushDuration(prov.pubkeyEtagFlushDur),
 			pubkey.WithRefreshDuration(prov.pubkeyRefreshDuration),
+			pubkey.WithErrRetryInterval(prov.pubkeyErrRetryInterval),
 			pubkey.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create pubkeyd")
@@ -128,6 +132,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithAthenzURL(prov.athenzURL),
 			policy.WithAthenzDomains(prov.athenzDomains...),
 			policy.WithRefreshDuration(prov.policyRefreshDuration),
+			policy.WithErrRetryInterval(prov.policyErrRetryInterval),
 			policy.WithHTTPClient(prov.client),
 			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
 		); err != nil {
@@ -139,6 +144,7 @@ func New(opts ...Option) (Authorizerd, error) {
 		if prov.jwkd, err = jwk.New(
 			jwk.WithAthenzURL(prov.athenzURL),
 			jwk.WithRefreshDuration(prov.jwkRefreshDuration),
+			jwk.WithErrRetryInterval(prov.jwkErrRetryInterval),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create jwkd")
