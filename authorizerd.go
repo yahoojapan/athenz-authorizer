@@ -155,21 +155,21 @@ func New(opts ...Option) (Authorizerd, error) {
 }
 
 // Start starts authorizer daemon.
-func (p *authorizer) Start(ctx context.Context) <-chan error {
+func (a *authorizer) Start(ctx context.Context) <-chan error {
 	var (
 		ech              = make(chan error, 200)
-		g                = p.cache.StartExpired(ctx, p.cacheExp/2)
+		g                = a.cache.StartExpired(ctx, a.cacheExp/2)
 		cech, pech, jech <-chan error
 	)
 
-	if !p.disablePubkeyd {
-		cech = p.pubkeyd.Start(ctx)
+	if !a.disablePubkeyd {
+		cech = a.pubkeyd.Start(ctx)
 	}
-	if !p.disablePolicyd {
-		pech = p.policyd.Start(ctx)
+	if !a.disablePolicyd {
+		pech = a.policyd.Start(ctx)
 	}
-	if !p.disableJwkd {
-		jech = p.jwkd.Start(ctx)
+	if !a.disableJwkd {
+		jech = a.jwkd.Start(ctx)
 	}
 
 	go func() {
@@ -200,21 +200,21 @@ func (p *authorizer) Start(ctx context.Context) <-chan error {
 }
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
-func (p *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
-	return p.verify(ctx, token, tok, act, res)
+func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
+	return a.verify(ctx, token, tok, act, res)
 }
 
-func (p *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	return p.verify(ctx, jwt, tok, act, res)
+func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
+	return a.verify(ctx, jwt, tok, act, res)
 }
 
-func (p *authorizer) verify(ctx context.Context, m mode, tok, act, res string) error {
+func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
 	}
 
 	// check if exists in verification success cache
-	_, ok := p.cache.Get(tok + act + res)
+	_, ok := a.cache.Get(tok + act + res)
 	if ok {
 		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
 		return nil
@@ -227,7 +227,7 @@ func (p *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 
 	switch m {
 	case token:
-		rt, err := p.roleProcessor.ParseAndValidateRoleToken(tok)
+		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
 			return errors.Wrap(err, "error verify role token")
@@ -235,7 +235,7 @@ func (p *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		domain = rt.Domain
 		roles = rt.Roles
 	case jwt:
-		rc, err := p.roleProcessor.ParseAndValidateRoleJWT(tok)
+		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
 			return errors.Wrap(err, "error verify role jwt")
@@ -244,23 +244,23 @@ func (p *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
 	}
 
-	if err := p.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
+	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
 		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "token unauthorizate")
+		return errors.Wrap(err, "token unauthorized")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
-	p.cache.SetWithExpire(tok+act+res, struct{}{}, p.cacheExp)
+	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
 	return nil
 }
 
-func (p *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
+func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
 	dr := make([]string, 0, 2)
 	drcheck := make(map[string]struct{})
 	domainRoles := make(map[string][]string)
 	for _, cert := range peerCerts {
 		for _, uri := range cert.URIs {
-			if strings.HasPrefix(uri.String(), p.roleCertURIPrefix) {
-				dr = strings.SplitN(strings.TrimPrefix(uri.String(), p.roleCertURIPrefix), "/", 2) // domain/role
+			if strings.HasPrefix(uri.String(), a.roleCertURIPrefix) {
+				dr = strings.SplitN(strings.TrimPrefix(uri.String(), a.roleCertURIPrefix), "/", 2) // domain/role
 				if len(dr) != 2 {
 					continue
 				}
@@ -275,21 +275,21 @@ func (p *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	}
 
 	if len(domainRoles) == 0 {
-		return errors.New("not valid role certificate")
+		return errors.New("invalid role certificate")
 	}
 
 	var err error
 	for domain, roles := range domainRoles {
 		// TODO futurework
-		if err = p.policyd.CheckPolicy(ctx, domain, roles, act, res); err == nil {
+		if err = a.policyd.CheckPolicy(ctx, domain, roles, act, res); err == nil {
 			return nil
 		}
 	}
 
-	return errors.Wrap(err, "role certificates unauthorizate")
+	return errors.Wrap(err, "role certificates unauthorized")
 }
 
-func (p *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return p.policyd.GetPolicyCache(ctx)
+func (a *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return a.policyd.GetPolicyCache(ctx)
 
 }

@@ -96,7 +96,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func Test_policy_Start(t *testing.T) {
+func Test_policyd_Start(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -352,7 +352,7 @@ func Test_policy_Start(t *testing.T) {
 	}
 }
 
-func Test_policy_Update(t *testing.T) {
+func Test_policyd_Update(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -553,7 +553,7 @@ func Test_policy_Update(t *testing.T) {
 	}
 }
 
-func Test_policy_CheckPolicy(t *testing.T) {
+func Test_policyd_CheckPolicy(t *testing.T) {
 	type fields struct {
 		expireMargin     time.Duration
 		rolePolicies     gache.Gache
@@ -768,7 +768,7 @@ func Test_policy_CheckPolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_fetchAndCachePolicy(t *testing.T) {
+func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -932,7 +932,7 @@ func Test_policy_fetchAndCachePolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_fetchPolicy(t *testing.T) {
+func Test_policyd_fetchPolicy(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -1415,7 +1415,7 @@ func Test_policy_fetchPolicy(t *testing.T) {
 	}
 }
 
-func Test_policy_simplifyAndCache(t *testing.T) {
+func Test_policyd_simplifyAndCache(t *testing.T) {
 	type fields struct {
 		expireMargin          time.Duration
 		rolePolicies          gache.Gache
@@ -2120,10 +2120,42 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		want   map[string]interface{}
 	}{
 		{
+			name: "get empty policy cache success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					return g
+				}(),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: make(map[string]interface{}),
+		},
+		{
 			name: "get policy cache success",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
+					g.Set("key", "value")
+					return g
+				}(),
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: map[string]interface{}{
+				"key": "value",
+			},
+		},
+		{
+			name: "get policy cache without expired success",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.SetWithExpire("key", "value", 1*time.Nanosecond)
+					time.Sleep(5 * time.Millisecond)
+					g.DeleteExpired(context.Background())
 					return g
 				}(),
 			},
@@ -2150,7 +2182,7 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 				client:                tt.fields.client,
 			}
 			if got := p.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("policyd.GetPolicyCache() = %v, want %v", got, tt.want)
+				t.Errorf("policyd.GetPolicyCache() = %+v, want %v", got, tt.want)
 			}
 		})
 	}

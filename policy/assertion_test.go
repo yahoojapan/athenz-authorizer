@@ -45,12 +45,15 @@ func TestNewAssertion(t *testing.T) {
 				effect:   "allow",
 			},
 			want: &Assertion{
+				Action:         "act",
+				Resource:       "res",
 				ResourceDomain: "dom",
 				Reg: func() *regexp.Regexp {
 					r, _ := regexp.Compile("^act-res$")
 					return r
 				}(),
-				Effect: nil,
+				Effect:      nil,
+				RegexString: "^act-res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if !reflect.DeepEqual(got, want) {
@@ -68,12 +71,15 @@ func TestNewAssertion(t *testing.T) {
 				effect:   "deny",
 			},
 			want: &Assertion{
+				Action:         "act",
+				Resource:       "res",
 				ResourceDomain: "dom",
 				Reg: func() *regexp.Regexp {
 					r, _ := regexp.Compile("^act-res$")
 					return r
 				}(),
-				Effect: errors.New("policy deny: Access Check was explicitly denied"),
+				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
+				RegexString: "^act-res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
@@ -92,7 +98,7 @@ func TestNewAssertion(t *testing.T) {
 				action:   "act",
 				effect:   "deny",
 			},
-			wantErr: errors.New("assestion format not correct: Access denied due to invalie/empty policy resources"),
+			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 	}
 	for _, tt := range tests {
@@ -111,7 +117,7 @@ func TestNewAssertion(t *testing.T) {
 				if tt.wantErr == nil {
 					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
 				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("NewAssertio error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
 				}
 			}
 		})

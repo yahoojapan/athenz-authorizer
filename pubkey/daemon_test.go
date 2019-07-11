@@ -32,7 +32,7 @@ import (
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
 
-func Test_pubkey_New(t *testing.T) {
+func TestNew(t *testing.T) {
 	type args struct {
 		opts []Option
 	}
@@ -106,7 +106,7 @@ func Test_pubkey_New(t *testing.T) {
 	}
 }
 
-func Test_pubkey_getPubKey(t *testing.T) {
+func Test_pubkeyd_getPubKey(t *testing.T) {
 	c := &pubkeyd{
 		confCache: &AthenzConfig{
 			ZMSPubKeys: new(sync.Map),
@@ -170,7 +170,7 @@ func Test_pubkey_getPubKey(t *testing.T) {
 	}
 }
 
-func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
+func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -512,7 +512,7 @@ func Test_pubkey_fetchPubKeyEntries(t *testing.T) {
 	}
 }
 
-func Test_pubkey_GetProvider(t *testing.T) {
+func Test_pubkeyd_GetProvider(t *testing.T) {
 	c := &pubkeyd{
 		confCache: &AthenzConfig{},
 	}
@@ -536,7 +536,7 @@ func Test_pubkey_GetProvider(t *testing.T) {
 	}
 }
 
-func Test_pubkey_Update(t *testing.T) {
+func Test_pubkeyd_Update(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -868,7 +868,7 @@ func Test_pubkey_Update(t *testing.T) {
 	}
 }
 
-func Test_pubkey_StartpubkeyUpdator(t *testing.T) {
+func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration

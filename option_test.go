@@ -459,7 +459,7 @@ func TestWithPolicyEtagFlushDuration(t *testing.T) {
 		})
 	}
 }
-func TestPolicyEtagExpTime(t *testing.T) {
+func TestWithPolicyEtagExpTime(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -494,7 +494,7 @@ func TestPolicyEtagExpTime(t *testing.T) {
 		})
 	}
 }
-func TestCacheExp(t *testing.T) {
+func TestWithCacheExp(t *testing.T) {
 	type args struct {
 		d time.Duration
 	}
@@ -531,7 +531,7 @@ func TestCacheExp(t *testing.T) {
 		})
 	}
 }
-func TestTransport(t *testing.T) {
+func TestWithTransport(t *testing.T) {
 	type args struct {
 		t *http.Transport
 	}

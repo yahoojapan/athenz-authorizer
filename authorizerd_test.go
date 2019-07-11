@@ -113,7 +113,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestStart(t *testing.T) {
+func Test_authorizer_Start(t *testing.T) {
 	type fields struct {
 		pubkeyd  pubkey.Daemon
 		policyd  policy.Daemon
@@ -289,7 +289,7 @@ func TestStart(t *testing.T) {
 	}
 }
 
-func TestVerifyRoleToken(t *testing.T) {
+func Test_authorizer_VerifyRoleToken(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		tok string
@@ -463,7 +463,7 @@ func TestVerifyRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "token unauthorizate: deny",
+				wantErr: "token unauthorized: deny",
 			}
 		}(),
 	}
@@ -684,7 +684,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
-				wantErr: "token unauthorizate: deny",
+				wantErr: "token unauthorized: deny",
 			}
 		}(),
 	}
@@ -844,8 +844,7 @@ ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
 ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
 Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
 bu80CwTnWhmdBo36Ig==
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`
 			block, _ := pem.Decode([]byte(crt))
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
@@ -911,7 +910,7 @@ KSdPh6TRd/kYpv7t6cVm1Orll4O5jh+IdoguGkOCxheMaQ==
 			}
 
 			return test{
-				name: "invalid athenz role certificate",
+				name: "invalid athenz role certificate, invalid SAN",
 				fields: fields{
 					roleCertURIPrefix: "athenz://role/",
 					policyd:           pm,
@@ -941,8 +940,7 @@ ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
 ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
 Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
 bu80CwTnWhmdBo36Ig==
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`
 			block, _ := pem.Decode([]byte(crt))
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
@@ -953,7 +951,7 @@ bu80CwTnWhmdBo36Ig==
 			}
 
 			return test{
-				name: "parse and verify role cert success",
+				name: "invalid athenz role certificate, deny by policyd",
 				fields: fields{
 					roleCertURIPrefix: "athenz://role/",
 					policyd:           pm,

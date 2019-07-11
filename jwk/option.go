@@ -25,7 +25,7 @@ import (
 var (
 	defaultOptions = []Option{
 		WithRefreshDuration("24h"),
-		WithErrRetryInterval("1ms"),
+		WithErrRetryInterval("1m"),
 		WithHTTPClient(http.DefaultClient),
 	}
 )
