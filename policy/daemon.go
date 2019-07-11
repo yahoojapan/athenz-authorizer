@@ -378,18 +378,15 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return retErr
 	}
 
-	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
-		return true
+	rp.StartExpired(ctx, p.policyExpiredDuration).EnableExpiredHook().SetExpiredHook(func(ctx context.Context, key string) {
+		//key = <domain>:role.<role>
+		p.fetchAndCachePolicy(ctx, strings.Split(key, ":role.")[0])
 	})
 
-	p.rolePolicies.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		_, ok := rp.Get(k)
-		if !ok {
-			p.rolePolicies.Delete(k)
-		}
-		return true
-	})
+	// swap the pointer of role policies
+	p.rolePolicies, rp = rp, p.rolePolicies
+	rp.Stop()
+	rp.Clear()
 
 	return nil
 }
