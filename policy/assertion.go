@@ -16,7 +16,6 @@ limitations under the License.
 package policy
 
 import (
-	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -29,12 +28,13 @@ var (
 
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
-	Action   string
-	Resource string
+	ResourceDomain string         `json:"resource_domain"`
+	Reg            *regexp.Regexp `json:"-"`
+	Effect         error          `json:"effect"`
 
-	ResourceDomain string
-	Reg            *regexp.Regexp
-	Effect         error
+	Action      string `json:"action"`
+	Resource    string `json:"resource"`
+	RegexString string `json:"regex_string"`
 }
 
 // NewAssertion returns the Assertion object or error
@@ -46,15 +46,13 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	dom := domres[0]
 	res := domres[1]
 
-	regexStr := "^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$"
-	reg, err := regexp.Compile(regexStr)
+	reg, err := regexp.Compile("^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$")
+
 	if err != nil {
 		return nil, errors.Wrap(err, "assertion format not correct")
 	}
 
 	return &Assertion{
-		Action:         action,
-		Resource:       res,
 		ResourceDomain: dom,
 		Reg:            reg,
 		Effect: func() error {
@@ -63,26 +61,8 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 			}
 			return nil
 		}(),
+		Action:      action,
+		Resource:    res,
+		RegexString: reg.String(),
 	}, nil
-}
-
-// AssertionJSON represents json format of Assertion
-type AssertionJSON struct {
-	Action         string `json:"action"`
-	Resource       string `json:"resource"`
-	ResourceDomain string `json:"domain"`
-	Reg            string `json:"reg"`
-	Deny           bool   `json:"deny"`
-}
-
-// MarshalJSON implements the Marshaler interface.
-func (a *Assertion) MarshalJSON() ([]byte, error) {
-	x := &AssertionJSON{
-		Action:         a.Action,
-		Resource:       a.Resource,
-		ResourceDomain: a.ResourceDomain,
-		Reg:            a.Reg.String(),
-		Deny:           a.Effect != nil,
-	}
-	return json.Marshal(x)
 }

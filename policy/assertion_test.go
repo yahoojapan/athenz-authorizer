@@ -16,8 +16,6 @@ limitations under the License.
 package policy
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -54,7 +52,8 @@ func TestNewAssertion(t *testing.T) {
 					r, _ := regexp.Compile("^act-res$")
 					return r
 				}(),
-				Effect: nil,
+				Effect:      nil,
+				RegexString: "^act-res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if !reflect.DeepEqual(got, want) {
@@ -79,7 +78,8 @@ func TestNewAssertion(t *testing.T) {
 					r, _ := regexp.Compile("^act-res$")
 					return r
 				}(),
-				Effect: errors.New("policy deny: Access Check was explicitly denied"),
+				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
+				RegexString: "^act-res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
@@ -118,62 +118,6 @@ func TestNewAssertion(t *testing.T) {
 					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
 				} else if err.Error() != tt.wantErr.Error() {
 					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
-				}
-			}
-		})
-	}
-}
-
-func TestAssertion_MarshalJSON(t *testing.T) {
-	type args struct {
-		action   string
-		resource string
-		effect   string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr error
-	}{
-		{
-			name: "encoding JSON: allow policy",
-			args: args{
-				resource: "dom:res",
-				action:   "act",
-				effect:   "allow",
-			},
-			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":false}` + "\n",
-		},
-		{
-			name: "encoding JSON: deny policy",
-			args: args{
-				resource: "dom:res",
-				action:   "act",
-				effect:   "deny",
-			},
-			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":true}` + "\n",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewAssertion(tt.args.action, tt.args.resource, tt.args.effect)
-
-			b := bytes.NewBuffer(make([]byte, 0))
-			err = json.NewEncoder(b).Encode(got)
-
-			if b.String() != tt.want {
-				t.Errorf("Assertion.MarshalJSON error: %v != %v", b.String(), tt.want)
-			}
-			if err == nil {
-				if tt.wantErr != nil {
-					t.Errorf("Assertion.MarshalJSON = %v, wantErr %v", err, tt.wantErr)
-				}
-			} else {
-				if tt.wantErr == nil {
-					t.Errorf("Assertion.MarshalJSON error = %v, wantErr %v", err, tt.wantErr)
-				} else if err.Error() != tt.wantErr.Error() {
-					t.Errorf("Assertion.MarshalJSON error = %v, wantErr %v", err, tt.wantErr)
 				}
 			}
 		})
