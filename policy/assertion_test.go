@@ -143,7 +143,7 @@ func TestAssertion_MarshalJSON(t *testing.T) {
 				action:   "act",
 				effect:   "allow",
 			},
-			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":true}` + "\n",
+			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":false}` + "\n",
 		},
 		{
 			name: "encoding JSON: deny policy",
@@ -152,7 +152,7 @@ func TestAssertion_MarshalJSON(t *testing.T) {
 				action:   "act",
 				effect:   "deny",
 			},
-			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":false}` + "\n",
+			want: `{"action":"act","resource":"res","domain":"dom","reg":"^act-res$","deny":true}` + "\n",
 		},
 	}
 	for _, tt := range tests {

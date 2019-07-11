@@ -82,7 +82,7 @@ func (a *Assertion) MarshalJSON() ([]byte, error) {
 		Resource:       a.Resource,
 		ResourceDomain: a.ResourceDomain,
 		Reg:            a.Reg.String(),
-		Deny:           a.Effect == nil,
+		Deny:           a.Effect != nil,
 	}
 	return json.Marshal(x)
 }
