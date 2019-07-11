@@ -29,6 +29,9 @@ var (
 		WithEnablePubkeyd(),
 		WithEnablePolicyd(),
 		WithEnableJwkd(),
+		WithPolicyErrRetryInterval("1m"),
+		WithPubkeyErrRetryInterval("1m"),
+		WithJwkErrRetryInterval("1m"),
 	}
 )
 
@@ -112,6 +115,14 @@ func WithPubkeyRefreshDuration(t string) Option {
 	}
 }
 
+// WithPubkeyErrRetryInterval represents a PubkeyErrRetryInterval functional option
+func WithPubkeyErrRetryInterval(i string) Option {
+	return func(prov *authorizer) error {
+		prov.pubkeyErrRetryInterval = i
+		return nil
+	}
+}
+
 // WithPubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
 func WithPubkeySysAuthDomain(domain string) Option {
 	return func(prov *authorizer) error {
@@ -164,6 +175,14 @@ func WithPolicyRefreshDuration(t string) Option {
 	}
 }
 
+// WithPolicyErrRetryInterval represents a PolicyErrRetryInterval functional option
+func WithPolicyErrRetryInterval(i string) Option {
+	return func(prov *authorizer) error {
+		prov.policyErrRetryInterval = i
+		return nil
+	}
+}
+
 // WithPolicyExpireMargin represents a PolicyExpireMargin functional option
 func WithPolicyExpireMargin(t string) Option {
 	return func(prov *authorizer) error {
@@ -212,6 +231,14 @@ func WithDisableJwkd() Option {
 func WithJwkRefreshDuration(t string) Option {
 	return func(prov *authorizer) error {
 		prov.jwkRefreshDuration = t
+		return nil
+	}
+}
+
+// WithJwkErrRetryInterval represents a JwkErrRetryInterval functional option
+func WithJwkErrRetryInterval(i string) Option {
+	return func(prov *authorizer) error {
+		prov.jwkErrRetryInterval = i
 		return nil
 	}
 }
