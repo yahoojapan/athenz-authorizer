@@ -170,6 +170,10 @@ func (p *policyd) Update(ctx context.Context) error {
 		}
 	}
 
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	rp.StartExpired(ctx, p.policyExpiredDuration).
 		EnableExpiredHook().
 		SetExpiredHook(func(ctx context.Context, key string) {
@@ -181,7 +185,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	rp.Stop()
 	rp.Clear()
 
-	return eg.Wait()
+	return nil
 }
 
 // CheckPolicy checks the specified request has privilege to access the resources or not.
