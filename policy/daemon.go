@@ -78,7 +78,7 @@ func New(opts ...Option) (Daemon, error) {
 
 	p.rolePolicies.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, key string) {
 		//key = <domain>:role.<role>
-		p.fetchAndCachePolicy(ctx, strings.Split(key, ":role.")[0])
+		p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
 	})
 
 	for _, opt := range append(defaultOptions, opts...) {
@@ -149,6 +149,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	glg.Info("Updating policy")
 	defer glg.Info("Updated policy")
 	eg := errgroup.Group{}
+	rp := gache.New()
 
 	for _, domain := range p.athenzDomains {
 		select {
@@ -163,11 +164,22 @@ func (p *policyd) Update(ctx context.Context) error {
 					glg.Info("Update policy interrupted")
 					return ctx.Err()
 				default:
-					return p.fetchAndCachePolicy(ctx, dom)
+					return p.fetchAndCachePolicy(ctx, rp, dom)
 				}
 			})
 		}
 	}
+
+	rp.StartExpired(ctx, p.policyExpiredDuration).
+		EnableExpiredHook().
+		SetExpiredHook(func(ctx context.Context, key string) {
+			//key = <domain>:role.<role>
+			p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
+		})
+
+	p.rolePolicies, rp = rp, p.rolePolicies
+	rp.Stop()
+	rp.Clear()
 
 	return eg.Wait()
 }
@@ -227,7 +239,7 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
+func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 	if err != nil {
 		glg.Debugf("fetch policy failed, err: %v", err)
@@ -241,7 +253,7 @@ func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
 			return fmt.Sprintf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
 		})
 
-		if err = p.simplifyAndCache(ctx, spd); err != nil {
+		if err = p.simplifyAndCache(ctx, g, spd); err != nil {
 			glg.Debugf("simplify and cache error: %v", err)
 			return errors.Wrap(err, "error simplify and cache")
 		}
@@ -320,8 +332,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	return sp, true, nil
 }
 
-func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
-	rp := gache.New()
+func (p *policyd) simplifyAndCache(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
 	eg := errgroup.Group{}
 	assm := new(sync.Map) // assertion map
 
@@ -377,19 +388,6 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	if retErr != nil {
 		return retErr
 	}
-
-	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
-		return true
-	})
-
-	p.rolePolicies.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		_, ok := rp.Get(k)
-		if !ok {
-			p.rolePolicies.Delete(k)
-		}
-		return true
-	})
 
 	return nil
 }
