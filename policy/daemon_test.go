@@ -785,6 +785,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 	}
 	type args struct {
 		ctx context.Context
+		g   gache.Gache
 		dom string
 	}
 	type test struct {
@@ -823,6 +824,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   gache.New(),
 					dom: "dummyDom",
 				},
 				wantErr: false,
@@ -865,6 +867,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   gache.New(),
 					dom: "dummyDomain",
 				},
 				wantErr: true,
@@ -898,6 +901,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   gache.New(),
 					dom: "dummyDom",
 				},
 				wantErr: true,
@@ -920,7 +924,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
 			}
-			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.dom); (err != nil) != tt.wantErr {
+			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.g, tt.args.dom); (err != nil) != tt.wantErr {
 				t.Errorf("policy.fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
@@ -1432,6 +1436,7 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 	}
 	type args struct {
 		ctx context.Context
+		rp  gache.Gache
 		sp  *SignedPolicy
 	}
 	type test struct {
@@ -1891,6 +1896,7 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					rp:  gache.New(),
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -2083,7 +2089,7 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
 			}
-			if err := p.simplifyAndCache(tt.args.ctx, tt.args.sp); (err != nil) != tt.wantErr {
+			if err := p.simplifyAndCache(tt.args.ctx, tt.args.rp, tt.args.sp); (err != nil) != tt.wantErr {
 				t.Errorf("policy.simplifyAndCache() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
