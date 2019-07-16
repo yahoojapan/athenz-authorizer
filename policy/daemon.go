@@ -76,11 +76,6 @@ func New(opts ...Option) (Daemon, error) {
 		etagCache:    gache.New(),
 	}
 
-	p.rolePolicies.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, key string) {
-		//key = <domain>:role.<role>
-		p.fetchAndCachePolicy(ctx, strings.Split(key, ":role.")[0])
-	})
-
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(p); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
@@ -105,7 +100,6 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		p.rolePolicies.StartExpired(ctx, p.policyExpiredDuration)
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
@@ -149,6 +143,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	glg.Info("Updating policy")
 	defer glg.Info("Updated policy")
 	eg := errgroup.Group{}
+	rp := gache.New()
 
 	for _, domain := range p.athenzDomains {
 		select {
@@ -163,13 +158,28 @@ func (p *policyd) Update(ctx context.Context) error {
 					glg.Info("Update policy interrupted")
 					return ctx.Err()
 				default:
-					return p.fetchAndCachePolicy(ctx, dom)
+					return p.fetchAndCachePolicy(ctx, rp, dom)
 				}
 			})
 		}
 	}
 
-	return eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	rp.StartExpired(ctx, p.policyExpiredDuration).
+		EnableExpiredHook().
+		SetExpiredHook(func(ctx context.Context, key string) {
+			//key = <domain>:role.<role>
+			p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
+		})
+
+	p.rolePolicies, rp = rp, p.rolePolicies
+	rp.Stop()
+	rp.Clear()
+
+	return nil
 }
 
 // CheckPolicy checks the specified request has privilege to access the resources or not.
@@ -227,7 +237,7 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
+func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom string) error {
 	spd, upd, err := p.fetchPolicy(ctx, dom)
 	if err != nil {
 		glg.Debugf("fetch policy failed, err: %v", err)
@@ -241,7 +251,7 @@ func (p *policyd) fetchAndCachePolicy(ctx context.Context, dom string) error {
 			return fmt.Sprintf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
 		})
 
-		if err = p.simplifyAndCache(ctx, spd); err != nil {
+		if err = simplifyAndCachePolicy(ctx, g, spd); err != nil {
 			glg.Debugf("simplify and cache error: %v", err)
 			return errors.Wrap(err, "error simplify and cache")
 		}
@@ -267,7 +277,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	if ok {
 		ec := t.(*etagCache)
 		if time.Now().Add(p.expireMargin).UnixNano() < ec.sp.SignedPolicyData.Expires.UnixNano() {
-			glg.Debugf("domain : %s, using etag: %s", domain, ec.eTag)
+			glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
 			req.Header.Set("If-None-Match", ec.eTag)
 		}
 	}
@@ -299,7 +309,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 
 	// verify policy data
 	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifing policy, domain: %s,err: %v", domain, err)
+		glg.Errorf("Error verifying policy, domain: %s,err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error verify policy data")
 	}
 
@@ -320,11 +330,11 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	return sp, true, nil
 }
 
-func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error {
-	rp := gache.New()
+func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
 	eg := errgroup.Group{}
 	assm := new(sync.Map) // assertion map
 
+	// simplify signed policy cache
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
 		eg.Go(func() error {
@@ -353,6 +363,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		return errors.Wrap(err, "error simplify and cache policy")
 	}
 
+	// cache
 	var retErr error
 	assm.Range(func(k interface{}, val interface{}) bool {
 		ass := val.(*util.Assertion)
@@ -364,7 +375,8 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 		}
 
 		var asss []*Assertion
-		if r, ok := rp.Get(ass.Role); ok {
+		r := ass.Role
+		if r, ok := rp.Get(r); ok {
 			asss = append(r.([]*Assertion), a)
 		} else {
 			asss = []*Assertion{a}
@@ -377,19 +389,6 @@ func (p *policyd) simplifyAndCache(ctx context.Context, sp *SignedPolicy) error 
 	if retErr != nil {
 		return retErr
 	}
-
-	rp.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		p.rolePolicies.SetWithExpire(k, val, time.Duration(exp))
-		return true
-	})
-
-	p.rolePolicies.Foreach(ctx, func(k string, val interface{}, exp int64) bool {
-		_, ok := rp.Get(k)
-		if !ok {
-			p.rolePolicies.Delete(k)
-		}
-		return true
-	})
 
 	return nil
 }

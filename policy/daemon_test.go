@@ -785,6 +785,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 	}
 	type args struct {
 		ctx context.Context
+		g   gache.Gache
 		dom string
 	}
 	type test struct {
@@ -802,6 +803,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
+			g := gache.New()
 
 			return test{
 				name: "fetch policy success with updated policy",
@@ -823,11 +825,11 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   g,
 					dom: "dummyDom",
 				},
-				wantErr: false,
 				checkFunc: func(pol *policyd) error {
-					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					pols, ok := g.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("role policies not found")
 					}
@@ -844,6 +846,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			srv := httptest.NewTLSServer(handler)
+			g := gache.New()
 
 			return test{
 				name: "fetch policy failed",
@@ -865,6 +868,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   g,
 					dom: "dummyDomain",
 				},
 				wantErr: true,
@@ -898,6 +902,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				},
 				args: args{
 					ctx: context.Background(),
+					g:   gache.New(),
 					dom: "dummyDom",
 				},
 				wantErr: true,
@@ -920,7 +925,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
 			}
-			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.dom); (err != nil) != tt.wantErr {
+			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.g, tt.args.dom); (err != nil) != tt.wantErr {
 				t.Errorf("policy.fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
@@ -1415,30 +1420,16 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 	}
 }
 
-func Test_policyd_simplifyAndCache(t *testing.T) {
-	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
-		athenzURL             string
-		athenzDomains         []string
-		client                *http.Client
-	}
+func Test_simplifyAndCachePolicy(t *testing.T) {
 	type args struct {
 		ctx context.Context
+		rp  gache.Gache
 		sp  *SignedPolicy
 	}
 	type test struct {
 		name      string
-		fields    fields
 		args      args
-		checkFunc func(pol *policyd) error
+		checkFunc func() error
 		wantErr   bool
 	}
 
@@ -1451,14 +1442,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache success with data",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1503,12 +1492,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 2 {
-						return errors.Errorf("invalid length role policies 2, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 2 {
+						return errors.Errorf("invalid length role policies 2, role policies: %v", rp.ToRawMap(context.Background()))
 					}
 
-					gotRp1, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					gotRp1, ok := rp.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("cannot simplify and cache data")
 					}
@@ -1530,7 +1519,7 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						return errors.Errorf("hv1: %v, hv2: %v", hv1, hv2)
 					}
 
-					gotRp2, ok := pol.rolePolicies.Get("dummyDom2:role.dummyRole2")
+					gotRp2, ok := rp.Get("dummyDom2:role.dummyRole2")
 					if !ok {
 						return errors.New("cannot simplify and cache data")
 					}
@@ -1546,15 +1535,13 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 		}(),
 
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*5))
+			rp := gache.New()
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Nanosecond*5))
 			return test{
 				name: "test context done",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: ctx,
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1599,7 +1586,7 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
+				checkFunc: func() error {
 					cancel()
 					return nil
 				},
@@ -1608,14 +1595,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 		}(),
 
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache deny overwrite allow",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1672,12 +1657,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
-						return errors.Errorf("invalid length role policies 1, role policies: %v", pol.rolePolicies.ToRawMap(context.Background()))
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 1 {
+						return errors.Errorf("invalid length role policies 1, role policies: %v", rp.ToRawMap(context.Background()))
 					}
 
-					gotRp1, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					gotRp1, ok := rp.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("cannot simplify and cache data")
 					}
@@ -1696,14 +1681,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 		}(),
 
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache success with no data",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1714,18 +1697,21 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 0 {
+						return errors.Errorf("invalid length role policies 0, role policies: %v", rp.ToRawMap(context.Background()))
+					}
+					return nil
+				},
 				wantErr: false,
 			}
 		}(),
 		func() test {
 			return test{
 				name: "cache failed with invalid assertion",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  gache.New(),
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1754,14 +1740,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 			}
 		}(),
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache success with no data",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1772,16 +1756,18 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 0 {
+						return errors.Errorf("invalid length role policies 0, role policies: %v", rp.ToRawMap(context.Background()))
+					}
+					return nil
+				},
 				wantErr: false,
 			}
 		}(),
 		func() test {
 			return test{
 				name: "cache failed with invalid assertion",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
 					sp: &SignedPolicy{
@@ -1821,13 +1807,10 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 				}(),
 			})
 			return test{
-				name: "cache replace by new assertion",
-				fields: fields{
-					rolePolicies:          rp,
-					policyExpiredDuration: time.Minute * 30,
-				},
+				name: "cache can append new assertion",
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1852,60 +1835,65 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 1 {
 						return errors.Errorf("invalid role policies length")
 					}
 
-					gotAsss, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					gotAsss, ok := rp.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("cannot find dummyDom:role.dummyRole")
 					}
 
 					asss := gotAsss.([]*Assertion)
-					if len(asss) != 1 {
+					if len(asss) != 2 {
 						return errors.New("Invalid asss length")
 					}
 
-					ass := asss[0]
+					if err := checkAssertion(asss[0], "dummyAct", "dummyDom:dummyRes", "dummyEff1"); err != nil {
+						return err
+					}
 
-					return checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1")
+					return checkAssertion(asss[1], "dummyAct1", "dummyDom1:dummyRes1", "allow1")
 				},
 				wantErr: false,
 			}
 		}(),
-		func() test {
-			rp := gache.New()
+		/*
+			func() test {
+				rp := gache.New()
 
-			rp.Set("dummyDom:role.dummyRole", []*Assertion{
-				func() *Assertion {
-					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "dummyEff")
-					return a
-				}(),
-			})
-			return test{
-				name: "cache delete",
-				fields: fields{
-					rolePolicies:          rp,
-					policyExpiredDuration: time.Minute * 30,
-				},
-				args: args{
-					ctx: context.Background(),
-					sp: &SignedPolicy{
-						util.DomainSignedPolicyData{
-							SignedPolicyData: &util.SignedPolicyData{
-								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
-								},
-								PolicyData: &util.PolicyData{
-									Policies: []*util.Policy{
-										{
-											Assertions: []*util.Assertion{
-												{
-													Role:     "dummyDom1:role.dummyRole1",
-													Action:   "dummyAct1",
-													Resource: "dummyDom1:dummyRes1",
-													Effect:   "allow1",
+				rp.Set("dummyDom:role.dummyRole", []*Assertion{
+					func() *Assertion {
+						a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "dummyEff")
+						return a
+					}(),
+				})
+				return test{
+					name: "cache delete",
+					fields: fields{
+						rolePolicies:          rp,
+						policyExpiredDuration: time.Minute * 30,
+					},
+					args: args{
+						ctx: context.Background(),
+						rp:  rp,
+						sp: &SignedPolicy{
+							util.DomainSignedPolicyData{
+								SignedPolicyData: &util.SignedPolicyData{
+									Expires: &rdl.Timestamp{
+										time.Now().Add(time.Hour).UTC(),
+									},
+									PolicyData: &util.PolicyData{
+										Policies: []*util.Policy{
+											{
+												Assertions: []*util.Assertion{
+													{
+														Role:     "dummyDom1:role.dummyRole1",
+														Action:   "dummyAct1",
+														Resource: "dummyDom1:dummyRes1",
+														Effect:   "allow1",
+													},
 												},
 											},
 										},
@@ -1914,45 +1902,43 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 							},
 						},
 					},
-				},
-				checkFunc: func(pol *policyd) error {
-					// check if old policy exists
-					_, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
-					if ok {
-						return errors.New("role policy found")
-					}
+					checkFunc: func(pol *policyd) error {
+						// check if old policy exists
+						_, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+						if ok {
+							return errors.New("role policy found")
+						}
 
-					// check new policy exist
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
-						return errors.Errorf("invalid role policies length")
-					}
+						// check new policy exist
+						if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+							return errors.Errorf("invalid role policies length")
+						}
 
-					gotAsss, ok := pol.rolePolicies.Get("dummyDom1:role.dummyRole1")
-					if !ok {
-						return errors.New("cannot find dummyDom1:role.dummyRole1")
-					}
+						gotAsss, ok := pol.rolePolicies.Get("dummyDom1:role.dummyRole1")
+						if !ok {
+							return errors.New("cannot find dummyDom1:role.dummyRole1")
+						}
 
-					asss := gotAsss.([]*Assertion)
-					if len(asss) != 1 {
-						return errors.New("Invalid asss length")
-					}
+						asss := gotAsss.([]*Assertion)
+						if len(asss) != 1 {
+							return errors.New("Invalid asss length")
+						}
 
-					ass := asss[0]
-					return checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1")
-				},
-				wantErr: false,
-			}
-		}(),
+						ass := asss[0]
+						return checkAssertion(ass, "dummyAct1", "dummyDom1:dummyRes1", "allow1")
+					},
+					wantErr: false,
+				}
+			}(),
+		*/
 
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache success with 100x100 data",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -1986,13 +1972,13 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 100 {
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 100 {
 						return errors.New("invalid length role policies 100")
 					}
 
 					var err error
-					pol.rolePolicies.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
+					rp.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
 						//glg.Debugf("key: %s, val: %v", k, val)
 						if len(val.([]*Assertion)) != 100 {
 							err = errors.Errorf("invalid length asss 100, error: %v", k)
@@ -2006,14 +1992,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 			}
 		}(),
 		func() test {
+			rp := gache.New()
 			return test{
 				name: "cache success with no race condition with 100x100 data",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-				},
 				args: args{
 					ctx: context.Background(),
+					rp:  rp,
 					sp: &SignedPolicy{
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
@@ -2047,13 +2031,13 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 						},
 					},
 				},
-				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != 1 {
+				checkFunc: func() error {
+					if len(rp.ToRawMap(context.Background())) != 1 {
 						return errors.New("invalid length role policies 1")
 					}
 
 					var err error
-					pol.rolePolicies.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
+					rp.Foreach(context.Background(), func(k string, val interface{}, exp int64) bool {
 						//glg.Debugf("key: %s, val: %v", k, val)
 						if len(val.([]*Assertion)) != 10000 {
 							err = errors.Errorf("invalid length asss 100, error: %v", k)
@@ -2069,26 +2053,12 @@ func Test_policyd_simplifyAndCache(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
-			}
-			if err := p.simplifyAndCache(tt.args.ctx, tt.args.sp); (err != nil) != tt.wantErr {
-				t.Errorf("policy.simplifyAndCache() error = %v, wantErr %v", err, tt.wantErr)
+			if err := simplifyAndCachePolicy(tt.args.ctx, tt.args.rp, tt.args.sp); (err != nil) != tt.wantErr {
+				t.Errorf("simplifyAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
-				if err := tt.checkFunc(p); err != nil {
-					t.Errorf("policy.simplifyAndCache() error = %v", err)
+				if err := tt.checkFunc(); err != nil {
+					t.Errorf("simplifyAndCachePolicy() error = %v", err)
 				}
 			}
 		})
