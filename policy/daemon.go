@@ -283,7 +283,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	if ok {
 		ec := t.(*etagCache)
 		if time.Now().Add(p.expireMargin).UnixNano() < ec.sp.SignedPolicyData.Expires.UnixNano() {
-			glg.Debugf("domain : %s, using etag: %s", domain, ec.eTag)
+			glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
 			req.Header.Set("If-None-Match", ec.eTag)
 		}
 	}
@@ -315,7 +315,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 
 	// verify policy data
 	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifing policy, domain: %s,err: %v", domain, err)
+		glg.Errorf("Error verifying policy, domain: %s,err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error verify policy data")
 	}
 
