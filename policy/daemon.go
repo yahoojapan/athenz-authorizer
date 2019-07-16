@@ -76,11 +76,6 @@ func New(opts ...Option) (Daemon, error) {
 		etagCache:    gache.New(),
 	}
 
-	p.rolePolicies.EnableExpiredHook().SetExpiredHook(func(ctx context.Context, key string) {
-		//key = <domain>:role.<role>
-		p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
-	})
-
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(p); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
@@ -105,7 +100,6 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		p.rolePolicies.StartExpired(ctx, p.policyExpiredDuration)
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
@@ -257,7 +251,7 @@ func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom st
 			return fmt.Sprintf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
 		})
 
-		if err = p.simplifyAndCache(ctx, g, spd); err != nil {
+		if err = simplifyAndCachePolicy(ctx, g, spd); err != nil {
 			glg.Debugf("simplify and cache error: %v", err)
 			return errors.Wrap(err, "error simplify and cache")
 		}
@@ -336,10 +330,11 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	return sp, true, nil
 }
 
-func (p *policyd) simplifyAndCache(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
+func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
 	eg := errgroup.Group{}
 	assm := new(sync.Map) // assertion map
 
+	// simplify signed policy cache
 	for _, policy := range sp.DomainSignedPolicyData.SignedPolicyData.PolicyData.Policies {
 		pol := policy
 		eg.Go(func() error {
@@ -368,6 +363,7 @@ func (p *policyd) simplifyAndCache(ctx context.Context, rp gache.Gache, sp *Sign
 		return errors.Wrap(err, "error simplify and cache policy")
 	}
 
+	// cache
 	var retErr error
 	assm.Range(func(k interface{}, val interface{}) bool {
 		ass := val.(*util.Assertion)
@@ -379,7 +375,8 @@ func (p *policyd) simplifyAndCache(ctx context.Context, rp gache.Gache, sp *Sign
 		}
 
 		var asss []*Assertion
-		if r, ok := rp.Get(ass.Role); ok {
+		r := ass.Role
+		if r, ok := rp.Get(r); ok {
 			asss = append(r.([]*Assertion), a)
 		} else {
 			asss = []*Assertion{a}
