@@ -33,34 +33,34 @@ var (
 	}
 )
 
-// Option represents a functional options pattern interface
+// Option represents a functional option
 type Option func(*pubkeyd) error
 
-// WithAthenzURL represents a AthenzURL functional option
+// WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if url == "" {
 			return nil
 		}
-		c.athenzURL = regex.ReplaceAllString(url, "")
+		p.athenzURL = url
 		return nil
 	}
 }
 
-// WithSysAuthDomain represents a SysAuthDomain functional option
+// WithSysAuthDomain returns a SysAuthDomain functional option
 func WithSysAuthDomain(d string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if d == "" {
 			return nil
 		}
-		c.sysAuthDomain = d
+		p.sysAuthDomain = d
 		return nil
 	}
 }
 
-// WithEtagExpTime represents a EtagExpTime functional option
+// WithEtagExpTime returns an EtagExpTime functional option
 func WithEtagExpTime(t string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
@@ -69,14 +69,14 @@ func WithEtagExpTime(t string) Option {
 		if err != nil {
 			return errors.Wrap(err, "invalid etag expire time")
 		}
-		c.etagExpTime = etagExpTime
+		p.etagExpTime = etagExpTime
 		return nil
 	}
 }
 
-// WithEtagFlushDuration represents a EtagFlushDur functional option
+// WithEtagFlushDuration returns an EtagFlushDur functional option
 func WithEtagFlushDuration(t string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
@@ -85,40 +85,40 @@ func WithEtagFlushDuration(t string) Option {
 		if err != nil {
 			return errors.Wrap(err, "invalid etag flush duration")
 		}
-		c.etagFlushDur = etagFlushDur
+		p.etagFlushDur = etagFlushDur
 		return nil
 	}
 }
 
-// WithRefreshDuration represents a RefreshDuration functional option
+// WithRefreshDuration returns a RefreshDuration functional option
 func WithRefreshDuration(t string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if t == "" {
 			return nil
 		}
 
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh druation")
+			return errors.Wrap(err, "invalid refresh duration")
 		}
-		c.refreshDuration = rd
+		p.refreshDuration = rd
 		return nil
 	}
 }
 
-// WithHTTPClient represents a HTTPClient functional option
+// WithHTTPClient returns a HTTPClient functional option
 func WithHTTPClient(cl *http.Client) Option {
-	return func(c *pubkeyd) error {
-		if c != nil {
-			c.client = cl
+	return func(p *pubkeyd) error {
+		if p != nil {
+			p.client = cl
 		}
 		return nil
 	}
 }
 
-// WithErrRetryInterval represents a ErrRetryInterval functional option
+// WithErrRetryInterval returns an ErrRetryInterval functional option
 func WithErrRetryInterval(i string) Option {
-	return func(c *pubkeyd) error {
+	return func(p *pubkeyd) error {
 		if i == "" {
 			return nil
 		}
@@ -127,7 +127,7 @@ func WithErrRetryInterval(i string) Option {
 		if err != nil {
 			return errors.Wrap(err, "invalid err retry interval")
 		}
-		c.errRetryInterval = ri
+		p.errRetryInterval = ri
 		return nil
 	}
 }

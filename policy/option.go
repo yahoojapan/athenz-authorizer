@@ -35,10 +35,10 @@ var (
 	}
 )
 
-// Option represents a functional options pattern interface
+// Option represents a functional option
 type Option func(*policyd) error
 
-// WithEtagFlushDuration represents a ETagFlushDur functional option
+// WithEtagFlushDuration returns an ETagFlushDur functional option
 func WithEtagFlushDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
@@ -53,7 +53,7 @@ func WithEtagFlushDuration(t string) Option {
 	}
 }
 
-// WithExpireMargin represents a ExpiryMargin functional option
+// WithExpireMargin returns an ExpiryMargin functional option
 func WithExpireMargin(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
@@ -68,7 +68,7 @@ func WithExpireMargin(t string) Option {
 	}
 }
 
-// WithEtagExpTime represents a EtagExpTime functional option
+// WithEtagExpTime returns an EtagExpTime functional option
 func WithEtagExpTime(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
@@ -83,7 +83,7 @@ func WithEtagExpTime(t string) Option {
 	}
 }
 
-// WithAthenzURL represents a AthenzURL functional option
+// WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(pol *policyd) error {
 		if url == "" {
@@ -94,7 +94,7 @@ func WithAthenzURL(url string) Option {
 	}
 }
 
-// WithAthenzDomains represents a AthenzDomain functional option
+// WithAthenzDomains represents an AthenzDomain functional option
 func WithAthenzDomains(doms ...string) Option {
 	return func(pol *policyd) error {
 		if doms == nil {
@@ -105,7 +105,7 @@ func WithAthenzDomains(doms ...string) Option {
 	}
 }
 
-// WithPolicyExpiredDuration represents a PolicyExpiredDuration functional option
+// WithPolicyExpiredDuration returns a PolicyExpiredDuration functional option
 func WithPolicyExpiredDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
@@ -120,7 +120,7 @@ func WithPolicyExpiredDuration(t string) Option {
 	}
 }
 
-// WithRefreshDuration represents a RefreshDuration functional option
+// WithRefreshDuration returns a RefreshDuration functional option
 func WithRefreshDuration(t string) Option {
 	return func(pol *policyd) error {
 		if t == "" {
@@ -135,7 +135,7 @@ func WithRefreshDuration(t string) Option {
 	}
 }
 
-// WithHTTPClient represents a HttpClient functional option
+// WithHTTPClient returns a HttpClient functional option
 func WithHTTPClient(c *http.Client) Option {
 	return func(pol *policyd) error {
 		if c != nil {
@@ -145,7 +145,7 @@ func WithHTTPClient(c *http.Client) Option {
 	}
 }
 
-// WithPubKeyProvider represents a PubKeyProvider functional option
+// WithPubKeyProvider returns a PubKeyProvider functional option
 func WithPubKeyProvider(pkp pubkey.Provider) Option {
 	return func(pol *policyd) error {
 		if pkp != nil {
@@ -155,7 +155,7 @@ func WithPubKeyProvider(pkp pubkey.Provider) Option {
 	}
 }
 
-// WithErrRetryInterval represents a ErrRetryInterval functional option
+// WithErrRetryInterval returns an ErrRetryInterval functional option
 func WithErrRetryInterval(i string) Option {
 	return func(pol *policyd) error {
 		if i == "" {

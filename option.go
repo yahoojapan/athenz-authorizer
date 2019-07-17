@@ -17,10 +17,12 @@ package authorizerd
 
 import (
 	"net/http"
+	"regexp"
 	"time"
 )
 
 var (
+	regex          = regexp.MustCompile("^(http|https)://")
 	defaultOptions = []Option{
 		WithAthenzURL("www.athenz.com/zts/v1"),
 		WithTransport(nil),
@@ -35,114 +37,114 @@ var (
 	}
 )
 
-// Option represents a functional options pattern interface
+// Option represents a functional option
 type Option func(*authorizer) error
 
-// WithAthenzURL represents a AthenzURL functional option
+// WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
-	return func(prov *authorizer) error {
-		prov.athenzURL = url
+	return func(authz *authorizer) error {
+		authz.athenzURL = regex.ReplaceAllString(url, "")
 		return nil
 	}
 }
 
-// WithAthenzDomains represents a AthenzDomains functional option
+// WithAthenzDomains returns an AthenzDomains functional option
 func WithAthenzDomains(domains ...string) Option {
-	return func(prov *authorizer) error {
-		prov.athenzDomains = domains
+	return func(authz *authorizer) error {
+		authz.athenzDomains = domains
 		return nil
 	}
 }
 
-// WithTransport represents a Transport functional option
+// WithTransport returns a Transport functional option
 func WithTransport(t *http.Transport) Option {
-	return func(prov *authorizer) error {
+	return func(authz *authorizer) error {
 		if t == nil {
-			prov.client = &http.Client{
+			authz.client = &http.Client{
 				Timeout: time.Second * 30,
 			}
 			return nil
 		}
-		prov.client = &http.Client{
+		authz.client = &http.Client{
 			Transport: t,
 		}
 		return nil
 	}
 }
 
-// WithCacheExp represents the cache expiration time
+// WithCacheExp returns a CacheExp functional option
 func WithCacheExp(exp time.Duration) Option {
-	return func(prov *authorizer) error {
-		prov.cache.SetDefaultExpire(exp)
-		prov.cacheExp = exp
+	return func(authz *authorizer) error {
+		authz.cache.SetDefaultExpire(exp)
+		authz.cacheExp = exp
 		return nil
 	}
 }
 
-// WithRoleCertURIPrefix represents a RoleCertURIPrefix functional option
+// WithRoleCertURIPrefix returns a RoleCertURIPrefix functional option
 func WithRoleCertURIPrefix(t string) Option {
-	return func(prov *authorizer) error {
-		prov.roleCertURIPrefix = t
+	return func(authz *authorizer) error {
+		authz.roleCertURIPrefix = t
 		return nil
 	}
 }
 
 /*
-	Pubkeyd parameters
+	pubkeyd parameters
 */
 
-// WithEnablePubkeyd represents a EnablePubkey functional optiond
+// WithEnablePubkeyd returns an EnablePubkey functional option
 func WithEnablePubkeyd() Option {
-	return func(prov *authorizer) error {
-		prov.disablePubkeyd = false
+	return func(authz *authorizer) error {
+		authz.disablePubkeyd = false
 		return nil
 	}
 }
 
-// WithDisablePubkeyd represents a DisablePubkey functional optiond
+// WithDisablePubkeyd returns a DisablePubkey functional option
 func WithDisablePubkeyd() Option {
-	return func(prov *authorizer) error {
-		prov.disablePubkeyd = true
+	return func(authz *authorizer) error {
+		authz.disablePubkeyd = true
 		return nil
 	}
 }
 
-// WithPubkeyRefreshDuration represents a PubkeyRefreshDuration functional option
+// WithPubkeyRefreshDuration returns a PubkeyRefreshDuration functional option
 func WithPubkeyRefreshDuration(t string) Option {
-	return func(prov *authorizer) error {
-		prov.pubkeyRefreshDuration = t
+	return func(authz *authorizer) error {
+		authz.pubkeyRefreshDuration = t
 		return nil
 	}
 }
 
-// WithPubkeyErrRetryInterval represents a PubkeyErrRetryInterval functional option
+// WithPubkeyErrRetryInterval returns a PubkeyErrRetryInterval functional option
 func WithPubkeyErrRetryInterval(i string) Option {
-	return func(prov *authorizer) error {
-		prov.pubkeyErrRetryInterval = i
+	return func(authz *authorizer) error {
+		authz.pubkeyErrRetryInterval = i
 		return nil
 	}
 }
 
-// WithPubkeySysAuthDomain represents a PubkeySysAuthDomain functional option
+// WithPubkeySysAuthDomain returns a PubkeySysAuthDomain functional option
 func WithPubkeySysAuthDomain(domain string) Option {
-	return func(prov *authorizer) error {
-		prov.pubkeySysAuthDomain = domain
+	return func(authz *authorizer) error {
+		authz.pubkeySysAuthDomain = domain
 		return nil
 	}
 }
 
-// WithPubkeyEtagExpTime represents a PubkeyEtagExpTime functional option
+// WithPubkeyEtagExpTime returns a PubkeyEtagExpTime functional option
 func WithPubkeyEtagExpTime(t string) Option {
-	return func(prov *authorizer) error {
-		prov.pubkeyEtagExpTime = t
+	return func(authz *authorizer) error {
+		authz.pubkeyEtagExpTime = t
 		return nil
 	}
 }
 
-// WithPubkeyEtagFlushDuration represents a PubkeyEtagFlushDur functional option
+// WithPubkeyEtagFlushDuration returns a PubkeyEtagFlushDur functional option
 func WithPubkeyEtagFlushDuration(t string) Option {
-	return func(prov *authorizer) error {
-		prov.pubkeyEtagFlushDur = t
+	return func(authz *authorizer) error {
+		authz.pubkeyEtagFlushDur = t
 		return nil
 	}
 }
@@ -151,58 +153,58 @@ func WithPubkeyEtagFlushDuration(t string) Option {
 	policyd parameters
 */
 
-// WithEnablePolicyd represents a EnablePolicyd functional optiond
+// WithEnablePolicyd returns an EnablePolicyd functional option
 func WithEnablePolicyd() Option {
-	return func(prov *authorizer) error {
-		prov.disablePolicyd = false
+	return func(authz *authorizer) error {
+		authz.disablePolicyd = false
 		return nil
 	}
 }
 
-// WithDisablePolicyd represents a DisablePolicyd functional optiond
+// WithDisablePolicyd returns a DisablePolicyd functional option
 func WithDisablePolicyd() Option {
-	return func(prov *authorizer) error {
-		prov.disablePolicyd = true
+	return func(authz *authorizer) error {
+		authz.disablePolicyd = true
 		return nil
 	}
 }
 
-// WithPolicyRefreshDuration represents a PolicyRefreshDuration functional option
+// WithPolicyRefreshDuration returns a PolicyRefreshDuration functional option
 func WithPolicyRefreshDuration(t string) Option {
-	return func(prov *authorizer) error {
-		prov.policyRefreshDuration = t
+	return func(authz *authorizer) error {
+		authz.policyRefreshDuration = t
 		return nil
 	}
 }
 
-// WithPolicyErrRetryInterval represents a PolicyErrRetryInterval functional option
+// WithPolicyErrRetryInterval returns a PolicyErrRetryInterval functional option
 func WithPolicyErrRetryInterval(i string) Option {
-	return func(prov *authorizer) error {
-		prov.policyErrRetryInterval = i
+	return func(authz *authorizer) error {
+		authz.policyErrRetryInterval = i
 		return nil
 	}
 }
 
-// WithPolicyExpireMargin represents a PolicyExpireMargin functional option
+// WithPolicyExpireMargin returns a PolicyExpireMargin functional option
 func WithPolicyExpireMargin(t string) Option {
-	return func(prov *authorizer) error {
-		prov.policyExpireMargin = t
+	return func(authz *authorizer) error {
+		authz.policyExpireMargin = t
 		return nil
 	}
 }
 
-// WithPolicyEtagExpTime represents a PolicyEtagExpTime functional option
+// WithPolicyEtagExpTime returns a PolicyEtagExpTime functional option
 func WithPolicyEtagExpTime(t string) Option {
-	return func(prov *authorizer) error {
-		prov.policyEtagExpTime = t
+	return func(authz *authorizer) error {
+		authz.policyEtagExpTime = t
 		return nil
 	}
 }
 
-// WithPolicyEtagFlushDuration represents a PolicyEtagFlushDur functional option
+// WithPolicyEtagFlushDuration returns a PolicyEtagFlushDur functional option
 func WithPolicyEtagFlushDuration(t string) Option {
-	return func(prov *authorizer) error {
-		prov.policyEtagFlushDur = t
+	return func(authz *authorizer) error {
+		authz.policyEtagFlushDur = t
 		return nil
 	}
 }
@@ -211,34 +213,34 @@ func WithPolicyEtagFlushDuration(t string) Option {
 	jwkd parameters
 */
 
-// WithEnableJwkd represents a EnableJwkd functional optiond
+// WithEnableJwkd returns an EnableJwkd functional option
 func WithEnableJwkd() Option {
-	return func(prov *authorizer) error {
-		prov.disableJwkd = false
+	return func(authz *authorizer) error {
+		authz.disableJwkd = false
 		return nil
 	}
 }
 
-// WithDisableJwkd represents a DisableJwkd functional optiond
+// WithDisableJwkd returns a DisableJwkd functional option
 func WithDisableJwkd() Option {
-	return func(prov *authorizer) error {
-		prov.disableJwkd = true
+	return func(authz *authorizer) error {
+		authz.disableJwkd = true
 		return nil
 	}
 }
 
-// WithJwkRefreshDuration represents a JwkRefreshDuration functional option
+// WithJwkRefreshDuration returns a JwkRefreshDuration functional option
 func WithJwkRefreshDuration(t string) Option {
-	return func(prov *authorizer) error {
-		prov.jwkRefreshDuration = t
+	return func(authz *authorizer) error {
+		authz.jwkRefreshDuration = t
 		return nil
 	}
 }
 
-// WithJwkErrRetryInterval represents a JwkErrRetryInterval functional option
+// WithJwkErrRetryInterval returns a JwkErrRetryInterval functional option
 func WithJwkErrRetryInterval(i string) Option {
-	return func(prov *authorizer) error {
-		prov.jwkErrRetryInterval = i
+	return func(authz *authorizer) error {
+		authz.jwkErrRetryInterval = i
 		return nil
 	}
 }

@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"sync"
 	"time"
 
@@ -79,10 +78,6 @@ const (
 
 	// EnvZTS represent the ZTS environment name.
 	EnvZTS AthenzEnv = "zts"
-)
-
-var (
-	regex = regexp.MustCompile("^(http|https)://")
 )
 
 // New represent the constructor of Pubkeyd

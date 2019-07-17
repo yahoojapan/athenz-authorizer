@@ -33,11 +33,11 @@ func TestWithEnablePubkeyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disablePubkeyd != false {
+				if authz.disablePubkeyd != false {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -62,11 +62,11 @@ func TestWithDisablePubkeyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disablePubkeyd != true {
+				if authz.disablePubkeyd != true {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -98,11 +98,11 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.policyErrRetryInterval != "dummy" {
+				if authz.policyErrRetryInterval != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -133,11 +133,11 @@ func TestWithPolicyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.policyRefreshDuration != "dummy" {
+				if authz.policyRefreshDuration != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -168,11 +168,11 @@ func TestWithPubkeyRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.pubkeyRefreshDuration != "dummy" {
+				if authz.pubkeyRefreshDuration != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -203,11 +203,11 @@ func TestWithPubkeyErrRetryInterval(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.pubkeyErrRetryInterval != "dummy" {
+				if authz.pubkeyErrRetryInterval != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -225,7 +225,7 @@ func TestWithPubkeyErrRetryInterval(t *testing.T) {
 }
 func TestWithAthenzURL(t *testing.T) {
 	type args struct {
-		t string
+		athenzURL string
 	}
 	tests := []struct {
 		name      string
@@ -235,15 +235,66 @@ func TestWithAthenzURL(t *testing.T) {
 		{
 			name: "set success",
 			args: args{
-				t: "dummy",
+				athenzURL: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.athenzURL != "dummy" {
+				if authz.athenzURL != "dummy" {
 					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+		{
+			name: "remove http:// prefix",
+			args: args{
+				athenzURL: "http://dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+
+				if authz.athenzURL != "dummy" {
+					return fmt.Errorf("cannot set athenz url")
+				}
+				return nil
+			},
+		},
+		{
+			name: "remove https:// prefix",
+			args: args{
+				athenzURL: "https://dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+
+				if authz.athenzURL != "dummy" {
+					return fmt.Errorf("cannot set athenz url")
+				}
+				return nil
+			},
+		},
+		{
+			name: "do not remove other protocol",
+			args: args{
+				athenzURL: "ftp://dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+
+				if authz.athenzURL != "ftp://dummy" {
+					return fmt.Errorf("cannot set athenz url")
 				}
 				return nil
 			},
@@ -251,7 +302,7 @@ func TestWithAthenzURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAthenzURL(tt.args.t)
+			got := WithAthenzURL(tt.args.athenzURL)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithAthenzURL() error = %v", err)
 			}
@@ -273,11 +324,11 @@ func TestWithAthenzDomains(t *testing.T) {
 				t: []string{"dummy1", "dummy2"},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(prov.athenzDomains, []string{"dummy1", "dummy2"}) {
+				if !reflect.DeepEqual(authz.athenzDomains, []string{"dummy1", "dummy2"}) {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -309,11 +360,11 @@ func TestWithPubkeySysAuthDomain(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.pubkeySysAuthDomain != "dummy" {
+				if authz.pubkeySysAuthDomain != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -345,11 +396,11 @@ func TestWithPubkeyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.pubkeyEtagExpTime != "dummy" {
+				if authz.pubkeyEtagExpTime != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -380,11 +431,11 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.pubkeyEtagFlushDur != "dummy" {
+				if authz.pubkeyEtagFlushDur != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -409,11 +460,11 @@ func TestWithEnablePolicyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disablePolicyd != false {
+				if authz.disablePolicyd != false {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -438,11 +489,11 @@ func TestWithDisablePolicyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disablePolicyd != true {
+				if authz.disablePolicyd != true {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -474,11 +525,11 @@ func TestWithPolicyExpireMargin(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.policyExpireMargin != "dummy" {
+				if authz.policyExpireMargin != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -509,11 +560,11 @@ func TestWithPolicyEtagFlushDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.policyEtagFlushDur != "dummy" {
+				if authz.policyEtagFlushDur != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -544,11 +595,11 @@ func TestWithPolicyEtagExpTime(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.policyEtagExpTime != "dummy" {
+				if authz.policyEtagExpTime != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -579,13 +630,13 @@ func TestWithCacheExp(t *testing.T) {
 				d: time.Duration(time.Hour * 2),
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{
+				authz := &authorizer{
 					cache: gache.New(),
 				}
-				if err := opt(prov); err != nil {
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.cacheExp != time.Duration(time.Hour*2) {
+				if authz.cacheExp != time.Duration(time.Hour*2) {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -616,11 +667,11 @@ func TestWithTransport(t *testing.T) {
 				t: &http.Transport{},
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(prov.client.Transport, &http.Transport{}) {
+				if !reflect.DeepEqual(authz.client.Transport, &http.Transport{}) {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -632,14 +683,14 @@ func TestWithTransport(t *testing.T) {
 				t: nil,
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
 				want := &http.Client{
 					Timeout: time.Second * 30,
 				}
-				if !reflect.DeepEqual(prov.client, want) {
+				if !reflect.DeepEqual(authz.client, want) {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -664,11 +715,11 @@ func TestWithEnableJwkd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disableJwkd != false {
+				if authz.disableJwkd != false {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -693,11 +744,11 @@ func TestWithDisableJwkd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.disableJwkd != true {
+				if authz.disableJwkd != true {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -729,11 +780,11 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.jwkRefreshDuration != "dummy" {
+				if authz.jwkRefreshDuration != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -764,11 +815,11 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				prov := &authorizer{}
-				if err := opt(prov); err != nil {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
 					return err
 				}
-				if prov.jwkErrRetryInterval != "dummy" {
+				if authz.jwkErrRetryInterval != "dummy" {
 
 					return fmt.Errorf("invalid param was set")
 				}

@@ -38,10 +38,12 @@ func TestWithAthenzURL(t *testing.T) {
 				athenzURL: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.athenzURL != "" {
+				if p.athenzURL != "" {
 					return fmt.Errorf("invalid url was set")
 				}
 				return nil
@@ -53,55 +55,12 @@ func TestWithAthenzURL(t *testing.T) {
 				athenzURL: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-
-				if c.athenzURL != "dummy" {
-					return fmt.Errorf("cannot set athenz url")
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
 				}
-				return nil
-			},
-		},
-		{
-			name: "remove http:// prefix",
-			args: args{
-				athenzURL: "http://dummy",
-			},
-			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
 
-				if c.athenzURL != "dummy" {
-					return fmt.Errorf("cannot set athenz url")
-				}
-				return nil
-			},
-		},
-		{
-			name: "remove https:// prefix",
-			args: args{
-				athenzURL: "https://dummy",
-			},
-			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-
-				if c.athenzURL != "dummy" {
-					return fmt.Errorf("cannot set athenz url")
-				}
-				return nil
-			},
-		},
-		{
-			name: "do not remove other protocol",
-			args: args{
-				athenzURL: "ftp://dummy",
-			},
-			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-
-				if c.athenzURL != "ftp://dummy" {
+				if p.athenzURL != "dummy" {
 					return fmt.Errorf("cannot set athenz url")
 				}
 				return nil
@@ -137,10 +96,12 @@ func TestWithSysAuthDomain(t *testing.T) {
 				domain: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.sysAuthDomain != "dummy" {
+				if p.sysAuthDomain != "dummy" {
 					return fmt.Errorf("cannot set sys.auth domain")
 				}
 				return nil
@@ -152,9 +113,11 @@ func TestWithSysAuthDomain(t *testing.T) {
 				domain: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-				if c.sysAuthDomain != "" {
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
+				if p.sysAuthDomain != "" {
 					return fmt.Errorf("invalid domain wasset")
 				}
 				return nil
@@ -190,10 +153,12 @@ func TestWithEtagExpTime(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.etagExpTime != time.Duration(time.Hour*2) {
+				if p.etagExpTime != time.Duration(time.Hour*2) {
 					return fmt.Errorf("cannot set etag expire time")
 				}
 				return nil
@@ -205,10 +170,12 @@ func TestWithEtagExpTime(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-				if !reflect.DeepEqual(c, &pubkeyd{}) {
-					return fmt.Errorf("expected no changes, but got %v", c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(p, &pubkeyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", p)
 				}
 				return nil
 			},
@@ -219,8 +186,8 @@ func TestWithEtagExpTime(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				err := got(c)
+				p := &pubkeyd{}
+				err := got(p)
 
 				if err == nil {
 					return fmt.Errorf("invalid etag expire time was set")
@@ -258,10 +225,12 @@ func TestWithErrRetryInterval(t *testing.T) {
 				time: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.errRetryInterval != time.Duration(time.Hour*2) {
+				if p.errRetryInterval != time.Duration(time.Hour*2) {
 					return fmt.Errorf("cannot set errRetryInterval time")
 				}
 				return nil
@@ -273,10 +242,12 @@ func TestWithErrRetryInterval(t *testing.T) {
 				time: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-				if !reflect.DeepEqual(c, &pubkeyd{}) {
-					return fmt.Errorf("expected no changes, but got %v", c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(p, &pubkeyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", p)
 				}
 				return nil
 			},
@@ -287,8 +258,8 @@ func TestWithErrRetryInterval(t *testing.T) {
 				time: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				err := got(c)
+				p := &pubkeyd{}
+				err := got(p)
 
 				if err == nil {
 					return fmt.Errorf("invalid errRetryInterval time was set")
@@ -326,10 +297,12 @@ func TestWithEtagFlushDuration(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.etagFlushDur != time.Duration(time.Hour*2) {
+				if p.etagFlushDur != time.Duration(time.Hour*2) {
 					return fmt.Errorf("cannot set etag flush duration")
 				}
 				return nil
@@ -341,8 +314,8 @@ func TestWithEtagFlushDuration(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				err := got(c)
+				p := &pubkeyd{}
+				err := got(p)
 
 				if err == nil {
 					return fmt.Errorf("invalid etag flush duration was set")
@@ -356,10 +329,12 @@ func TestWithEtagFlushDuration(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-				if !reflect.DeepEqual(c, &pubkeyd{}) {
-					return fmt.Errorf("expected no changes, but got %v", c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(p, &pubkeyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", p)
 				}
 				return nil
 			},
@@ -394,10 +369,12 @@ func TestWithRefreshDuration(t *testing.T) {
 				dur: "2h",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
 
-				if c.refreshDuration != time.Duration(time.Hour*2) {
+				if p.refreshDuration != time.Duration(time.Hour*2) {
 					return fmt.Errorf("cannot set refresh duration")
 				}
 				return nil
@@ -409,8 +386,8 @@ func TestWithRefreshDuration(t *testing.T) {
 				dur: "dummy",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				err := got(c)
+				p := &pubkeyd{}
+				err := got(p)
 
 				if err == nil {
 					return fmt.Errorf("invalid refresh duration was set")
@@ -424,10 +401,12 @@ func TestWithRefreshDuration(t *testing.T) {
 				dur: "",
 			},
 			checkFunc: func(got Option) error {
-				c := &pubkeyd{}
-				got(c)
-				if !reflect.DeepEqual(c, &pubkeyd{}) {
-					return fmt.Errorf("expected no changes, but got %v", c)
+				p := &pubkeyd{}
+				if err := got(p); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(p, &pubkeyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", p)
 				}
 				return nil
 			},
