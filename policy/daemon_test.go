@@ -424,59 +424,64 @@ func Test_policyd_Update(t *testing.T) {
 				},
 			}
 		}(),
-		/*
-			func() test {
-				handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Add("ETag", "dummyEtag")
-					w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-					w.WriteHeader(http.StatusOK)
-				}))
-				srv := httptest.NewTLSServer(handler)
+		func() test {
+			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				domain := strings.Split(r.URL.Path, "/")[2]
 
-				return test{
-					name: "Update policy success with multiple athenz domains",
-					fields: fields{
-						rolePolicies: gache.New(),
-						athenzURL:    strings.Replace(srv.URL, "https://", "", 1),
-						etagCache:    gache.New(),
-						etagExpTime:  time.Minute,
-						expireMargin: time.Hour,
-						client:       srv.Client(),
-						pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-							return VerifierMock{
-								VerifyFunc: func(d, s string) error {
-									return nil
-								},
-							}
-						},
-						athenzDomains: []string{"dummyDom", "dummyDom1"},
+				w.Header().Add("ETag", domain+"Etag")
+				spd := fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"%s","policies":[{"name":"%s:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"%s:role.dummyRole","resource":"%s:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, domain, domain, domain, domain)
+				w.Write([]byte(spd))
+				w.WriteHeader(http.StatusOK)
+			}))
+			srv := httptest.NewTLSServer(handler)
+
+			domains := make([]string, 1000)
+			for i := 0; i < 1000; i++ {
+				domains[i] = fmt.Sprintf("dummyDom%d", i)
+			}
+
+			return test{
+				name: "Update policy success with multiple athenz domains",
+				fields: fields{
+					rolePolicies:          gache.New(),
+					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
+					etagCache:             gache.New(),
+					etagExpTime:           time.Minute,
+					policyExpiredDuration: time.Second * 120,
+					expireMargin:          time.Hour,
+					client:                srv.Client(),
+					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+						return VerifierMock{
+							VerifyFunc: func(d, s string) error {
+								return nil
+							},
+						}
 					},
-					args: args{
-						ctx: context.Background(),
-					},
-					wantErr: false,
-					checkFunc: func(pol *policyd) error {
-						pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
+					athenzDomains: domains,
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(pol *policyd) error {
+					if len(pol.rolePolicies.ToRawMap(context.Background())) != len(domains) {
+						return errors.New("role policies length is not correct")
+					}
+
+					for _, dom := range domains {
+						domRole := fmt.Sprintf("%s:role.dummyRole", dom)
+						pols, ok := pol.rolePolicies.Get(domRole)
 						if !ok {
-							return errors.New("role policies not found")
+							return errors.Errorf("role policies %s not found", domRole)
 						}
 						if len(pols.([]*Assertion)) != 1 {
-							return errors.New("role policies not correct")
+							return errors.Errorf("role policies of %s not correct", domRole)
 						}
+					}
 
-						pols, ok = pol.rolePolicies.Get("dummyDom1:role.dummyRole")
-						if !ok {
-							return errors.New("role policies not found")
-						}
-						if len(pols.([]*Assertion)) != 1 {
-							return errors.New("role policies not correct")
-						}
-
-						return nil
-					},
-				}
-			}(),
-		*/
+					return nil
+				},
+			}
+		}(),
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
