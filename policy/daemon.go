@@ -243,19 +243,16 @@ func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom st
 		glg.Debugf("fetch policy failed, err: %v", err)
 		return errors.Wrap(err, "error fetch policy")
 	}
-	glg.Debugf("fetch policy success, updated: %v", upd)
 
-	//	if upd {
 	glg.DebugFunc(func() string {
 		rawpol, _ := json.Marshal(spd)
-		return fmt.Sprintf("fetched policy data:\tdomain\t%s\tbody\t%s", dom, (string)(rawpol))
+		return fmt.Sprintf("fetched policy data, domain: %s,updated: %v, body: %s", dom, upd, (string)(rawpol))
 	})
 
 	if err = simplifyAndCachePolicy(ctx, g, spd); err != nil {
 		glg.Debugf("simplify and cache error: %v", err)
 		return errors.Wrap(err, "error simplify and cache")
 	}
-	//	}
 
 	return nil
 }
