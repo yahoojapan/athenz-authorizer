@@ -179,6 +179,7 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 	}
 
 	go func() {
+		defer close(ech)
 		for {
 			select {
 			case <-ctx.Done():
