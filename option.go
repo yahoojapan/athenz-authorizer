@@ -17,12 +17,12 @@ package authorizerd
 
 import (
 	"net/http"
-	"regexp"
 	"time"
+
+	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
 )
 
 var (
-	regex          = regexp.MustCompile("^(http|https)://")
 	defaultOptions = []Option{
 		WithAthenzURL("www.athenz.com/zts/v1"),
 		WithTransport(nil),
@@ -43,7 +43,11 @@ type Option func(*authorizer) error
 // WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(authz *authorizer) error {
-		authz.athenzURL = regex.ReplaceAllString(url, "")
+		u, err := urlutil.TrimHTTPScheme(url)
+		if err {
+			return err
+		}
+		authz.athenzURL = u
 		return nil
 	}
 }

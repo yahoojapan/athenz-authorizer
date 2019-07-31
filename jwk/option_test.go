@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
 )
 
 func TestWithAthenzURL(t *testing.T) {
@@ -28,49 +30,62 @@ func TestWithAthenzURL(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
+		name    string
+		args    args
+		want    *jwkd
+		wantErr error
 	}{
 		{
-			name: "set success",
-			args: args{
-				"http://dummy.com",
-			},
-			checkFunc: func(opt Option) error {
-				pol := &jwkd{}
-				if err := opt(pol); err != nil {
-					return err
-				}
-				if pol.athenzURL != "http://dummy.com" {
-					return fmt.Errorf("Error")
-				}
-
-				return nil
-			},
-		},
-		{
-			name: "empty value",
+			name: "empty string",
 			args: args{
 				"",
 			},
-			checkFunc: func(opt Option) error {
-				pol := &jwkd{}
-				if err := opt(pol); err != nil {
-					return err
-				}
-				if !reflect.DeepEqual(pol, &jwkd{}) {
-					return fmt.Errorf("expected no changes, but got %v", pol)
-				}
-				return nil
+			want:    &jwkd{athenzURL: ""},
+			wantErr: nil,
+		},
+		{
+			name: "no scheme",
+			args: args{
+				"dummy.com",
 			},
+			want:    &jwkd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "http scheme",
+			args: args{
+				"http://dummy.com",
+			},
+			want:    &jwkd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "https scheme",
+			args: args{
+				"https://dummy.com",
+			},
+			want:    &jwkd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "unsupported scheme",
+			args: args{
+				"ftp://dummy.com",
+			},
+			want:    &jwkd{athenzURL: ""},
+			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAthenzURL(tt.args.url)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithAthenzURL() error = %v", err)
+			got := &jwkd{}
+			err := WithAthenzURL(tt.args.url)(got)
+			if err != tt.wantErr {
+				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithAthenzURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}

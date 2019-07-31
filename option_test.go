@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/kpango/gache"
+	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
 )
 
 func TestWithEnablePubkeyd(t *testing.T) {
@@ -223,92 +224,73 @@ func TestWithPubkeyErrRetryInterval(t *testing.T) {
 		})
 	}
 }
+
 func TestWithAthenzURL(t *testing.T) {
 	type args struct {
-		athenzURL string
+		url string
 	}
 	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
+		name    string
+		args    args
+		want    *authorizer
+		wantErr error
 	}{
 		{
-			name: "set success",
+			name: "empty string",
 			args: args{
-				athenzURL: "dummy",
+				"",
 			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.athenzURL != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
+			want:    &authorizer{athenzURL: ""},
+			wantErr: nil,
 		},
 		{
-			name: "remove http:// prefix",
+			name: "no scheme",
 			args: args{
-				athenzURL: "http://dummy",
+				"dummy.com",
 			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-
-				if authz.athenzURL != "dummy" {
-					return fmt.Errorf("cannot set athenz url")
-				}
-				return nil
-			},
+			want:    &authorizer{athenzURL: "dummy.com"},
+			wantErr: nil,
 		},
 		{
-			name: "remove https:// prefix",
+			name: "http scheme",
 			args: args{
-				athenzURL: "https://dummy",
+				"http://dummy.com",
 			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-
-				if authz.athenzURL != "dummy" {
-					return fmt.Errorf("cannot set athenz url")
-				}
-				return nil
-			},
+			want:    &authorizer{athenzURL: "dummy.com"},
+			wantErr: nil,
 		},
 		{
-			name: "do not remove other protocol",
+			name: "https scheme",
 			args: args{
-				athenzURL: "ftp://dummy",
+				"https://dummy.com",
 			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-
-				if authz.athenzURL != "ftp://dummy" {
-					return fmt.Errorf("cannot set athenz url")
-				}
-				return nil
+			want:    &authorizer{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "unsupported scheme",
+			args: args{
+				"ftp://dummy.com",
 			},
+			want:    &authorizer{athenzURL: ""},
+			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAthenzURL(tt.args.athenzURL)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithAthenzURL() error = %v", err)
+			got := &authorizer{}
+			err := WithAthenzURL(tt.args.url)(got)
+			if err != tt.wantErr {
+				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithAthenzURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
+
 func TestWithAthenzDomains(t *testing.T) {
 	type args struct {
 		t []string
