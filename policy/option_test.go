@@ -23,7 +23,7 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 

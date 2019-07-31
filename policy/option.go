@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
@@ -88,7 +88,7 @@ func WithEtagExpTime(t string) Option {
 func WithAthenzURL(url string) Option {
 	return func(pol *policyd) error {
 		u, err := urlutil.TrimHTTPScheme(url)
-		if err {
+		if err != nil {
 			return err
 		}
 		pol.athenzURL = u

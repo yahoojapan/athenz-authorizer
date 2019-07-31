@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
 )
 
 var (
@@ -44,7 +44,7 @@ type Option func(*authorizer) error
 func WithAthenzURL(url string) Option {
 	return func(authz *authorizer) error {
 		u, err := urlutil.TrimHTTPScheme(url)
-		if err {
+		if err != nil {
 			return err
 		}
 		authz.athenzURL = u

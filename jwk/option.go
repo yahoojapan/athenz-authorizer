@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/internal/urlutil"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
 )
 
 var (
@@ -38,7 +38,7 @@ type Option func(*jwkd) error
 func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
 		u, err := urlutil.TrimHTTPScheme(url)
-		if err {
+		if err != nil {
 			return err
 		}
 		j.athenzURL = u
