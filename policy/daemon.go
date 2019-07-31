@@ -185,7 +185,7 @@ func (p *policyd) Update(ctx context.Context) error {
 // CheckPolicy checks the specified request has privilege to access the resources or not.
 // If return is nil then the request is allowed, otherwise the request is rejected.
 func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	ech := make(chan error, 1)
+	ech := make(chan error, len(roles))
 	cctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -321,7 +321,12 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	eTag := res.Header.Get("ETag")
 	if eTag != "" {
 		glg.Debugf("Setting ETag %v for domain %s", eTag, domain)
-		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, p.etagExpTime)
+
+		dur := sp.SignedPolicyData.Expires.Sub(time.Now())
+		if dur <= 0 {
+			dur = p.etagExpTime
+		}
+		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, dur)
 	}
 
 	return sp, true, nil
