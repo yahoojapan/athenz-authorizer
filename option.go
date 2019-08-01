@@ -44,7 +44,7 @@ type Option func(*authorizer) error
 func WithAthenzURL(url string) Option {
 	return func(authz *authorizer) error {
 		u := urlutil.TrimHTTPScheme(url)
-		if !urlutil.HaveScheme(u) {
+		if !urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
 		authz.athenzURL = u

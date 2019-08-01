@@ -19,20 +19,30 @@ package url
 
 import (
 	"regexp"
+	"sync"
+)
+
+var (
+	httpReg    *regexp.Regexp
+	schemeReg  *regexp.Regexp
+	httpOnce   = sync.Once{}
+	schemeOnce = sync.Once{}
 )
 
 // TrimHTTPScheme check and trim the URL scheme
 func TrimHTTPScheme(url string) string {
-	re := regexp.MustCompile("^(http|https)://")
-	s := re.ReplaceAllString(url, "")
+	httpOnce.Do(func() {
+		httpReg = regexp.MustCompile("^(http|https)://")
+	})
 
-	return s
+	return httpReg.ReplaceAllString(url, "")
 }
 
-func HaveScheme(url string) bool {
-	if regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9+-.]*://").MatchString(url) {
-		return false
-	}
+// HasScheme check if url has any scheme
+func HasScheme(url string) bool {
+	schemeOnce.Do(func() {
+		schemeReg = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9+-.]*://")
+	})
 
-	return true
+	return schemeReg.MatchString(url)
 }

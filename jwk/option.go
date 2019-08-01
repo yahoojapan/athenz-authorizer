@@ -38,7 +38,7 @@ type Option func(*jwkd) error
 func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
 		u := urlutil.TrimHTTPScheme(url)
-		if !urlutil.HaveScheme(u) {
+		if !urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
 		j.athenzURL = u

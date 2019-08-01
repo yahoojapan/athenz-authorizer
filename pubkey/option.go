@@ -41,7 +41,7 @@ type Option func(*pubkeyd) error
 func WithAthenzURL(url string) Option {
 	return func(p *pubkeyd) error {
 		u := urlutil.TrimHTTPScheme(url)
-		if !urlutil.HaveScheme(u) {
+		if !urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
 		p.athenzURL = u
