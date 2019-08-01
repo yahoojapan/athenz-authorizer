@@ -273,10 +273,8 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	t, ok := p.etagCache.Get(domain)
 	if ok {
 		ec := t.(*etagCache)
-		if time.Now().Add(p.expireMargin).UnixNano() < ec.sp.SignedPolicyData.Expires.UnixNano() {
-			glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
-			req.Header.Set("If-None-Match", ec.eTag)
-		}
+		glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
+		req.Header.Set("If-None-Match", ec.eTag)
 	}
 
 	res, err := p.client.Do(req.WithContext(ctx))
@@ -322,7 +320,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	if eTag != "" {
 		glg.Debugf("Setting ETag %v for domain %s", eTag, domain)
 
-		dur := sp.SignedPolicyData.Expires.Sub(time.Now())
+		dur := sp.SignedPolicyData.Expires.Sub(time.Now()) - p.expireMargin
 		if dur <= 0 {
 			dur = p.etagExpTime
 		}
