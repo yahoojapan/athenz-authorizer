@@ -971,7 +971,10 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"zmsKeyId":"1"}}`))
+				w.Write([]byte(`{"signedPolicyData":{
+					"zmsKeyId":"1",
+					"Expires":"2099-12-31"
+				}}`))
 				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
@@ -1019,7 +1022,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 						},
 					}
 
-					if !cmp.Equal(etagCac.sp, want) {
+					if !cmp.Equal(etagCac.sp, sp) {
 						return errors.Errorf("etag value not match, got: %v, want: %v", etag, want)
 					}
 
@@ -1150,7 +1153,11 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("If-None-Match") == "dummyOldEtag" {
 					w.Header().Add("ETag", "dummyNewEtag")
-					w.Write([]byte(`{"signedPolicyData":{"zmsKeyId":"dummyNewId"}}`))
+					w.Write([]byte(`{"signedPolicyData":
+					{
+						"zmsKeyId":"dummyNewId",
+						"Expires":"2099-12-31"
+					}}`))
 					w.WriteHeader(http.StatusOK)
 				} else {
 					w.WriteHeader(http.StatusNotModified)
@@ -1207,15 +1214,8 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 						return errors.New("etag header not correct")
 					}
 
-					want := &SignedPolicy{
-						util.DomainSignedPolicyData{
-							SignedPolicyData: &util.SignedPolicyData{
-								ZmsKeyId: "dummyNewId",
-							},
-						},
-					}
-					if !cmp.Equal(etagCac.sp, want) {
-						return errors.Errorf("etag value not match, got: %v, want: %v", etag, want)
+					if !cmp.Equal(etagCac.sp, sp) {
+						return errors.Errorf("etag value not match, got: %v, want: %v", etagCac, sp)
 					}
 
 					if upd != true {
@@ -1358,7 +1358,11 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"zmsKeyId":"1"}}`))
+				w.Write([]byte(`{"signedPolicyData":
+				{
+					"zmsKeyId":"1",
+					"Expires":"2099-12-31"
+				}}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
