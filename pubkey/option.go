@@ -40,9 +40,9 @@ type Option func(*pubkeyd) error
 // WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(p *pubkeyd) error {
-		u, err := urlutil.TrimHTTPScheme(url)
-		if err != nil {
-			return err
+		u := urlutil.TrimHTTPScheme(url)
+		if !urlutil.HaveScheme(u) {
+			return urlutil.ErrUnsupportedScheme
 		}
 		p.athenzURL = u
 		return nil

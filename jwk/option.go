@@ -37,9 +37,9 @@ type Option func(*jwkd) error
 // WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
-		u, err := urlutil.TrimHTTPScheme(url)
-		if err != nil {
-			return err
+		u := urlutil.TrimHTTPScheme(url)
+		if !urlutil.HaveScheme(u) {
+			return urlutil.ErrUnsupportedScheme
 		}
 		j.athenzURL = u
 		return nil

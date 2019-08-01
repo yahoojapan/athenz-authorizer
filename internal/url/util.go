@@ -22,13 +22,17 @@ import (
 )
 
 // TrimHTTPScheme check and trim the URL scheme
-func TrimHTTPScheme(url string) (string, error) {
+func TrimHTTPScheme(url string) string {
 	re := regexp.MustCompile("^(http|https)://")
 	s := re.ReplaceAllString(url, "")
 
-	if regexp.MustCompile("^[A-Za-z]+://").MatchString(s) {
-		return "", ErrUnsupportedScheme
+	return s
+}
+
+func HaveScheme(url string) bool {
+	if regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9+-.]*://").MatchString(url) {
+		return false
 	}
 
-	return s, nil;
+	return true
 }
