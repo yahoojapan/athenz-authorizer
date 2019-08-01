@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
 )
 
 var (

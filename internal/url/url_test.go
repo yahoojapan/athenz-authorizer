@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package urlutil contains the utility functions for URL processing
-package urlutil
+package url
 
 import "testing"
 
@@ -60,14 +59,6 @@ func TestTrimHTTPScheme(t *testing.T) {
 			},
 			want:    "www.athenz.com/path/",
 			wantErr: false,
-		},
-		{
-			name: "error, parse error",
-			args: args{
-				urlStr: "\nwww.athenz.com/path",
-			},
-			want:    "",
-			wantErr: true,
 		},
 		{
 			name: "error, unsupported scheme",

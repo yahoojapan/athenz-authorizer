@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"time"
 
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
 )
 
 var (
