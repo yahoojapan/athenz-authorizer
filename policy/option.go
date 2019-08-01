@@ -88,7 +88,7 @@ func WithEtagExpTime(t string) Option {
 func WithAthenzURL(url string) Option {
 	return func(pol *policyd) error {
 		u := urlutil.TrimHTTPScheme(url)
-		if !urlutil.HasScheme(u) {
+		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
 		pol.athenzURL = u
