@@ -16,68 +16,100 @@ limitations under the License.
 
 package url
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestTrimHTTPScheme(t *testing.T) {
 	type args struct {
 		urlStr string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name string
+		args args
+		want string
 	}{
 		{
 			name: "empty string",
 			args: args{
 				urlStr: "",
 			},
-			want:    "",
-			wantErr: false,
+			want: "",
 		},
 		{
 			name: "no scheme success",
 			args: args{
 				urlStr: "www.athenz.com/path",
 			},
-			want:    "www.athenz.com/path",
-			wantErr: false,
+			want: "www.athenz.com/path",
 		},
 		{
 			name: "trim HTTP scheme success",
 			args: args{
 				urlStr: "http://www.athenz.com/path",
 			},
-			want:    "www.athenz.com/path",
-			wantErr: false,
+			want: "www.athenz.com/path",
 		},
 		{
 			name: "trim HTTPS scheme success",
 			args: args{
 				urlStr: "https://www.athenz.com/path/",
 			},
-			want:    "www.athenz.com/path/",
-			wantErr: false,
+			want: "www.athenz.com/path/",
 		},
 		{
-			name: "error, unsupported scheme",
+			name: "non-http supported scheme",
 			args: args{
 				urlStr: "ftp://www.athenz.com/path",
 			},
-			want:    "",
-			wantErr: true,
+			want: "ftp://www.athenz.com/path",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := TrimHTTPScheme(tt.args.urlStr)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("TrimHTTPScheme() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := TrimHTTPScheme(tt.args.urlStr)
 			if got != tt.want {
 				t.Errorf("TrimHTTPScheme() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasScheme(t *testing.T) {
+	type args struct {
+		url string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "no schema",
+			args: args{
+				url: "www.athenz.com/path",
+			},
+			want: false,
+		},
+		{
+			name: "with schema",
+			args: args{
+				url: "ftp://www.athenz.com/path",
+			},
+			want: true,
+		},
+		{
+			name: "with schema",
+			args: args{
+				url: "a0+-.://www.athenz.com/path",
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasScheme(tt.args.url); got != tt.want {
+				t.Errorf("HasScheme() = %v, want %v", got, tt.want)
 			}
 		})
 	}
