@@ -318,12 +318,12 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	// set eTag cache
 	eTag := res.Header.Get("ETag")
 	if eTag != "" {
-		glg.Debugf("Setting ETag %v for domain %s", eTag, domain)
-
 		dur := sp.SignedPolicyData.Expires.Sub(time.Now()) - p.expireMargin
 		if dur <= 0 {
 			dur = p.etagExpTime
 		}
+
+		glg.Debugf("Setting etag %v for domain %s, duration: %s", eTag, domain, dur)
 		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, dur)
 	}
 
