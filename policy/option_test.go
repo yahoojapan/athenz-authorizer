@@ -23,6 +23,7 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
 )
 
@@ -226,52 +227,65 @@ func TestWithEtagExpTime(t *testing.T) {
 
 func TestWithAthenzURL(t *testing.T) {
 	type args struct {
-		t string
+		url string
 	}
 	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
+		name    string
+		args    args
+		want    *policyd
+		wantErr error
 	}{
 		{
-			name: "set success",
-			args: args{
-				"http://dummy.com",
-			},
-			checkFunc: func(opt Option) error {
-				pol := &policyd{}
-				if err := opt(pol); err != nil {
-					return err
-				}
-				if pol.athenzURL != "http://dummy.com" {
-					return fmt.Errorf("Error")
-				}
-
-				return nil
-			},
-		},
-		{
-			name: "empty value",
+			name: "empty string",
 			args: args{
 				"",
 			},
-			checkFunc: func(opt Option) error {
-				pol := &policyd{}
-				if err := opt(pol); err != nil {
-					return err
-				}
-				if !reflect.DeepEqual(pol, &policyd{}) {
-					return fmt.Errorf("expected no changes, but got %v", pol)
-				}
-				return nil
+			want:    &policyd{athenzURL: ""},
+			wantErr: nil,
+		},
+		{
+			name: "no scheme",
+			args: args{
+				"dummy.com",
 			},
+			want:    &policyd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "http scheme",
+			args: args{
+				"http://dummy.com",
+			},
+			want:    &policyd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "https scheme",
+			args: args{
+				"https://dummy.com",
+			},
+			want:    &policyd{athenzURL: "dummy.com"},
+			wantErr: nil,
+		},
+		{
+			name: "unsupported scheme",
+			args: args{
+				"ftp://dummy.com",
+			},
+			want:    &policyd{athenzURL: ""},
+			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAthenzURL(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithAthenzURL() error = %v", err)
+			got := &policyd{}
+			err := WithAthenzURL(tt.args.url)(got)
+			if err != tt.wantErr {
+				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithAthenzURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}

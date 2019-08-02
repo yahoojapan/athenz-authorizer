@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
 )
 
 var (
@@ -30,21 +31,22 @@ var (
 	}
 )
 
-// Option represents a functional options pattern interface
+// Option represents a functional option
 type Option func(*jwkd) error
 
-// WithAthenzURL represents set athenzURL functional option
+// WithAthenzURL returns an AthenzURL functional option
 func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
-		if url == "" {
-			return nil
+		u := urlutil.TrimHTTPScheme(url)
+		if urlutil.HasScheme(u) {
+			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzURL = url
+		j.athenzURL = u
 		return nil
 	}
 }
 
-// WithRefreshDuration represents a RefreshDuration functional option
+// WithRefreshDuration returns a RefreshDuration functional option
 func WithRefreshDuration(t string) Option {
 	return func(j *jwkd) error {
 		if t == "" {
@@ -59,7 +61,7 @@ func WithRefreshDuration(t string) Option {
 	}
 }
 
-// WithErrRetryInterval represents a ErrRetryInterval functional option
+// WithErrRetryInterval returns an ErrRetryInterval functional option
 func WithErrRetryInterval(i string) Option {
 	return func(j *jwkd) error {
 		if i == "" {
@@ -74,7 +76,7 @@ func WithErrRetryInterval(i string) Option {
 	}
 }
 
-// WithHTTPClient represents a HTTPClient functional option
+// WithHTTPClient returns a HTTPClient functional option
 func WithHTTPClient(cl *http.Client) Option {
 	return func(j *jwkd) error {
 		j.client = cl

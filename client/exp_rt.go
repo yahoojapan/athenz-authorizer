@@ -31,7 +31,7 @@ type ExponentialRoundTripper struct {
 	maxRetryTime    time.Duration
 }
 
-var retriableStatuses = map[int]struct{}{
+var retryableStatuses = map[int]struct{}{
 	http.StatusTooManyRequests:     {},
 	http.StatusInternalServerError: {},
 	http.StatusServiceUnavailable:  {},
@@ -41,7 +41,7 @@ var retriableStatuses = map[int]struct{}{
 func NewExponentialRoundTripper(transport http.RoundTripper, backoffFactor float64, maxRetryCount int, maxRetryTime time.Duration) (*ExponentialRoundTripper, error) {
 	// Pre-calculate the time factor for calculating the delta wait duration used in calNextWaitDur(int) method.
 	// Originally the formula of calculating wait duration is [ dt = ( ((count + 1) / factor) * √t ) ^ 2 - ( (count / factor) * √t ) ^ 2 ],
-	// but we can simpliy the formula to [ dt = (2 * count + 1) * (t / factor ^ 2) ]
+	// but we can simplify the formula to [ dt = (2 * count + 1) * (t / factor ^ 2) ]
 	f := float64(time.Second) / math.Pow(backoffFactor, 2.0)
 
 	return &ExponentialRoundTripper{
@@ -99,7 +99,7 @@ func canRetry(dur time.Duration, timeLimit int64) bool {
 }
 
 func responseRetriable(r *http.Response) bool {
-	_, ok := retriableStatuses[r.StatusCode]
+	_, ok := retryableStatuses[r.StatusCode]
 	return ok
 }
 
