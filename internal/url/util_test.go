@@ -44,6 +44,13 @@ func TestTrimHTTPScheme(t *testing.T) {
 			want: "www.athenz.com/path",
 		},
 		{
+			name: "no scheme with port number success",
+			args: args{
+				urlStr: "www.athenz.com:8080/path",
+			},
+			want: "www.athenz.com:8080/path",
+		},
+		{
 			name: "trim HTTP scheme success",
 			args: args{
 				urlStr: "http://www.athenz.com/path",
@@ -56,6 +63,13 @@ func TestTrimHTTPScheme(t *testing.T) {
 				urlStr: "https://www.athenz.com/path/",
 			},
 			want: "www.athenz.com/path/",
+		},
+		{
+			name: "trim HTTPS scheme with port number success",
+			args: args{
+				urlStr: "https://www.athenz.com:8080/path/",
+			},
+			want: "www.athenz.com:8080/path/",
 		},
 		{
 			name: "non-http supported scheme",
