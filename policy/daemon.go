@@ -66,7 +66,7 @@ type policyd struct {
 }
 
 type etagCache struct {
-	eTag string
+	etag string
 	sp   *SignedPolicy
 }
 
@@ -274,8 +274,8 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	t, ok := p.etagCache.Get(domain)
 	if ok {
 		ec := t.(*etagCache)
-		glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
-		req.Header.Set("If-None-Match", ec.eTag)
+		glg.Debugf("request on domain: %s, using etag: %s", domain, ec.etag)
+		req.Header.Set("If-None-Match", ec.etag)
 	}
 
 	res, err := p.client.Do(req.WithContext(ctx))
@@ -287,7 +287,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	// if server return NotModified, return policy from cache
 	if res.StatusCode == http.StatusNotModified {
 		cache := t.(*etagCache)
-		glg.Debugf("Server return not modified, domain: %s, etag: %v", domain, cache.eTag)
+		glg.Debugf("Server return not modified, keep using domain: %s, etag: %v", domain, cache.etag)
 		return cache.sp, false, nil
 	}
 

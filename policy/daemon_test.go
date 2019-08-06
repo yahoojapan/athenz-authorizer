@@ -128,8 +128,8 @@ func Test_policyd_Start(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -186,8 +186,8 @@ func Test_policyd_Start(t *testing.T) {
 				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
 				res := fmt.Sprintf("dummyRes%d", c)
 				act := fmt.Sprintf("dummyAct%d", c)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -238,7 +238,7 @@ func Test_policyd_Start(t *testing.T) {
 						return errors.New("etagCache is empty")
 					}
 					ecwant := fmt.Sprintf("dummyEtag%d", c)
-					if ec.(*etagCache).eTag != ecwant {
+					if ec.(*etagCache).etag != ecwant {
 						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
 					}
 
@@ -260,8 +260,8 @@ func Test_policyd_Start(t *testing.T) {
 				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
 				res := fmt.Sprintf("dummyRes%d", c)
 				act := fmt.Sprintf("dummyAct%d", c)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -313,7 +313,7 @@ func Test_policyd_Start(t *testing.T) {
 						return errors.New("etagCache is empty")
 					}
 					ecwant := fmt.Sprintf("dummyEtag%d", c)
-					if ec.(*etagCache).eTag != ecwant {
+					if ec.(*etagCache).etag != ecwant {
 						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
 					}
 
@@ -386,8 +386,8 @@ func Test_policyd_Update(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -432,9 +432,9 @@ func Test_policyd_Update(t *testing.T) {
 				domain := strings.Split(r.URL.Path, "/")[2]
 
 				w.Header().Add("ETag", domain+"Etag")
+				w.WriteHeader(http.StatusOK)
 				spd := fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"%s","policies":[{"name":"%s:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"%s:role.dummyRole","resource":"%s:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, domain, domain, domain, domain)
 				w.Write([]byte(spd))
-				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -488,8 +488,8 @@ func Test_policyd_Update(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -943,8 +943,8 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			g := gache.New()
@@ -1021,8 +1021,8 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -1110,11 +1110,11 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
+				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"signedPolicyData":{
 					"zmsKeyId":"1",
-					"Expires":"2099-12-31"
+					"expires":"2099-12-31"
 				}}`))
-				w.WriteHeader(http.StatusOK)
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -1149,7 +1149,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 						return errors.New("etag not set")
 					}
 					etagCac := etag.(*etagCache)
-					if etagCac.eTag != "dummyEtag" {
+					if etagCac.etag != "dummyEtag" {
 						return errors.New("etag header not correct")
 					}
 
@@ -1228,7 +1228,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 
 			etagCac := gache.New()
 			etagCac.Set("dummyDomain", &etagCache{
-				eTag: "dummyEtag",
+				etag: "dummyEtag",
 				sp: &SignedPolicy{
 					util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
@@ -1242,7 +1242,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			})
 
 			return test{
-				name: "test etag exists but not modified",
+				name: "test etag exists and response not modified",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
@@ -1272,7 +1272,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 						return errors.New("etag not set")
 					}
 					etagCac := etag.(*etagCache)
-					if etagCac.eTag != "dummyEtag" {
+					if etagCac.etag != "dummyEtag" {
 						return errors.New("etag header not correct")
 					}
 
@@ -1292,12 +1292,11 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("If-None-Match") == "dummyOldEtag" {
 					w.Header().Add("ETag", "dummyNewEtag")
-					w.Write([]byte(`{"signedPolicyData":
-					{
-						"zmsKeyId":"dummyNewId",
-						"Expires":"2099-12-31"
-					}}`))
 					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"signedPolicyData":{
+						"zmsKeyId":"dummyNewId",
+						"expires":"2099-12-31"
+					}}`))
 				} else {
 					w.WriteHeader(http.StatusNotModified)
 				}
@@ -1306,7 +1305,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 
 			etagCac := gache.New()
 			etagCac.Set("dummyDomain", &etagCache{
-				eTag: "dummyOldEtag",
+				etag: "dummyOldEtag",
 				sp: &SignedPolicy{
 					util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
@@ -1319,7 +1318,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			})
 
 			return test{
-				name: "test etag exists but modified",
+				name: "test etag exists but response modified",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
@@ -1349,7 +1348,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 						return errors.New("etag not set")
 					}
 					etagCac := etag.(*etagCache)
-					if etagCac.eTag != "dummyNewEtag" {
+					if etagCac.etag != "dummyNewEtag" {
 						return errors.New("etag header not correct")
 					}
 
@@ -1497,10 +1496,9 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":
-				{
+				w.Write([]byte(`{"signedPolicyData":{
 					"zmsKeyId":"1",
-					"Expires":"2099-12-31"
+					"expires":"2099-12-31"
 				}}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
