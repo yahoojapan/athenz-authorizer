@@ -394,7 +394,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		} else {
 			asss = []*Assertion{a}
 		}
-		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
+		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(fastime.Now())))
 
 		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true
