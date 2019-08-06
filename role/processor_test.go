@@ -348,7 +348,7 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			return test{
-				name: "verify jwt fail, no expiration definied",
+				name: "verify jwt fail, no expiration defined",
 				fields: fields{
 					jwkp: jwk.Provider(func(kid string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")

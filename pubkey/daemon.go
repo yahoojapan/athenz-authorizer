@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package pubkey
 
 import (
@@ -101,7 +102,7 @@ func New(opts ...Option) (Daemon, error) {
 
 // Start starts the pubkey daemon to retrive the public key periodically
 func (p *pubkeyd) Start(ctx context.Context) <-chan error {
-	glg.Info("Starting pubkey updator")
+	glg.Info("Starting pubkey updater")
 
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)

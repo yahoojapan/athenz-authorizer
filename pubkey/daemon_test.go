@@ -590,9 +590,9 @@ func Test_pubkeyd_Update(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *pubkeyd, goter error) error {
-					if goter != nil {
-						return goter
+				checkFunc: func(c *pubkeyd, gotErr error) error {
+					if gotErr != nil {
+						return gotErr
 					}
 					ind := 0
 					var err error
@@ -600,7 +600,7 @@ func Test_pubkeyd_Update(t *testing.T) {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
 						if valType != "*zmssvctoken.verify" {
-							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
+							err = errors.Errorf("Pubkey Map key:%s is not Verifier. result: %s", key, valType)
 							return false
 						}
 						return true
@@ -665,10 +665,10 @@ func Test_pubkeyd_Update(t *testing.T) {
 
 			zmsVer := &VerifierMock{}
 			ztsVer := &VerifierMock{}
-			zmsVm := new(sync.Map)
-			ztsVm := new(sync.Map)
-			zmsVm.Store("zms", zmsVer)
-			ztsVm.Store("zts", ztsVer)
+			zmsVM := new(sync.Map)
+			ztsVM := new(sync.Map)
+			zmsVM.Store("zms", zmsVer)
+			ztsVM.Store("zts", ztsVer)
 			return test{
 				name: "test use etag cache",
 				fields: fields{
@@ -678,16 +678,16 @@ func Test_pubkeyd_Update(t *testing.T) {
 					etagExpTime:   time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
-						ZMSPubKeys: zmsVm,
-						ZTSPubKeys: ztsVm,
+						ZMSPubKeys: zmsVM,
+						ZTSPubKeys: ztsVM,
 					},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *pubkeyd, goter error) error {
-					if goter != nil {
-						return goter
+				checkFunc: func(c *pubkeyd, gotErr error) error {
+					if gotErr != nil {
+						return gotErr
 					}
 					ind := 0
 					var err error
@@ -754,10 +754,10 @@ func Test_pubkeyd_Update(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *pubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, gotErr error) error {
 					wantErr := "error when processing pubkey: Error updating ZMS athenz pubkey: error fetch public key entries: json format not correct: EOF"
-					if goter.Error() != wantErr {
-						return errors.Wrap(goter, "unexpected error")
+					if gotErr.Error() != wantErr {
+						return errors.Wrap(gotErr, "unexpected error")
 					}
 					return nil
 				},
@@ -795,10 +795,10 @@ func Test_pubkeyd_Update(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *pubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, gotErr error) error {
 					wantErr := "error when processing pubkey: Error updating ZMS athenz pubkey: error decoding key: illegal base64 data at input byte 6"
-					if goter.Error() != wantErr {
-						return errors.Wrap(goter, "unexpected error")
+					if gotErr.Error() != wantErr {
+						return errors.Wrap(gotErr, "unexpected error")
 					}
 					return nil
 				},
@@ -836,10 +836,10 @@ func Test_pubkeyd_Update(t *testing.T) {
 				args: args{
 					ctx: context.Background(),
 				},
-				checkFunc: func(c *pubkeyd, goter error) error {
+				checkFunc: func(c *pubkeyd, gotErr error) error {
 					wantErr := "error when processing pubkey: Error updating ZTS athenz pubkey: error initializing verifier: Unable to load public key"
-					if goter.Error() != wantErr {
-						return errors.Wrap(goter, "unexpected error")
+					if gotErr.Error() != wantErr {
+						return errors.Wrap(gotErr, "unexpected error")
 					}
 					return nil
 				},
@@ -868,7 +868,7 @@ func Test_pubkeyd_Update(t *testing.T) {
 	}
 }
 
-func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
+func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -908,7 +908,7 @@ func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
-				name: "test start pubkey updator and ctx.done",
+				name: "test start pubkey updater and ctx.done",
 				fields: fields{
 					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain:    "dummyDom",
@@ -934,7 +934,7 @@ func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
 						if valType != "*zmssvctoken.verify" {
-							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
+							err = errors.Errorf("Pubkey Map key:%s is not Verifier. result: %s", key, valType)
 							return false
 						}
 						return true
@@ -1014,12 +1014,12 @@ func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(c *pubkeyd, ch <-chan error) error {
-					goter := <-ch
+					gotErr := <-ch
 					cancel()
 
 					want := "error update pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
-					if goter.Error() != want {
-						return errors.Errorf("got: %s, want: %s", goter, want)
+					if gotErr.Error() != want {
+						return errors.Errorf("got: %s, want: %s", gotErr, want)
 					}
 					return nil
 				},
@@ -1102,7 +1102,7 @@ func Test_pubkeyd_StartpubkeyUpdator(t *testing.T) {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
 						if valType != "*zmssvctoken.verify" {
-							err = errors.Errorf("Pubkey Map key:%s is not Verifier. resutl:%s", key, valType)
+							err = errors.Errorf("Pubkey Map key:%s is not Verifier. result: %s", key, valType)
 							return false
 						}
 						return true
