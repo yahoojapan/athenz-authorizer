@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Policyd represent the daemon to retrieve policy data from Athenz.
+// Daemon represents the daemon to retrieve policy data from Athenz.
 type Daemon interface {
 	Start(context.Context) <-chan error
 	Update(context.Context) error
@@ -304,7 +305,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 
 	// verify policy data
 	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifying policy, domain: %s,err: %v", domain, err)
+		glg.Errorf("Error verifying policy, domain: %s, err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error verify policy data")
 	}
 

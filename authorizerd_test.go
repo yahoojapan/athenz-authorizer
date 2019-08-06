@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/jwk"
@@ -133,7 +134,7 @@ func Test_authorizer_Start(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*10))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}
@@ -165,7 +166,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
 			cm := &ConfdMock{
 				confdExp: time.Millisecond * 10,
 			}
@@ -197,7 +198,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}
@@ -229,7 +230,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*500))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*500))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}

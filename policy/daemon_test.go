@@ -29,6 +29,7 @@ import (
 
 	"github.com/ardielle/ardielle-go/rdl"
 	cmp "github.com/google/go-cmp/cmp"
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
@@ -492,7 +493,7 @@ func Test_policyd_Update(t *testing.T) {
 			}))
 			srv := httptest.NewTLSServer(handler)
 
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*10))
 			return test{
 				name: "Update error, context timeout",
 				fields: fields{
@@ -1232,7 +1233,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
 							Expires: func() *rdl.Timestamp {
-								t := rdl.NewTimestamp(time.Now().Add(time.Hour))
+								t := rdl.NewTimestamp(fastime.Now().Add(time.Hour))
 								return &t
 							}(),
 						},
@@ -1310,7 +1311,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
 							Expires: &rdl.Timestamp{
-								time.Now().Add(time.Hour).UTC(),
+								Time: fastime.Now().Add(time.Hour).UTC(),
 							},
 						},
 					},
@@ -1599,7 +1600,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour * 99999).UTC(),
+									Time: fastime.Now().Add(time.Hour * 99999).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1683,7 +1684,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 
 		func() test {
 			rp := gache.New()
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Nanosecond*5))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Nanosecond*5))
 			return test{
 				name: "test context done",
 				args: args{
@@ -1693,7 +1694,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour * 99999).UTC(),
+									Time: fastime.Now().Add(time.Hour * 99999).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1752,7 +1753,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour * 99999).UTC(),
+									Time: fastime.Now().Add(time.Hour * 99999).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1863,7 +1864,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									Time: fastime.Now().Add(time.Hour).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1921,7 +1922,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									Time: fastime.Now().Add(time.Hour).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1962,7 +1963,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									Time: fastime.Now().Add(time.Hour).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -2029,7 +2030,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 							util.DomainSignedPolicyData{
 								SignedPolicyData: &util.SignedPolicyData{
 									Expires: &rdl.Timestamp{
-										time.Now().Add(time.Hour).UTC(),
+										fastime.Now().Add(time.Hour).UTC(),
 									},
 									PolicyData: &util.PolicyData{
 										Policies: []*util.Policy{
@@ -2090,7 +2091,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									Time: fastime.Now().Add(time.Hour).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: func() []*util.Policy {
@@ -2149,7 +2150,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									time.Now().Add(time.Hour).UTC(),
+									Time: fastime.Now().Add(time.Hour).UTC(),
 								},
 								PolicyData: &util.PolicyData{
 									Policies: func() []*util.Policy {

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package role
 
 import (
@@ -20,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/pkg/errors"
 )
 
@@ -83,5 +85,5 @@ func (r *Token) SetParams(key, value string) error {
 
 // Expired returns if the role token is expired or not.
 func (r *Token) Expired() bool {
-	return time.Now().After(r.ExpiryTime)
+	return fastime.Now().After(r.ExpiryTime)
 }

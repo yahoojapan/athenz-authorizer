@@ -21,6 +21,8 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/kpango/fastime"
 )
 
 type ExponentialRoundTripper struct {
@@ -53,7 +55,7 @@ func NewExponentialRoundTripper(transport http.RoundTripper, backoffFactor float
 }
 
 func (p *ExponentialRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	timeLimit := time.Now().Add(p.maxRetryTime).UnixNano()
+	timeLimit := fastime.Now().Add(p.maxRetryTime).UnixNano()
 	var resp *http.Response
 	var err error
 
@@ -95,7 +97,7 @@ func (p *ExponentialRoundTripper) calNextWaitDur(count int) time.Duration {
 // sleep return false if ( Now + wait duration > time limit )
 // otherwise it return true
 func canRetry(dur time.Duration, timeLimit int64) bool {
-	return time.Now().Add(dur).UnixNano() < timeLimit
+	return fastime.Now().Add(dur).UnixNano() < timeLimit
 }
 
 func responseRetriable(r *http.Response) bool {

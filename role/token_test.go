@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/kpango/fastime"
 )
 
 func TestToken_SetParams(t *testing.T) {
@@ -207,14 +209,14 @@ func TestToken_Expired(t *testing.T) {
 		{
 			name: "expired",
 			fields: fields{
-				ExpiryTime: time.Now().Add(-1 * time.Hour),
+				ExpiryTime: fastime.Now().Add(-1 * time.Hour),
 			},
 			want: true,
 		},
 		{
 			name: "not expired",
 			fields: fields{
-				ExpiryTime: time.Now().Add(time.Hour),
+				ExpiryTime: fastime.Now().Add(time.Hour),
 			},
 			want: false,
 		},
