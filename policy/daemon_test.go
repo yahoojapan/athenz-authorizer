@@ -466,8 +466,10 @@ func Test_policyd_Update(t *testing.T) {
 					ctx: context.Background(),
 				},
 				checkFunc: func(pol *policyd) error {
-					if len(pol.rolePolicies.ToRawMap(context.Background())) != len(domains) {
-						return errors.New("role policies length is not correct")
+					gotLen := len(pol.rolePolicies.ToRawMap(context.Background()))
+					wantLen := len(domains)
+					if gotLen != wantLen {
+						return fmt.Errorf("role policies length is not correct, got: %v, want: %v", gotLen, wantLen)
 					}
 
 					for _, dom := range domains {
@@ -1109,12 +1111,22 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 	tests := []test{
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId":"1",
-					"expires":"2099-12-31"
-				}}`))
+				tByte, err := rdl.Timestamp{
+					Time: fastime.Now().Add(1 * time.Hour).UTC(),
+				}.MarshalJSON()
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte(err.Error()))
+				} else {
+					w.Header().Add("ETag", "dummyEtag")
+					w.Header().Set("Content-Type", "application/json; charset=utf-8")
+					w.WriteHeader(http.StatusOK)
+					json := fmt.Sprintf(`{"signedPolicyData":{
+						"zmsKeyId": "1",
+						"expires": %v
+					}}`, string(tByte))
+					w.Write([]byte(json))
+				}
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -1125,7 +1137,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
 					etagExpTime:           time.Minute,
-					expireMargin:          time.Hour,
+					expireMargin:          time.Minute,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
@@ -1242,7 +1254,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			})
 
 			return test{
-				name: "test etag exists and response not modified",
+				name: "test etag exists and response 304",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
@@ -1294,8 +1306,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					w.Header().Add("ETag", "dummyNewEtag")
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(`{"signedPolicyData":{
-						"zmsKeyId":"dummyNewId",
-						"expires":"2099-12-31"
+						"zmsKeyId":"dummyNewId"
 					}}`))
 				} else {
 					w.WriteHeader(http.StatusNotModified)
@@ -1318,7 +1329,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			})
 
 			return test{
-				name: "test etag exists but response modified",
+				name: "test etag exists but response 200",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
@@ -1497,8 +1508,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId":"1",
-					"expires":"2099-12-31"
+					"zmsKeyId":"1"
 				}}`))
 			}))
 			srv := httptest.NewTLSServer(handler)

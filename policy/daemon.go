@@ -316,16 +316,28 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 		glg.Warn(errors.Wrap(err, "error body.close"))
 	}
 
-	// set eTag cache
-	eTag := res.Header.Get("ETag")
-	if eTag != "" {
-		dur := sp.SignedPolicyData.Expires.Sub(time.Now()) - p.expireMargin
-		if dur <= 0 {
-			dur = p.etagExpTime
+	// verify policy expiry
+	var etagValidDur time.Duration
+	if sp.SignedPolicyData.Expires == nil {
+		glg.Warnf("Warning: policy expiry not set, domain: %v", domain)
+		etagValidDur = p.etagExpTime - p.expireMargin
+	} else {
+		// if not set, sp.SignedPolicyData.Expires is nil
+		// if set, but invalid, sp.SignedPolicyData.Expires is Time{}
+		validDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now())
+		if validDur <= p.expireMargin {
+			p.etagCache.Delete(domain)
+			glg.Errorf("Error verifying policy expiry, policy expiry: %v, valid duration: %v, valid margin: %v", sp.SignedPolicyData.Expires.Time, validDur, p.expireMargin)
+			return nil, false, errors.New("policy already expired")
 		}
+		etagValidDur = sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
+	}
 
-		glg.Debugf("Setting etag %v for domain %s, duration: %s", eTag, domain, dur)
-		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, dur)
+	// set etag cache
+	etag := res.Header.Get("ETag")
+	if etag != "" {
+		glg.Debugf("Set domain %s with etag %v, duration: %s", domain, etag, etagValidDur)
+		p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
 	}
 
 	return sp, true, nil
