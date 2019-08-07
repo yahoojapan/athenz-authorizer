@@ -1835,66 +1835,6 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 				wantErr: false,
 			}
 		}(),
-
-		func() test {
-			rp := gache.New()
-			return test{
-				name: "cache success with no data",
-				args: args{
-					ctx: context.Background(),
-					rp:  rp,
-					sp: &SignedPolicy{
-						util.DomainSignedPolicyData{
-							SignedPolicyData: &util.SignedPolicyData{
-								PolicyData: &util.PolicyData{
-									Policies: []*util.Policy{},
-								},
-							},
-						},
-					},
-				},
-				checkFunc: func() error {
-					if len(rp.ToRawMap(context.Background())) != 0 {
-						return errors.Errorf("invalid length role policies 0, role policies: %v", rp.ToRawMap(context.Background()))
-					}
-					return nil
-				},
-				wantErr: false,
-			}
-		}(),
-		func() test {
-			return test{
-				name: "cache failed with invalid assertion",
-				args: args{
-					ctx: context.Background(),
-					rp:  gache.New(),
-					sp: &SignedPolicy{
-						util.DomainSignedPolicyData{
-							SignedPolicyData: &util.SignedPolicyData{
-								Expires: &rdl.Timestamp{
-									Time: fastime.Now().Add(time.Hour).UTC(),
-								},
-								PolicyData: &util.PolicyData{
-									Policies: []*util.Policy{
-										{
-											Assertions: []*util.Assertion{
-												{
-													Role:     "dummyRole",
-													Action:   "dummyAct",
-													Resource: "dummyRes",
-													Effect:   "allow",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				wantErr: true,
-			}
-		}(),
 		func() test {
 			rp := gache.New()
 			return test{
