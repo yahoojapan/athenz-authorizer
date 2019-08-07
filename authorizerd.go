@@ -74,7 +74,6 @@ type authorizer struct {
 	policyRefreshDuration  string
 	policyErrRetryInterval string
 	policyEtagFlushDur     string
-	policyEtagExpTime      string
 
 	// jwkd parameters
 	disableJwkd         bool
@@ -128,7 +127,6 @@ func New(opts ...Option) (Authorizerd, error) {
 		if prov.policyd, err = policy.New(
 			policy.WithExpireMargin(prov.policyExpireMargin),
 			policy.WithEtagFlushDuration(prov.policyEtagFlushDur),
-			policy.WithEtagExpTime(prov.policyEtagExpTime),
 			policy.WithAthenzURL(prov.athenzURL),
 			policy.WithAthenzDomains(prov.athenzDomains...),
 			policy.WithRefreshDuration(prov.policyRefreshDuration),

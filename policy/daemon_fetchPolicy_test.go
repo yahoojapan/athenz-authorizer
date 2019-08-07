@@ -44,7 +44,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -91,7 +90,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -155,13 +153,7 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					},
 				},
 			}
-			wantSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-137",
-					},
-				},
-			}
+			wantSp := cachedSp
 
 			// old etag cache, to confirm update
 			etagCac := gache.New()
@@ -170,17 +162,13 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				sp:   cachedSp,
 			})
 
-			etagExpTime := 2 * time.Hour
-			expireMargin := time.Hour
-
 			return test{
-				name: "test policy without expiry, skip expiry check, set etagCache with (etagExpTime - expireMargin)",
+				name: "test policy without expiry, keep etagCache, return error",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           etagExpTime,
-					expireMargin:          expireMargin,
+					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 						return VerifierMock{
@@ -196,23 +184,24 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				},
 				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					// check return values
-					if err != nil {
-						return err
+					wantError := "error verify policy data: policy without expiry"
+					if !strings.HasPrefix(err.Error(), wantError) {
+						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
 					}
-					if !reflect.DeepEqual(sp, wantSp) {
-						return fmt.Errorf("SignedPolicy got: %+v, want: %+v", *sp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
+					if sp != nil {
+						return errors.New("sp should be nil")
 					}
-					if upd != true {
-						return errors.New("upd should be true")
+					if upd != false {
+						return errors.New("upd should be false")
 					}
 
 					// check etag cache values
-					etagCac, gotExpiry, ok := p.etagCache.GetWithExpire(domain)
+					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
 					if !ok {
 						return errors.New("etag cache should be found")
 					}
 					// check etag
-					wantEtag := "\"dummyNewEtag\""
+					wantEtag := "\"dummyOldEtag\""
 					gotEtag := etagCac.(*etagCache).etag
 					if gotEtag != wantEtag {
 						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
@@ -221,12 +210,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					gotCachedSp := etagCac.(*etagCache).sp
 					if !reflect.DeepEqual(gotCachedSp, wantSp) {
 						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-					// check cache expire time
-					wantExpiry := fastime.Now().Add(etagExpTime).Add(-1 * expireMargin).UnixNano()
-					if (wantExpiry - gotExpiry) > (time.Second * 3).Nanoseconds() {
-						return fmt.Errorf("etag cache expiry got: %v, want: %v", gotExpiry, wantExpiry)
-
 					}
 
 					return nil
@@ -253,6 +236,7 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					},
 				},
 			}
+			wantSp := cachedSp
 
 			// old etag cache, to confirm delete
 			etagCac := gache.New()
@@ -262,12 +246,11 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 			})
 
 			return test{
-				name: "test policy with invalid expiry, expiry check fail, remove etagCache",
+				name: "test policy with invalid expiry, keep etagCache, return error",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Hour,
 					expireMargin:          time.Minute,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -284,8 +267,8 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				},
 				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					// check return values
-					wantError := "policy already expired"
-					if err.Error() != wantError {
+					wantError := "error verify policy data: policy already expired"
+					if !strings.HasPrefix(err.Error(), wantError) {
 						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
 					}
 					if sp != nil {
@@ -295,10 +278,21 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 						return errors.New("upd should be false")
 					}
 
-					// check etag cache empty
-					_, ok := p.etagCache.Get(domain)
-					if ok {
-						return errors.New("etag cache should be not found")
+					// check etag cache values
+					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
+					if !ok {
+						return errors.New("etag cache should be found")
+					}
+					// check etag
+					wantEtag := "\"dummyOldEtag\""
+					gotEtag := etagCac.(*etagCache).etag
+					if gotEtag != wantEtag {
+						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
+					}
+					// check policy equal
+					gotCachedSp := etagCac.(*etagCache).sp
+					if !reflect.DeepEqual(gotCachedSp, wantSp) {
+						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
 					}
 
 					return nil
@@ -333,6 +327,7 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					},
 				},
 			}
+			wantSp := cachedSp
 
 			// old etag cache, to confirm delete
 			etagCac := gache.New()
@@ -342,12 +337,11 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 			})
 
 			return test{
-				name: "test policy already expired, expiry check fail, remove etagCache",
+				name: "test policy already expired, expiry check fail, keep etagCache, return error",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Hour,
 					expireMargin:          time.Minute,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -364,8 +358,8 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				},
 				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					// check return values
-					wantError := "policy already expired"
-					if err.Error() != wantError {
+					wantError := "error verify policy data: policy already expired"
+					if !strings.HasPrefix(err.Error(), wantError) {
 						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
 					}
 					if sp != nil {
@@ -375,10 +369,21 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 						return errors.New("upd should be false")
 					}
 
-					// check etag cache empty
-					_, ok := p.etagCache.Get(domain)
-					if ok {
-						return errors.New("etag cache should be not found")
+					// check etag cache values
+					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
+					if !ok {
+						return errors.New("etag cache should be found")
+					}
+					// check etag
+					wantEtag := "\"dummyOldEtag\""
+					gotEtag := etagCac.(*etagCache).etag
+					if gotEtag != wantEtag {
+						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
+					}
+					// check policy equal
+					gotCachedSp := etagCac.(*etagCache).sp
+					if !reflect.DeepEqual(gotCachedSp, wantSp) {
+						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
 					}
 
 					return nil
@@ -387,10 +392,11 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 		}(),
 		func() test {
 			domain := "dummyDomain"
+			policyExpires := rdl.Timestamp{
+				Time: fastime.Now().Add(1 * time.Hour).Truncate(time.Millisecond).UTC(),
+			}
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				tByte, err := rdl.Timestamp{
-					Time: fastime.Now().Add(1 * time.Hour).UTC(),
-				}.MarshalJSON()
+				tByte, err := policyExpires.MarshalJSON()
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte(err.Error()))
@@ -413,6 +419,14 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					},
 				},
 			}
+			wantSp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					SignedPolicyData: &util.SignedPolicyData{
+						ZmsKeyId: "zmsKeyId-403",
+						Expires:  &policyExpires,
+					},
+				},
+			}
 
 			// old etag cache, to confirm delete
 			etagCac := gache.New()
@@ -422,12 +436,11 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 			})
 
 			return test{
-				name: "test policy expire by expireMargin, expiry check fail, remove etagCache",
+				name: "test policy expire within the expireMargin, remove etagCache, return policy",
 				fields: fields{
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Hour,
 					expireMargin:          2 * time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -444,15 +457,14 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				},
 				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
 					// check return values
-					wantError := "policy already expired"
-					if err.Error() != wantError {
-						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
+					if err != nil {
+						return err
 					}
-					if sp != nil {
-						return errors.New("sp should be nil")
+					if !reflect.DeepEqual(sp.DomainSignedPolicyData.SignedPolicyData, wantSp.DomainSignedPolicyData.SignedPolicyData) {
+						return fmt.Errorf("SignedPolicy got: %+v, want: %+v", *sp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
 					}
-					if upd != false {
-						return errors.New("upd should be false")
+					if upd != true {
+						return errors.New("upd should be true")
 					}
 
 					// check etag cache empty
@@ -499,7 +511,7 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				util.DomainSignedPolicyData{
 					SignedPolicyData: &util.SignedPolicyData{
 						ZmsKeyId: "zmsKeyId-482",
-						Expires: &policyExpires,
+						Expires:  &policyExpires,
 					},
 				},
 			}
@@ -517,7 +529,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Hour,
 					expireMargin:          expireMargin,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -570,7 +581,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				},
 			}
 		}(),
-		
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -583,7 +593,6 @@ func Test_policyd_fetchPolicy_expiry(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,

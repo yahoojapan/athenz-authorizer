@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package policy
 
 import (
@@ -56,7 +57,6 @@ type policyd struct {
 
 	etagCache    gache.Gache
 	etagFlushDur time.Duration
-	etagExpTime  time.Duration
 
 	// www.athenz.com/zts/v1
 	athenzURL     string
@@ -316,28 +316,16 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 		glg.Warn(errors.Wrap(err, "error body.close"))
 	}
 
-	// verify policy expiry
-	var etagValidDur time.Duration
-	if sp.SignedPolicyData.Expires == nil {
-		glg.Warnf("Warning: policy expiry not set, domain: %v", domain)
-		etagValidDur = p.etagExpTime - p.expireMargin
-	} else {
-		// if not set, sp.SignedPolicyData.Expires is nil
-		// if set, but invalid, sp.SignedPolicyData.Expires is Time{}
-		validDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now())
-		if validDur <= p.expireMargin {
-			p.etagCache.Delete(domain)
-			glg.Errorf("Error verifying policy expiry, policy expiry: %v, valid duration: %v, valid margin: %v", sp.SignedPolicyData.Expires.Time, validDur, p.expireMargin)
-			return nil, false, errors.New("policy already expired")
-		}
-		etagValidDur = sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
-	}
-
 	// set etag cache
 	etag := res.Header.Get("ETag")
 	if etag != "" {
+		etagValidDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
 		glg.Debugf("Set domain %s with etag %v, duration: %s", domain, etag, etagValidDur)
-		p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
+		if etagValidDur > 0 {
+			p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
+		} else {
+			p.etagCache.Delete(domain)
+		}
 	}
 
 	return sp, true, nil

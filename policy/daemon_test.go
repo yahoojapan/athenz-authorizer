@@ -74,13 +74,6 @@ func TestNew(t *testing.T) {
 				return nil
 			},
 		},
-		{
-			name: "new error due to options",
-			args: args{
-				opts: []Option{WithEtagExpTime("dummy")},
-			},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -109,7 +102,6 @@ func Test_policyd_Start(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -129,7 +121,7 @@ func Test_policyd_Start(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -141,7 +133,6 @@ func Test_policyd_Start(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					etagFlushDur:          time.Second,
 					refreshDuration:       time.Second,
 					expireMargin:          time.Hour,
@@ -187,7 +178,7 @@ func Test_policyd_Start(t *testing.T) {
 				res := fmt.Sprintf("dummyRes%d", c)
 				act := fmt.Sprintf("dummyAct%d", c)
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -199,7 +190,6 @@ func Test_policyd_Start(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					etagFlushDur:          time.Second,
 					refreshDuration:       time.Millisecond * 30,
 					expireMargin:          time.Hour,
@@ -261,7 +251,7 @@ func Test_policyd_Start(t *testing.T) {
 				res := fmt.Sprintf("dummyRes%d", c)
 				act := fmt.Sprintf("dummyAct%d", c)
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -273,7 +263,6 @@ func Test_policyd_Start(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					etagFlushDur:          time.Second,
 					refreshDuration:       time.Minute,
 					errRetryInterval:      time.Millisecond * 5,
@@ -340,7 +329,6 @@ func Test_policyd_Start(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
@@ -365,7 +353,6 @@ func Test_policyd_Update(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -387,7 +374,7 @@ func Test_policyd_Update(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -398,7 +385,6 @@ func Test_policyd_Update(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -433,7 +419,7 @@ func Test_policyd_Update(t *testing.T) {
 
 				w.Header().Add("ETag", domain+"Etag")
 				w.WriteHeader(http.StatusOK)
-				spd := fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"%s","policies":[{"name":"%s:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"%s:role.dummyRole","resource":"%s:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, domain, domain, domain, domain)
+				spd := fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"%s","policies":[{"name":"%s:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"%s:role.dummyRole","resource":"%s:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, domain, domain, domain, domain)
 				w.Write([]byte(spd))
 			}))
 			srv := httptest.NewTLSServer(handler)
@@ -449,7 +435,6 @@ func Test_policyd_Update(t *testing.T) {
 					rolePolicies:          gache.New(),
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					policyExpiredDuration: time.Second * 120,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
@@ -491,7 +476,7 @@ func Test_policyd_Update(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -503,7 +488,6 @@ func Test_policyd_Update(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -543,7 +527,6 @@ func Test_policyd_Update(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
@@ -572,7 +555,6 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
 		athenzURL        string
 		athenzDomains    []string
 		client           *http.Client
@@ -757,7 +739,6 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 				pkp:              tt.fields.pkp,
 				etagCache:        tt.fields.etagCache,
 				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
 				athenzURL:        tt.fields.athenzURL,
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
@@ -787,7 +768,6 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 		pkp              pubkey.Provider
 		etagCache        gache.Gache
 		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
 		athenzURL        string
 		athenzDomains    []string
 		client           *http.Client
@@ -881,7 +861,6 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 				pkp:              tt.fields.pkp,
 				etagCache:        tt.fields.etagCache,
 				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
 				athenzURL:        tt.fields.athenzURL,
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
@@ -924,7 +903,6 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -946,7 +924,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 			g := gache.New()
@@ -958,7 +936,6 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1001,7 +978,6 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1024,7 +1000,7 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", "dummyEtag")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-12T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
+				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
 
@@ -1035,7 +1011,6 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 					policyExpiredDuration: time.Minute * 30,
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1066,7 +1041,6 @@ func Test_policyd_fetchAndCachePolicy(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
@@ -1093,7 +1067,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -1136,7 +1109,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Minute,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1196,7 +1168,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             " ",
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Second,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1259,7 +1230,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Second,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1306,7 +1276,8 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					w.Header().Add("ETag", "dummyNewEtag")
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(`{"signedPolicyData":{
-						"zmsKeyId":"dummyNewId"
+						"zmsKeyId":"dummyNewId",
+						"expires":"2099-03-21T08:11:18.729Z"
 					}}`))
 				} else {
 					w.WriteHeader(http.StatusNotModified)
@@ -1334,7 +1305,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             etagCac,
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Second,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1386,7 +1356,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             "dummyURL",
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1429,7 +1398,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1473,7 +1441,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1508,7 +1475,8 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId":"1"
+					"zmsKeyId":"1",
+					"expires":"2099-03-21T08:11:18.729Z"
 				}}`))
 			}))
 			srv := httptest.NewTLSServer(handler)
@@ -1519,7 +1487,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
 					policyExpiredDuration: time.Minute * 30,
 					etagCache:             gache.New(),
-					etagExpTime:           time.Minute,
 					expireMargin:          time.Hour,
 					client:                srv.Client(),
 					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -1562,7 +1529,6 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
@@ -2171,7 +2137,6 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		pkp                   pubkey.Provider
 		etagCache             gache.Gache
 		etagFlushDur          time.Duration
-		etagExpTime           time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -2242,7 +2207,6 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 				pkp:                   tt.fields.pkp,
 				etagCache:             tt.fields.etagCache,
 				etagFlushDur:          tt.fields.etagFlushDur,
-				etagExpTime:           tt.fields.etagExpTime,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
