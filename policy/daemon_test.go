@@ -1565,6 +1565,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 	tests := []test{
 		func() test {
 			rp := gache.New()
+			expires := fastime.Now().Add(time.Hour).UTC()
 			return test{
 				name: "cache success with data",
 				args: args{
@@ -1574,7 +1575,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						util.DomainSignedPolicyData{
 							SignedPolicyData: &util.SignedPolicyData{
 								Expires: &rdl.Timestamp{
-									Time: fastime.Now().Add(time.Hour * 99999).UTC(),
+									Time: expires,
 								},
 								PolicyData: &util.PolicyData{
 									Policies: []*util.Policy{
@@ -1619,9 +1620,12 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						return errors.Errorf("invalid length role policies 2, role policies: %v", rp.ToRawMap(context.Background()))
 					}
 
-					gotRp1, ok := rp.Get("dummyDom:role.dummyRole")
+					gotRp1, gotExpire1, ok := rp.GetWithExpire("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("cannot simplify and cache data")
+					}
+					if math.Abs(time.Unix(0, gotExpire1).Sub(expires).Seconds()) > time.Second.Seconds() * 3 {
+						return errors.New("cache expiry not match with policy expires")
 					}
 					gotAsss1 := gotRp1.([]*Assertion)
 					if len(gotAsss1) != 2 {
@@ -1641,9 +1645,12 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 						return errors.Errorf("hv1: %v, hv2: %v", hv1, hv2)
 					}
 
-					gotRp2, ok := rp.Get("dummyDom2:role.dummyRole2")
+					gotRp2, gotExpire2, ok := rp.GetWithExpire("dummyDom2:role.dummyRole2")
 					if !ok {
 						return errors.New("cannot simplify and cache data")
+					}
+					if math.Abs(time.Unix(0, gotExpire2).Sub(expires).Seconds()) > time.Second.Seconds() * 3 {
+						return errors.New("cache expiry not match with policy expires")
 					}
 					gotAsss2 := gotRp2.([]*Assertion)
 					if len(gotAsss2) != 1 {
@@ -1655,7 +1662,6 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 				wantErr: false,
 			}
 		}(),
-
 		func() test {
 			rp := gache.New()
 			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Nanosecond*5))
@@ -1715,7 +1721,6 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
-
 		func() test {
 			rp := gache.New()
 			return test{
@@ -1993,7 +1998,6 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 				}
 			}(),
 		*/
-
 		func() test {
 			rp := gache.New()
 			return test{
