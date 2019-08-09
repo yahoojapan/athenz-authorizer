@@ -73,7 +73,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 			},
 		},
 		{
-			name: "without policy data",
+			name: "no policy data",
 			fields: fields{
 				DomainSignedPolicyData: util.DomainSignedPolicyData{
 					SignedPolicyData: nil,
@@ -91,7 +91,7 @@ func TestSignedPolicy_Verify(t *testing.T) {
 					}
 				},
 			},
-			wantErr: errors.New("without policy data"),
+			wantErr: errors.New("no policy data"),
 		},
 		{
 			name: "policy without expiry",
