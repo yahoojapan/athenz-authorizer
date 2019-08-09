@@ -324,6 +324,8 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 		if etagValidDur > 0 {
 			p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
 		} else {
+			// this triggers only if the new policies from server have expiry time < expiry margin
+			// hence, will not use ETag on next fetch request
 			p.etagCache.Delete(domain)
 		}
 	}

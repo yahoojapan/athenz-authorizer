@@ -35,19 +35,16 @@ type SignedPolicy struct {
 // Verify verifies the signed policy and return any errors
 func (s *SignedPolicy) Verify(pkp pubkey.Provider) error {
 
-	// check nil
 	if s.SignedPolicyData == nil {
-		return errors.New("without policy data")
+		return errors.New("no policy data")
 	}
 
 	// verify expires
-	// if not set, s.SignedPolicyData.Expires is nil
 	if s.SignedPolicyData.Expires == nil {
 		return errors.New("policy without expiry")
 	}
-	// if set, but invalid, s.SignedPolicyData.Expires is Time{}
-	validDur := s.SignedPolicyData.Expires.Time.Sub(fastime.Now())
-	if validDur <= 0 {
+	if s.SignedPolicyData.Expires.Time.Sub(fastime.Now()) <= 0 {
+		// when the {expires: "invalid string"}, s.SignedPolicyData.Expires is Time{}
 		return fmt.Errorf("policy already expired at %s", s.SignedPolicyData.Expires.Time.String())
 	}
 
