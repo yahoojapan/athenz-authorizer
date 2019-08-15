@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -62,7 +60,8 @@ type policyd struct {
 	athenzURL     string
 	athenzDomains []string
 
-	client *http.Client
+	client   *http.Client
+	fetchers map[string]fetcher
 }
 
 type etagCache struct {
@@ -81,6 +80,24 @@ func New(opts ...Option) (Daemon, error) {
 		if err := opt(p); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
+	}
+
+	// create fetchers
+	p.fetchers = make(map[string]fetcher, len(p.athenzDomains))
+	for _, domain := range p.athenzDomains {
+		f := fetcher{
+			expireMargin:  p.expireMargin,
+			retryInterval: p.errRetryInterval,
+			retryMaxCount: 3,
+			athenzURL:     p.athenzURL,
+			domain:        domain,
+			spVerifier: func(sp *SignedPolicy) error {
+				return sp.Verify(p.pkp)
+			},
+			client: p.client,
+		}
+		f.Init()
+		p.fetchers[domain] = f
 	}
 
 	return p, nil
@@ -141,25 +158,24 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 
 // Update updates and cache policy data
 func (p *policyd) Update(ctx context.Context) error {
-	glg.Info("Updating policy")
-	defer glg.Info("Updated policy")
+	glg.Info("will update policy")
+	defer glg.Info("update policy done")
 	eg := errgroup.Group{}
 	rp := gache.New()
 
-	for _, domain := range p.athenzDomains {
+	for _, fetcher := range p.fetchers {
 		select {
 		case <-ctx.Done():
 			glg.Info("Update policy interrupted")
 			return ctx.Err()
 		default:
-			dom := domain
 			eg.Go(func() error {
 				select {
 				case <-ctx.Done():
 					glg.Info("Update policy interrupted")
 					return ctx.Err()
 				default:
-					return p.fetchAndCachePolicy(ctx, rp, dom)
+					return fetchAndMergePolicy(ctx, rp, fetcher)
 				}
 			})
 		}
@@ -172,8 +188,8 @@ func (p *policyd) Update(ctx context.Context) error {
 	rp.StartExpired(ctx, p.policyExpiredDuration).
 		EnableExpiredHook().
 		SetExpiredHook(func(ctx context.Context, key string) {
-			//key = <domain>:role.<role>
-			p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
+			// key = <domain>:role.<role>
+			fetchAndMergePolicy(ctx, p.rolePolicies, p.fetchers[strings.Split(key, ":role.")[0]])
 		})
 
 	p.rolePolicies, rp = rp, p.rolePolicies
@@ -238,99 +254,25 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom string) error {
-	spd, upd, err := p.fetchPolicy(ctx, dom)
-	if err != nil {
-		glg.Debugf("fetch policy failed, err: %v", err)
-		return errors.Wrap(err, "error fetch policy")
-	}
-
+func fetchAndMergePolicy(ctx context.Context, g gache.Gache, f fetcher) error {
+	sp, fetchErr := f.FetchWithRetry(ctx)
 	glg.DebugFunc(func() string {
-		rawpol, _ := json.Marshal(spd)
-		return fmt.Sprintf("fetched policy data, domain: %s,updated: %v, body: %s", dom, upd, (string)(rawpol))
+		rawpol, _ := json.Marshal(sp)
+		return fmt.Sprintf("will merge policy, domain: %s, body: %s", f.GetDomain(), (string)(rawpol))
 	})
 
-	if err = simplifyAndCachePolicy(ctx, g, spd); err != nil {
-		glg.Debugf("simplify and cache error: %v", err)
-		return errors.Wrap(err, "error simplify and cache")
+	if err := simplifyAndCachePolicy(ctx, g, sp); err != nil {
+		errMsg := "simplify and cache policy fail"
+		glg.Debugf("%s, error: %v", errMsg, err)
+		return errors.Wrap(err, errMsg)
 	}
 
+	if fetchErr != nil {
+		errMsg := "fetch policy fail"
+		glg.Debugf("%s, error: %v", errMsg, fetchErr)
+		// return errors.Wrap(fetchErr, errMsg)
+	}
 	return nil
-}
-
-func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy, bool, error) {
-	glg.Infof("Fetching policy for domain %s", domain)
-	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
-	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", p.athenzURL, domain)
-
-	glg.Debugf("fetching policy, url: %v", url)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		glg.Errorf("fetch policy error, domain: %s, error: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error creating fetch policy request")
-	}
-
-	// etag header
-	t, ok := p.etagCache.Get(domain)
-	if ok {
-		ec := t.(*etagCache)
-		glg.Debugf("request on domain: %s, using etag: %s", domain, ec.etag)
-		req.Header.Set("If-None-Match", ec.etag)
-	}
-
-	res, err := p.client.Do(req.WithContext(ctx))
-	if err != nil {
-		glg.Errorf("Error making HTTP request, domain: %s, error: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error making request")
-	}
-
-	// if server return NotModified, return policy from cache
-	if res.StatusCode == http.StatusNotModified {
-		cache := t.(*etagCache)
-		glg.Debugf("Server return not modified, keep using domain: %s, etag: %v", domain, cache.etag)
-		return cache.sp, false, nil
-	}
-
-	if res.StatusCode != http.StatusOK {
-		glg.Errorf("Domain %s: Server return not OK", domain)
-		return nil, false, errors.Wrap(ErrFetchPolicy, "error fetching policy data")
-	}
-
-	// read and decode
-	sp := new(SignedPolicy)
-	if err = json.NewDecoder(res.Body).Decode(&sp); err != nil {
-		glg.Errorf("Error decoding policy, domain: %s, err: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error decode response")
-	}
-
-	// verify policy data
-	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifying policy, domain: %s, err: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error verify policy data")
-	}
-
-	if _, err = io.Copy(ioutil.Discard, res.Body); err != nil {
-		glg.Warn(errors.Wrap(err, "error io.copy"))
-	}
-	if err = res.Body.Close(); err != nil {
-		glg.Warn(errors.Wrap(err, "error body.close"))
-	}
-
-	// set etag cache
-	etag := res.Header.Get("ETag")
-	if etag != "" {
-		etagValidDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
-		glg.Debugf("Set domain %s with etag %v, duration: %s", domain, etag, etagValidDur)
-		if etagValidDur > 0 {
-			p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
-		} else {
-			// this triggers only if the new policies from server have expiry time < expiry margin
-			// hence, will not use ETag on next fetch request
-			p.etagCache.Delete(domain)
-		}
-	}
-
-	return sp, true, nil
 }
 
 func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
