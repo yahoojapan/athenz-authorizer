@@ -1960,7 +1960,7 @@ func Test_policyd_fetchPolicy(t *testing.T) {
 					}
 					// // check cache expire time
 					wantExpiry := wantSp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano() - expireMargin.Nanoseconds()
-					if math.Abs(float64(gotExpiry-wantExpiry)) > float64((time.Second * 3).Nanoseconds()) {
+					if gotExpiry-wantExpiry > (time.Second * 1).Nanoseconds() {
 						return fmt.Errorf("etag cache expiry got: %v, want: %v", gotExpiry, wantExpiry)
 					}
 
