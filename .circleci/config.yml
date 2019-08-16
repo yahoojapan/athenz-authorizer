@@ -55,21 +55,21 @@ jobs:
               PATCH="${VERSION%%.*}"; VERSION="${VERSION#*.}"
               if echo $LAST_COMMIT | grep "\[\(major\|MAJOR\)\]" > /dev/null; then
                 MAJOR=$((MAJOR+1))
-                echo "v$MAJOR.0.0" > ./.tag
+                echo "$MAJOR.0.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(minor\|MINOR\)\]" > /dev/null; then
                 MINOR=$((MINOR+1))
-                echo "v$MAJOR.$MINOR.0" > ./.tag
+                echo "$MAJOR.$MINOR.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(patch\|PATCH\)\]" > /dev/null; then
                 PATCH=$((PATCH+1))
-                echo "v$MAJOR.$MINOR.$PATCH" > ./.tag
+                echo "$MAJOR.$MINOR.$PATCH" > ./.tag
               fi
             else
               if echo $LAST_COMMIT | grep "\[\(major\|MAJOR\)\]" > /dev/null; then
-                echo "v1.0.0" > ./.tag
+                echo "1.0.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(minor\|MINOR\)\]" > /dev/null; then
-                echo "v0.1.0" > ./.tag
+                echo "0.1.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(patch\|PATCH\)\]" > /dev/null; then
-                echo "v0.0.1" > ./.tag
+                echo "0.0.1" > ./.tag
               fi
             fi
       - persist_to_workspace:
@@ -85,7 +85,11 @@ jobs:
           name: push tag and check PR body
           command: |
             mkdir -p $HOME/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+            # add tag header if not exists
             TAG=`cat ./.tag`
+            if [[ $TAG != v* ]]; then
+              TAG="v$TAG"
+            fi
             if [ ! -z "$TAG" ]; then
               echo $TAG
               git tag $TAG
