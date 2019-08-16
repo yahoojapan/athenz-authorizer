@@ -1,13 +1,13 @@
 alias:
   default: &default
-    working_directory: /go/src/github.com/kpango/athenz-policy-updater
+    working_directory: /go/src/github.com/yahoojapan/athenz-authorizer
     docker:
       - image: circleci/golang:1.12
         environment:
           GOPATH: "/go"
           GO111MODULE: "on"
           REPO_NAME: "yahoojapan"
-          IMAGE_NAME: "athenz-policy-updater"
+          IMAGE_NAME: "athenz-authorizer"
           GITHUB_API: "https://api.github.com/"
           DOCKER_USER: "kpango"
   setup_remote_docker: &setup_remote_docker
