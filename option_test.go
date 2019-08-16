@@ -562,41 +562,7 @@ func TestWithPolicyEtagFlushDuration(t *testing.T) {
 		})
 	}
 }
-func TestWithPolicyEtagExpTime(t *testing.T) {
-	type args struct {
-		t string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
-	}{
-		{
-			name: "set success",
-			args: args{
-				t: "dummy",
-			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.policyEtagExpTime != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyEtagExpTime(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyEtagExpTime() error = %v", err)
-			}
-		})
-	}
-}
+
 func TestWithCacheExp(t *testing.T) {
 	type args struct {
 		d time.Duration

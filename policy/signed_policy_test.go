@@ -18,7 +18,10 @@ package policy
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/ardielle/ardielle-go/rdl"
+	"github.com/kpango/fastime"
 	"github.com/pkg/errors"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
@@ -50,6 +53,9 @@ func TestSignedPolicy_Verify(t *testing.T) {
 						PolicyData: &util.PolicyData{
 							Domain: "dummy",
 						},
+						Expires: &rdl.Timestamp{
+							Time: fastime.Now().Add(time.Hour),
+						},
 					},
 				},
 			},
@@ -67,9 +73,84 @@ func TestSignedPolicy_Verify(t *testing.T) {
 			},
 		},
 		{
+			name: "no policy data",
+			fields: fields{
+				DomainSignedPolicyData: util.DomainSignedPolicyData{
+					SignedPolicyData: nil,
+				},
+			},
+			args: args{
+				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+					if e == pubkey.EnvZTS {
+						return nil
+					}
+					return VerifierMock{
+						VerifyFunc: func(d, s string) error {
+							return nil
+						},
+					}
+				},
+			},
+			wantErr: errors.New("no policy data"),
+		},
+		{
+			name: "policy without expiry",
+			fields: fields{
+				DomainSignedPolicyData: util.DomainSignedPolicyData{
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires: nil,
+					},
+				},
+			},
+			args: args{
+				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+					if e == pubkey.EnvZTS {
+						return nil
+					}
+					return VerifierMock{
+						VerifyFunc: func(d, s string) error {
+							return nil
+						},
+					}
+				},
+			},
+			wantErr: errors.New("policy without expiry"),
+		},
+		{
+			name: "policy already expired",
+			fields: fields{
+				DomainSignedPolicyData: util.DomainSignedPolicyData{
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires: &rdl.Timestamp{
+							Time: time.Time{},
+						},
+					},
+				},
+			},
+			args: args{
+				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
+					if e == pubkey.EnvZTS {
+						return nil
+					}
+					return VerifierMock{
+						VerifyFunc: func(d, s string) error {
+							return nil
+						},
+					}
+				},
+			},
+			wantErr: errors.New("policy already expired at 0001-01-01 00:00:00 +0000 UTC"),
+		},
+		{
 			name: "zts key not found",
 			fields: fields{
-				DomainSignedPolicyData: util.DomainSignedPolicyData{},
+				DomainSignedPolicyData: util.DomainSignedPolicyData{
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires: &rdl.Timestamp{
+							Time: fastime.Now().Add(time.Hour),
+						},
+					},
+				},
 			},
 			args: args{
 				pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
@@ -90,6 +171,11 @@ func TestSignedPolicy_Verify(t *testing.T) {
 			fields: fields{
 				DomainSignedPolicyData: util.DomainSignedPolicyData{
 					Signature: "dummyZtsSignature",
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires: &rdl.Timestamp{
+							Time: fastime.Now().Add(time.Hour),
+						},
+					},
 				},
 			},
 			args: args{
@@ -110,7 +196,11 @@ func TestSignedPolicy_Verify(t *testing.T) {
 			name: "zms key not found",
 			fields: fields{
 				DomainSignedPolicyData: util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{},
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires: &rdl.Timestamp{
+							Time: fastime.Now().Add(time.Hour),
+						},
+					},
 				},
 			},
 			args: args{
@@ -133,6 +223,9 @@ func TestSignedPolicy_Verify(t *testing.T) {
 				DomainSignedPolicyData: util.DomainSignedPolicyData{
 					SignedPolicyData: &util.SignedPolicyData{
 						ZmsSignature: "dummyZmsSignature",
+						Expires: &rdl.Timestamp{
+							Time: fastime.Now().Add(time.Hour),
+						},
 					},
 				},
 			},

@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/jwk"
@@ -90,18 +91,6 @@ func TestNew(t *testing.T) {
 				return nil
 			},
 		},
-		{
-			name: "test NewPolicy returns error",
-			args: args{
-				[]Option{WithPolicyEtagExpTime("dummy")},
-			},
-			checkFunc: func(prov Authorizerd, err error) error {
-				if err.Error() != "error create policyd: error create policyd: invalid etag expire time: time: invalid duration dummy" {
-					return errors.Wrap(err, "unexpected error")
-				}
-				return nil
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -133,7 +122,7 @@ func Test_authorizer_Start(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*10))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*10))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}
@@ -165,7 +154,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
 			cm := &ConfdMock{
 				confdExp: time.Millisecond * 10,
 			}
@@ -197,7 +186,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}
@@ -229,7 +218,7 @@ func Test_authorizer_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Millisecond*500))
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*500))
 			cm := &ConfdMock{
 				confdExp: time.Second,
 			}
@@ -515,7 +504,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		athenzDomains         []string
 		policyRefreshDuration string
 		policyEtagFlushDur    string
-		policyEtagExpTime     string
 	}
 	type args struct {
 		ctx context.Context
@@ -708,7 +696,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
 				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
-				policyEtagExpTime:     tt.fields.policyEtagExpTime,
 			}
 			err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {
@@ -750,7 +737,6 @@ func Test_authorizer_verify(t *testing.T) {
 		athenzDomains         []string
 		policyRefreshDuration string
 		policyEtagFlushDur    string
-		policyEtagExpTime     string
 	}
 	type args struct {
 		ctx context.Context
@@ -787,7 +773,6 @@ func Test_authorizer_verify(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
 				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
-				policyEtagExpTime:     tt.fields.policyEtagExpTime,
 			}
 			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
@@ -815,7 +800,6 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		athenzDomains         []string
 		policyRefreshDuration string
 		policyEtagFlushDur    string
-		policyEtagExpTime     string
 	}
 	type args struct {
 		ctx       context.Context
@@ -988,7 +972,6 @@ bu80CwTnWhmdBo36Ig==
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
 				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
-				policyEtagExpTime:     tt.fields.policyEtagExpTime,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -1016,7 +999,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		athenzDomains         []string
 		policyRefreshDuration string
 		policyEtagFlushDur    string
-		policyEtagExpTime     string
 	}
 	type args struct {
 		ctx context.Context
@@ -1058,7 +1040,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
 				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
-				policyEtagExpTime:     tt.fields.policyEtagExpTime,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)

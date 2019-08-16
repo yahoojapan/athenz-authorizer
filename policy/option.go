@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package policy
 
 import (
@@ -28,7 +29,6 @@ var (
 	defaultOptions = []Option{
 		WithExpireMargin("3h"),
 		WithEtagFlushDuration("12h"),
-		WithEtagExpTime("24h"),
 		WithPolicyExpiredDuration("1m"),
 		WithRefreshDuration("30m"),
 		WithErrRetryInterval("1m"),
@@ -65,21 +65,6 @@ func WithExpireMargin(t string) Option {
 			return errors.Wrap(err, "invalid expire margin")
 		}
 		pol.expireMargin = expireMargin
-		return nil
-	}
-}
-
-// WithEtagExpTime returns an EtagExpTime functional option
-func WithEtagExpTime(t string) Option {
-	return func(pol *policyd) error {
-		if t == "" {
-			return nil
-		}
-		etagExpTime, err := time.ParseDuration(t)
-		if err != nil {
-			return errors.Wrap(err, "invalid etag expire time")
-		}
-		pol.etagExpTime = etagExpTime
 		return nil
 	}
 }

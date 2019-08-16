@@ -197,14 +197,6 @@ func WithPolicyExpireMargin(t string) Option {
 	}
 }
 
-// WithPolicyEtagExpTime returns a PolicyEtagExpTime functional option
-func WithPolicyEtagExpTime(t string) Option {
-	return func(authz *authorizer) error {
-		authz.policyEtagExpTime = t
-		return nil
-	}
-}
-
 // WithPolicyEtagFlushDuration returns a PolicyEtagFlushDur functional option
 func WithPolicyEtagFlushDuration(t string) Option {
 	return func(authz *authorizer) error {

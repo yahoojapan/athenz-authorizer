@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package policy
 
 import (
@@ -26,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
@@ -34,7 +36,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Policyd represent the daemon to retrieve policy data from Athenz.
+// Daemon represents the daemon to retrieve policy data from Athenz.
 type Daemon interface {
 	Start(context.Context) <-chan error
 	Update(context.Context) error
@@ -55,7 +57,6 @@ type policyd struct {
 
 	etagCache    gache.Gache
 	etagFlushDur time.Duration
-	etagExpTime  time.Duration
 
 	// www.athenz.com/zts/v1
 	athenzURL     string
@@ -65,7 +66,7 @@ type policyd struct {
 }
 
 type etagCache struct {
-	eTag string
+	etag string
 	sp   *SignedPolicy
 }
 
@@ -185,7 +186,7 @@ func (p *policyd) Update(ctx context.Context) error {
 // CheckPolicy checks the specified request has privilege to access the resources or not.
 // If return is nil then the request is allowed, otherwise the request is rejected.
 func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	ech := make(chan error, 1)
+	ech := make(chan error, len(roles))
 	cctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -273,10 +274,8 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	t, ok := p.etagCache.Get(domain)
 	if ok {
 		ec := t.(*etagCache)
-		if time.Now().Add(p.expireMargin).UnixNano() < ec.sp.SignedPolicyData.Expires.UnixNano() {
-			glg.Debugf("domain: %s, using etag: %s", domain, ec.eTag)
-			req.Header.Set("If-None-Match", ec.eTag)
-		}
+		glg.Debugf("request on domain: %s, using etag: %s", domain, ec.etag)
+		req.Header.Set("If-None-Match", ec.etag)
 	}
 
 	res, err := p.client.Do(req.WithContext(ctx))
@@ -288,7 +287,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 	// if server return NotModified, return policy from cache
 	if res.StatusCode == http.StatusNotModified {
 		cache := t.(*etagCache)
-		glg.Debugf("Server return not modified, domain: %s, etag: %v", domain, cache.eTag)
+		glg.Debugf("Server return not modified, keep using domain: %s, etag: %v", domain, cache.etag)
 		return cache.sp, false, nil
 	}
 
@@ -306,7 +305,7 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 
 	// verify policy data
 	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifying policy, domain: %s,err: %v", domain, err)
+		glg.Errorf("Error verifying policy, domain: %s, err: %v", domain, err)
 		return nil, false, errors.Wrap(err, "error verify policy data")
 	}
 
@@ -317,11 +316,18 @@ func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy
 		glg.Warn(errors.Wrap(err, "error body.close"))
 	}
 
-	// set eTag cache
-	eTag := res.Header.Get("ETag")
-	if eTag != "" {
-		glg.Debugf("Setting ETag %v for domain %s", eTag, domain)
-		p.etagCache.SetWithExpire(domain, &etagCache{eTag, sp}, p.etagExpTime)
+	// set etag cache
+	etag := res.Header.Get("ETag")
+	if etag != "" {
+		etagValidDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
+		glg.Debugf("Set domain %s with etag %v, duration: %s", domain, etag, etagValidDur)
+		if etagValidDur > 0 {
+			p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
+		} else {
+			// this triggers only if the new policies from server have expiry time < expiry margin
+			// hence, will not use ETag on next fetch request
+			p.etagCache.Delete(domain)
+		}
 	}
 
 	return sp, true, nil
@@ -378,7 +384,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		} else {
 			asss = []*Assertion{a}
 		}
-		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano()))
+		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(fastime.Now())))
 
 		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/kpango/fastime"
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoojapan/athenz-authorizer/jwk"
 	"github.com/yahoojapan/athenz-authorizer/pubkey"
@@ -230,7 +231,7 @@ func Test_rtp_validate(t *testing.T) {
 			},
 			args: args{
 				&Token{
-					ExpiryTime: time.Now().Add(time.Hour),
+					ExpiryTime: fastime.Now().Add(time.Hour),
 				},
 			},
 		},
@@ -247,7 +248,7 @@ func Test_rtp_validate(t *testing.T) {
 			},
 			args: args{
 				&Token{
-					ExpiryTime: time.Now().Add(-1 * time.Hour),
+					ExpiryTime: fastime.Now().Add(-1 * time.Hour),
 				},
 			},
 			wantErr: true,
@@ -265,7 +266,7 @@ func Test_rtp_validate(t *testing.T) {
 			},
 			args: args{
 				&Token{
-					ExpiryTime: time.Now().Add(time.Hour),
+					ExpiryTime: fastime.Now().Add(time.Hour),
 				},
 			},
 			wantErr: true,
@@ -279,7 +280,7 @@ func Test_rtp_validate(t *testing.T) {
 			},
 			args: args{
 				&Token{
-					ExpiryTime: time.Now().Add(time.Hour),
+					ExpiryTime: fastime.Now().Add(time.Hour),
 				},
 			},
 			wantErr: true,
@@ -347,7 +348,7 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			return test{
-				name: "verify jwt fail, no expiration definied",
+				name: "verify jwt fail, no expiration defined",
 				fields: fields{
 					jwkp: jwk.Provider(func(kid string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")

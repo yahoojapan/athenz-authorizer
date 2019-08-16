@@ -61,7 +61,7 @@ func New(opts ...Option) (Daemon, error) {
 }
 
 func (j *jwkd) Start(ctx context.Context) <-chan error {
-	glg.Info("Starting jwk updator")
+	glg.Info("Starting jwk updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
 	if err := j.Update(ctx); err != nil {

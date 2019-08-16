@@ -13,11 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package policy
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/kpango/fastime"
 	"github.com/pkg/errors"
 
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
@@ -31,6 +34,20 @@ type SignedPolicy struct {
 
 // Verify verifies the signed policy and return any errors
 func (s *SignedPolicy) Verify(pkp pubkey.Provider) error {
+
+	if s.SignedPolicyData == nil {
+		return errors.New("no policy data")
+	}
+
+	// verify expires
+	if s.SignedPolicyData.Expires == nil {
+		return errors.New("policy without expiry")
+	}
+	if s.SignedPolicyData.Expires.Time.Sub(fastime.Now()) <= 0 {
+		// when the {expires: "invalid string"}, s.SignedPolicyData.Expires is Time{}
+		return fmt.Errorf("policy already expired at %s", s.SignedPolicyData.Expires.Time.String())
+	}
+
 	// verify signed policy data
 	ver := pkp(pubkey.EnvZTS, s.KeyId)
 	if ver == nil {
