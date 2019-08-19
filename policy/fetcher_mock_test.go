@@ -16,6 +16,30 @@ limitations under the License.
 
 package policy
 
+import "context"
+
+// fetcherMock is the adapter implementation of Fetcher interface for mocking.
+type fetcherMock struct {
+	domainMock         func() string
+	fetchMock          func(context.Context) (*SignedPolicy, error)
+	fetchWithRetryMock func(context.Context) (*SignedPolicy, error)
+}
+
+// Domain is just an adapter.
+func (r *fetcherMock) Domain() string {
+	return r.domainMock()
+}
+
+// Fetch is just an adapter.
+func (r *fetcherMock) Fetch(ctx context.Context) (*SignedPolicy, error) {
+	return r.fetchMock(ctx)
+}
+
+// FetchWithRetry is just an adapter.
+func (r *fetcherMock) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
+	return r.fetchWithRetryMock(ctx)
+}
+
 // readCloserMock is the adapter implementation of io.ReadCloser interface for mocking.
 type readCloserMock struct {
 	readMock  func(p []byte) (n int, err error)

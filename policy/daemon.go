@@ -61,7 +61,7 @@ type policyd struct {
 	athenzDomains []string
 
 	client   *http.Client
-	fetchers map[string]fetcher
+	fetchers map[string]Fetcher
 }
 
 type etagCache struct {
@@ -83,21 +83,21 @@ func New(opts ...Option) (Daemon, error) {
 	}
 
 	// create fetchers
-	p.fetchers = make(map[string]fetcher, len(p.athenzDomains))
+	p.fetchers = make(map[string]Fetcher, len(p.athenzDomains))
 	for _, domain := range p.athenzDomains {
 		f := fetcher{
+			domain:        domain,
 			expireMargin:  p.expireMargin,
 			retryInterval: p.errRetryInterval,
 			retryMaxCount: 3,
 			athenzURL:     p.athenzURL,
-			domain:        domain,
 			spVerifier: func(sp *SignedPolicy) error {
 				return sp.Verify(p.pkp)
 			},
 			client: p.client,
 		}
 		f.Init()
-		p.fetchers[domain] = f
+		p.fetchers[domain] = &f
 	}
 
 	return p, nil
@@ -254,11 +254,11 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func fetchAndMergePolicy(ctx context.Context, g gache.Gache, f fetcher) error {
+func fetchAndMergePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
 	sp, fetchErr := f.FetchWithRetry(ctx)
 	glg.DebugFunc(func() string {
 		rawpol, _ := json.Marshal(sp)
-		return fmt.Sprintf("will merge policy, domain: %s, body: %s", f.GetDomain(), (string)(rawpol))
+		return fmt.Sprintf("will merge policy, domain: %s, body: %s", f.Domain(), (string)(rawpol))
 	})
 
 	if err := simplifyAndCachePolicy(ctx, g, sp); err != nil {

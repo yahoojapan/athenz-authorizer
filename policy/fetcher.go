@@ -34,7 +34,15 @@ import (
 // SignedPolicyVerifier type defines the function signature to verify a signed policy.
 type SignedPolicyVerifier func(*SignedPolicy) error
 
+// Fetcher represents a daemon for user to verify the role token
+type Fetcher interface {
+	Domain() string
+	Fetch(context.Context) (*SignedPolicy, error)
+	FetchWithRetry(context.Context) (*SignedPolicy, error)
+}
+
 type fetcher struct {
+
 	// etag related
 	expireMargin time.Duration
 
@@ -43,8 +51,8 @@ type fetcher struct {
 	retryMaxCount int
 
 	// athenz related
-	athenzURL  string
 	domain     string
+	athenzURL  string
 	spVerifier SignedPolicyVerifier
 
 	client      *http.Client
@@ -60,34 +68,20 @@ type taggedPolicy struct {
 
 func (f *fetcher) Init() {
 	// prevent atomic.Value.Load() returns nil
-	f.policyCache.Store(taggedPolicy{
-		etagExpiry: time.Time{},
-	})
-}
-
-func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
-	var lastErr error
-	for i := 0; i < f.retryMaxCount; i++ {
-		sp, err := f.fetch(ctx)
-		if err == nil {
-			return sp, nil
-		}
-
-		lastErr = err
-		time.Sleep(f.retryInterval)
+	if f.policyCache.Load() == nil {
+		f.policyCache.Store(&taggedPolicy{
+			etagExpiry: time.Time{},
+			ctime:      fastime.Now(),
+		})
 	}
-
-	errMsg := "max. retry count excess"
-	glg.Info("Will use policy cache, since: %s, domain: %s, error: %v", errMsg, f.domain, lastErr)
-	return f.policyCache.Load().(taggedPolicy).sp, errors.Wrap(lastErr, errMsg)
 }
 
-func (f *fetcher) GetDomain() string {
+func (f *fetcher) Domain() string {
 	return f.domain
 }
 
-// fetch fetches the policy. When calling concurrently, it is not guarantee that the cache will always keep the latest version.
-func (f *fetcher) fetch(ctx context.Context) (*SignedPolicy, error) {
+// Fetch fetches the policy. When calling concurrently, it is not guarantee that the cache will always keep the latest version.
+func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	glg.Infof("will fetch policy for domain: %s", f.domain)
 	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
 	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", f.athenzURL, f.domain)
@@ -101,7 +95,7 @@ func (f *fetcher) fetch(ctx context.Context) (*SignedPolicy, error) {
 	}
 
 	// etag header
-	tp := f.policyCache.Load().(taggedPolicy)
+	tp := f.policyCache.Load().(*taggedPolicy)
 	if tp.etag != "" && tp.etagExpiry.After(fastime.Now()) {
 		glg.Debugf("request on domain: %s, with etag: %s", f.domain, tp.etag)
 		req.Header.Set("If-None-Match", tp.etag)
@@ -128,7 +122,7 @@ func (f *fetcher) fetch(ctx context.Context) (*SignedPolicy, error) {
 	if res.StatusCode != http.StatusOK {
 		errMsg := "fetch policy HTTP response != 200 OK"
 		glg.Errorf("%s, domain: %s, status: %d", errMsg, f.domain, res.StatusCode)
-		return nil, errors.Wrap(err, errMsg)
+		return nil, errors.Wrap(ErrFetchPolicy, errMsg)
 	}
 
 	// read and decode
@@ -156,9 +150,26 @@ func (f *fetcher) fetch(ctx context.Context) (*SignedPolicy, error) {
 		ctime:      fastime.Now(),
 	}
 	glg.Debugf("set policy cache for domain: %s, policy: %v", f.domain, newTp)
-	f.policyCache.Store(newTp)
+	f.policyCache.Store(&newTp)
 
 	return sp, nil
+}
+
+func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
+	var lastErr error
+	for i := -1; i < f.retryMaxCount; i++ {
+		sp, err := f.Fetch(ctx)
+		if err == nil {
+			return sp, nil
+		}
+
+		lastErr = err
+		time.Sleep(f.retryInterval)
+	}
+
+	errMsg := "max. retry count excess"
+	glg.Info("Will use policy cache, since: %s, domain: %s, error: %v", errMsg, f.domain, lastErr)
+	return f.policyCache.Load().(*taggedPolicy).sp, errors.Wrap(lastErr, errMsg)
 }
 
 // flushAndClose helps to flush and close a ReadCloser. Used for request body internal.
