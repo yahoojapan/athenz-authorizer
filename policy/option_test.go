@@ -23,8 +23,8 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
-	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v2/internal/url"
+	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
 func TestWithEtagFlushDur(t *testing.T) {

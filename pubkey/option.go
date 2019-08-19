@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
+	"github.com/yahoojapan/athenz-authorizer/v2/internal/url"
 )
 
 var (
@@ -39,11 +39,11 @@ var (
 type Option func(*pubkeyd) error
 
 // WithAthenzURL returns an AthenzURL functional option
-func WithAthenzURL(url string) Option {
+func WithAthenzURL(u string) Option {
 	return func(p *pubkeyd) error {
-		u := urlutil.TrimHTTPScheme(url)
-		if urlutil.HasScheme(u) {
-			return urlutil.ErrUnsupportedScheme
+		u := url.TrimHTTPScheme(u)
+		if url.HasScheme(u) {
+			return url.ErrUnsupportedScheme
 		}
 		p.athenzURL = u
 		return nil
