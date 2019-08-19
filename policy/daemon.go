@@ -38,7 +38,7 @@ import (
 
 // Daemon represents the daemon to retrieve policy data from Athenz.
 type Daemon interface {
-	Start(context.Context) <-chan error
+	Start(context.Context) (<-chan struct{}, <-chan error)
 	Update(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
 	GetPolicyCache(context.Context) map[string]interface{}
@@ -87,22 +87,38 @@ func New(opts ...Option) (Daemon, error) {
 }
 
 // Start starts the Policy daemon to retrive the policy data periodically
-func (p *policyd) Start(ctx context.Context) <-chan error {
+func (p *policyd) Start(ctx context.Context) (<-chan struct{}, <-chan error) {
 	glg.Info("Starting policyd updater")
+	sch := make(chan struct{}, 1)
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.Update(ctx); err != nil {
-		glg.Debugf("Error initialize policy data, err: %v", err)
-		ech <- errors.Wrap(err, "error update policy")
-		fch <- struct{}{}
-	}
 
 	go func() {
-		defer close(fch)
-		defer close(ech)
+		defer func() {
+			close(sch)
+			close(fch)
+			close(ech)
+		}()
 
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
+
+		update := func() {
+			if err := p.Update(ctx); err != nil {
+				ech <- errors.Wrap(err, "error update policy")
+
+				time.Sleep(p.errRetryInterval)
+
+				select {
+				case fch <- struct{}{}:
+				default:
+					glg.Warn("failure queue already full")
+				}
+			} else {
+				sch <- struct{}{}
+			}
+		}
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -111,32 +127,14 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 				ech <- ctx.Err()
 				return
 			case <-fch:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update policy")
-
-					time.Sleep(p.errRetryInterval)
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				update()
 			case <-ticker.C:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update policy")
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				update()
 			}
 		}
 	}()
 
-	return ech
+	return sch, ech
 }
 
 // Update updates and cache policy data

@@ -35,7 +35,7 @@ import (
 
 // Daemon represent the daemon to retrieve public key data.
 type Daemon interface {
-	Start(ctx context.Context) <-chan error
+	Start(ctx context.Context) (<-chan struct{}, <-chan error)
 	Update(context.Context) error
 	GetProvider() Provider
 }
@@ -101,9 +101,9 @@ func New(opts ...Option) (Daemon, error) {
 }
 
 // Start starts the pubkey daemon to retrive the public key periodically
-func (p *pubkeyd) Start(ctx context.Context) <-chan error {
+func (p *pubkeyd) Start(ctx context.Context) (<-chan struct{}, <-chan error) {
 	glg.Info("Starting pubkey updater")
-
+	sch := make(chan struct{}, 1)
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
 	if err := p.Update(ctx); err != nil {
@@ -112,11 +112,29 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 	}
 
 	go func() {
-		defer close(fch)
-		defer close(ech)
+		defer func() {
+			close(sch)
+			close(fch)
+			close(ech)
+		}()
 
 		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
+
+		update := func() {
+			if err := p.Update(ctx); err != nil {
+				ech <- errors.Wrap(err, "error update pubkey")
+
+				time.Sleep(p.errRetryInterval)
+
+				select {
+				case fch <- struct{}{}:
+				default:
+					glg.Warn("failure queue already full")
+				}
+			}
+		}
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -125,32 +143,14 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 				ech <- ctx.Err()
 				return
 			case <-fch:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update pubkey")
-
-					time.Sleep(p.errRetryInterval)
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				update()
 			case <-ticker.C:
-				if err := p.Update(ctx); err != nil {
-					ech <- errors.Wrap(err, "error update pubkey")
-
-					select {
-					case fch <- struct{}{}:
-					default:
-						glg.Warn("failure queue already full")
-					}
-				}
+				update()
 			}
 		}
 	}()
 
-	return ech
+	return sch, ech
 }
 
 // Update updates and cache athenz public key data

@@ -164,17 +164,24 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 	var (
 		ech              = make(chan error, 200)
 		g                = a.cache.StartExpired(ctx, a.cacheExp/2)
+		csch, psch, jsch <-chan struct{}
 		cech, pech, jech <-chan error
 	)
 
 	if !a.disablePubkeyd {
-		cech = a.pubkeyd.Start(ctx)
-	}
-	if !a.disablePolicyd {
-		pech = a.policyd.Start(ctx)
+		csch, cech = a.pubkeyd.Start(ctx)
+		<-csch
+		glg.Info("Initialize pubkey success")
 	}
 	if !a.disableJwkd {
-		jech = a.jwkd.Start(ctx)
+		jsch, jech = a.jwkd.Start(ctx)
+		<-jsch
+		glg.Info("Initialize jwk success")
+	}
+	if !a.disablePolicyd {
+		psch, pech = a.policyd.Start(ctx)
+		<-psch
+		glg.Info("Initialize policy success")
 	}
 
 	go func() {
@@ -186,6 +193,12 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 				g.Clear()
 				ech <- ctx.Err()
 				return
+			case <-csch:
+				glg.Info("Update pubkey success")
+			case <-psch:
+				glg.Info("Update policy success")
+			case <-jsch:
+				glg.Info("Update jwk success")
 			case err := <-cech:
 				if err != nil {
 					ech <- errors.Wrap(err, "update pubkey error")

@@ -30,7 +30,7 @@ import (
 
 // Daemon represents the daemon to retrieve jwk from Athenz.
 type Daemon interface {
-	Start(ctx context.Context) <-chan error
+	Start(ctx context.Context) (<-chan struct{}, <-chan error)
 	Update(context.Context) error
 	GetProvider() Provider
 }
@@ -61,18 +61,19 @@ func New(opts ...Option) (Daemon, error) {
 	return j, nil
 }
 
-func (j *jwkd) Start(ctx context.Context) <-chan error {
+func (j *jwkd) Start(ctx context.Context) (<-chan struct{}, <-chan error) {
 	glg.Info("Starting jwk updater")
+	sch := make(chan struct{}, 1)
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := j.Update(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update athenz json web key")
-		fch <- struct{}{}
-	}
 
 	go func() {
-		defer close(fch)
-		defer close(ech)
+		defer func() {
+			close(sch)
+			close(fch)
+			close(ech)
+		}()
+
 		ticker := time.NewTicker(j.refreshDuration)
 		ebuf := errors.New("")
 
@@ -93,6 +94,8 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 				default:
 					glg.Warn("failure queue already full")
 				}
+			} else {
+				sch <- struct{}{}
 			}
 		}
 
@@ -115,7 +118,7 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 		}
 	}()
 
-	return ech
+	return sch, ech
 }
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
