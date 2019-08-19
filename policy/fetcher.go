@@ -169,6 +169,9 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 
 	errMsg := "max. retry count excess"
 	glg.Info("Will use policy cache, since: %s, domain: %s, error: %v", errMsg, f.domain, lastErr)
+	if lastErr == nil {
+		lastErr = errors.New(fmt.Sprintf("retryMaxCount %v", f.retryMaxCount))
+	}
 	return f.policyCache.Load().(*taggedPolicy).sp, errors.Wrap(lastErr, errMsg)
 }
 
