@@ -1,13 +1,13 @@
 alias:
   default: &default
-    working_directory: /go/src/github.com/kpango/athenz-policy-updater
+    working_directory: /go/src/github.com/yahoojapan/athenz-authorizer
     docker:
       - image: circleci/golang:1.12
         environment:
           GOPATH: "/go"
           GO111MODULE: "on"
           REPO_NAME: "yahoojapan"
-          IMAGE_NAME: "athenz-policy-updater"
+          IMAGE_NAME: "athenz-authorizer"
           GITHUB_API: "https://api.github.com/"
           DOCKER_USER: "kpango"
   setup_remote_docker: &setup_remote_docker
@@ -49,27 +49,27 @@ jobs:
             LAST_COMMIT=`git log -1 --pretty=%B`
             touch ./.tag
             if VERSION=`git describe --abbrev=0 --tags` && [ ! -z "`git diff $VERSION`" -o -z "$VERSION" ]; then
-              VERSION=${VERSION:-'0.0.0'}
-              MAJOR="${VERSION%%.*}"; VERSION="${VERSION#*.}"
+              VERSION=${VERSION:-'v0.0.0'}
+              MAJOR="${VERSION%%.*}"; MAJOR="${MAJOR#v}"; VERSION="${VERSION#*.}"
               MINOR="${VERSION%%.*}"; VERSION="${VERSION#*.}"
               PATCH="${VERSION%%.*}"; VERSION="${VERSION#*.}"
               if echo $LAST_COMMIT | grep "\[\(major\|MAJOR\)\]" > /dev/null; then
                 MAJOR=$((MAJOR+1))
-                echo "$MAJOR.0.0" > ./.tag
+                echo "v$MAJOR.0.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(minor\|MINOR\)\]" > /dev/null; then
                 MINOR=$((MINOR+1))
-                echo "$MAJOR.$MINOR.0" > ./.tag
+                echo "v$MAJOR.$MINOR.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(patch\|PATCH\)\]" > /dev/null; then
                 PATCH=$((PATCH+1))
-                echo "$MAJOR.$MINOR.$PATCH" > ./.tag
+                echo "v$MAJOR.$MINOR.$PATCH" > ./.tag
               fi
             else
               if echo $LAST_COMMIT | grep "\[\(major\|MAJOR\)\]" > /dev/null; then
-                echo "1.0.0" > ./.tag
+                echo "v1.0.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(minor\|MINOR\)\]" > /dev/null; then
-                echo "0.1.0" > ./.tag
+                echo "v0.1.0" > ./.tag
               elif echo $LAST_COMMIT | grep "\[\(patch\|PATCH\)\]" > /dev/null; then
-                echo "0.0.1" > ./.tag
+                echo "v0.0.1" > ./.tag
               fi
             fi
       - persist_to_workspace:
@@ -85,11 +85,7 @@ jobs:
           name: push tag and check PR body
           command: |
             mkdir -p $HOME/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
-            # add tag header if not exists
             TAG=`cat ./.tag`
-            if [[ $TAG != v* ]]; then
-              TAG="v$TAG"
-            fi
             if [ ! -z "$TAG" ]; then
               echo $TAG
               git tag $TAG
