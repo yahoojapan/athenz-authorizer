@@ -1,4 +1,4 @@
-module github.com/yahoojapan/athenz-authorizer
+module github.com/yahoojapan/athenz-authorizer/v2
 
 go 1.12
 
