@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
-	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v2/internal/url"
+	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
 var (

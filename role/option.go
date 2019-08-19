@@ -17,8 +17,8 @@ limitations under the License.
 package role
 
 import (
-	"github.com/yahoojapan/athenz-authorizer/jwk"
-	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
 var (

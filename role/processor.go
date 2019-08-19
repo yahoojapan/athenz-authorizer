@@ -21,8 +21,8 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/jwk"
-	"github.com/yahoojapan/athenz-authorizer/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
 // Processor represents the role token parser interface.
