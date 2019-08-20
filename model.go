@@ -15,6 +15,7 @@ limitations under the License.
 */
 package authorizerd
 
+/*
 type signedPolicy struct {
 	KeyID            string `json:"keyId"`
 	Signature        string `json:"signature"`
@@ -38,3 +39,4 @@ type signedPolicy struct {
 		ZmsSignature string `json:"zmsSignature"`
 	} `json:"signedPolicyData"`
 }
+*/

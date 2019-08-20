@@ -2,7 +2,7 @@
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![release](https://img.shields.io/github/release/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://github.com/yahoojapan/athenz-authorizer/releases/latest) [![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer) [![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer) [![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer) [![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=yahoojapan/athenz-authorizer&amp;utm_campaign=Badge_Grade) [![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
 ## What is Athenz authorizer
 
-Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authenication and authorization check of user request.
+Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authentication and authorization check of user request.
 
 ![Overview](./doc/policy_updater_overview.png)
 
@@ -33,7 +33,7 @@ go func() {
 
 // Verify role token
 if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
-    // token not authorizated
+    // token not authorized
 }
 ```
 
@@ -49,9 +49,9 @@ Athenz pubkey daemon (pubkeyd) is responsible for periodically update the Athenz
 
 ### Athenz policy daemon
 
-Athenz policy daemon (policyd) is responsible for periodically update the policy data of specified Athenz domain from Athenz server. The received policy data will be verified using the public key got from pubkeyd, and cache into memory. Whenever user requesting for the access check, the verification check will be used instead of asking Athenz server everytime.
+Athenz policy daemon (policyd) is responsible for periodically update the policy data of specified Athenz domain from Athenz server. The received policy data will be verified using the public key got from pubkeyd, and cache into memory. Whenever user requesting for the access check, the verification check will be used instead of asking Athenz server every time.
 
-## Configuratrion
+## Configuration
 
 The authorizer uses functional options pattern to initialize the instance. All the options are defined [here](./option.go).
 
@@ -67,7 +67,6 @@ The authorizer uses functional options pattern to initialize the instance. All t
 | PubkeyEtagFlushDur        | ETag cache purge duration                                                                                           | 84 Hours                | No       |                        |
 | PolicyRefreshDuration     | The refresh duration to update Athenz policy data                                                                   | 30 Minutes              | No       |                        |
 | PolicyExpireMargin        | The expire margin to update the policy data. It forces update the policy data before the policy expiration margin. | 3 Hours                 | No       |                        |
-| PolicyEtagFlushDur        | Policy data cache purge duration                                                                                    | 12 Hours                | No       |                        |
 
 ## License
 

@@ -73,7 +73,6 @@ type authorizer struct {
 	athenzDomains          []string
 	policyRefreshDuration  string
 	policyErrRetryInterval string
-	policyEtagFlushDur     string
 
 	// jwkd parameters
 	disableJwkd         bool
@@ -126,7 +125,6 @@ func New(opts ...Option) (Authorizerd, error) {
 	if !prov.disablePolicyd {
 		if prov.policyd, err = policy.New(
 			policy.WithExpireMargin(prov.policyExpireMargin),
-			policy.WithEtagFlushDuration(prov.policyEtagFlushDur),
 			policy.WithAthenzURL(prov.athenzURL),
 			policy.WithAthenzDomains(prov.athenzDomains...),
 			policy.WithRefreshDuration(prov.policyRefreshDuration),
@@ -259,7 +257,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 }
 
 func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
-	dr := make([]string, 0, 2)
+	var dr []string
 	drcheck := make(map[string]struct{})
 	domainRoles := make(map[string][]string)
 	for _, cert := range peerCerts {

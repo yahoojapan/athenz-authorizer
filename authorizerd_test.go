@@ -503,7 +503,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -695,7 +694,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {
@@ -736,7 +734,6 @@ func Test_authorizer_verify(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -772,7 +769,6 @@ func Test_authorizer_verify(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
@@ -799,7 +795,6 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx       context.Context
@@ -971,7 +966,6 @@ bu80CwTnWhmdBo36Ig==
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -998,7 +992,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -1039,7 +1032,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)

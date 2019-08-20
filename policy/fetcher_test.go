@@ -263,7 +263,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 		wantPolicyCache *taggedPolicy
 		wantErrStr      string
 	}
-	mockSignedPolicyVerifier := func(sp *SignedPolicy) error {
+	dummySignedPolicyVerifier := func(sp *SignedPolicy) error {
 		return sp.Verify(func(e pubkey.AthenzEnv, id string) authcore.Verifier {
 			return VerifierMock{
 				VerifyFunc: func(d, s string) error {
@@ -364,7 +364,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				retryMaxCount: 3,
 				domain:        domain,
 				athenzURL:     url,
-				spVerifier:    mockSignedPolicyVerifier,
+				spVerifier:    dummySignedPolicyVerifier,
 				client:        client,
 				policyCache:   policyCache,
 			}
@@ -445,7 +445,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				retryMaxCount: 3,
 				domain:        domain,
 				athenzURL:     url,
-				spVerifier:    mockSignedPolicyVerifier,
+				spVerifier:    dummySignedPolicyVerifier,
 				client:        client,
 				policyCache:   policyCache,
 			}
@@ -507,7 +507,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				retryMaxCount: 3,
 				domain:        domain,
 				athenzURL:     url,
-				spVerifier:    mockSignedPolicyVerifier,
+				spVerifier:    dummySignedPolicyVerifier,
 				client:        client,
 				policyCache:   policyCache,
 			}
@@ -588,7 +588,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				retryMaxCount: 3,
 				domain:        domain,
 				athenzURL:     url,
-				spVerifier:    mockSignedPolicyVerifier,
+				spVerifier:    dummySignedPolicyVerifier,
 				client:        client,
 				policyCache:   policyCache,
 			}
@@ -650,7 +650,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				retryMaxCount: 3,
 				domain:        domain,
 				athenzURL:     url,
-				spVerifier:    mockSignedPolicyVerifier,
+				spVerifier:    dummySignedPolicyVerifier,
 				client:        client,
 				policyCache:   policyCache,
 			}
@@ -827,7 +827,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.fields = fields{
 				domain:      domain,
 				athenzURL:   url,
-				spVerifier:  mockSignedPolicyVerifier,
+				spVerifier:  dummySignedPolicyVerifier,
 				client:      client,
 				policyCache: policyCache,
 			}
@@ -858,7 +858,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.fields = fields{
 				domain:      domain,
 				athenzURL:   url,
-				spVerifier:  mockSignedPolicyVerifier,
+				spVerifier:  dummySignedPolicyVerifier,
 				client:      client,
 				policyCache: policyCache,
 			}
@@ -889,7 +889,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.fields = fields{
 				domain:      domain,
 				athenzURL:   url,
-				spVerifier:  mockSignedPolicyVerifier,
+				spVerifier:  dummySignedPolicyVerifier,
 				client:      client,
 				policyCache: policyCache,
 			}
@@ -975,7 +975,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			t.name = "success, no retry"
 			var requestCount uint32
 
-			// Fetch mock
+			// HTTP response
 			expireMargin := time.Hour
 			retryInterval := time.Minute
 			retryMaxCount := 0
@@ -1034,7 +1034,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			t.name = "success, after retry"
 			var requestCount uint32
 
-			// Fetch mock
+			// HTTP response
 			expireMargin := time.Hour
 			retryInterval := 100 * time.Millisecond
 			retryMaxCount := 2
@@ -1110,7 +1110,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		func() (t test) {
 			t.name = "all fail, return cached policy"
 
-			// Fetch mock
+			// HTTP response
 			expireMargin := time.Hour
 			retryInterval := time.Millisecond
 			retryMaxCount := 2
@@ -1164,7 +1164,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		func() (t test) {
 			t.name = "retryMaxCount < 0"
 
-			// Fetch mock
+			// HTTP response
 			expireMargin := time.Hour
 			retryInterval := time.Millisecond
 			retryMaxCount := -1
