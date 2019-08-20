@@ -48,32 +48,22 @@ type policyd struct {
 	policyExpiredDuration time.Duration
 
 	refreshDuration time.Duration
-	//flushDur time.Duration
 	errRetryInterval time.Duration
 
 	pkp pubkey.Provider
-
-	etagCache    gache.Gache
-	etagFlushDur time.Duration
 
 	// www.athenz.com/zts/v1
 	athenzURL     string
 	athenzDomains []string
 
 	client   *http.Client
-	fetchers map[string]Fetcher
-}
-
-type etagCache struct {
-	etag string
-	sp   *SignedPolicy
+	fetchers map[string]Fetcher // used for concurrent read, should never be updated
 }
 
 // New represent the constructor of Policyd
 func New(opts ...Option) (Daemon, error) {
 	p := &policyd{
 		rolePolicies: gache.New(),
-		etagCache:    gache.New(),
 	}
 
 	for _, opt := range append(defaultOptions, opts...) {
@@ -118,7 +108,6 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
 			select {
@@ -164,6 +153,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	rp := gache.New()
 
 	for _, fetcher := range p.fetchers {
+		f := fetcher // for closure
 		select {
 		case <-ctx.Done():
 			glg.Info("Update policy interrupted")
@@ -175,7 +165,7 @@ func (p *policyd) Update(ctx context.Context) error {
 					glg.Info("Update policy interrupted")
 					return ctx.Err()
 				default:
-					return fetchAndMergePolicy(ctx, rp, fetcher)
+					return fetchAndCachePolicy(ctx, rp, f)
 				}
 			})
 		}
@@ -189,10 +179,11 @@ func (p *policyd) Update(ctx context.Context) error {
 		EnableExpiredHook().
 		SetExpiredHook(func(ctx context.Context, key string) {
 			// key = <domain>:role.<role>
-			fetchAndMergePolicy(ctx, p.rolePolicies, p.fetchers[strings.Split(key, ":role.")[0]])
+			fetchAndCachePolicy(ctx, p.rolePolicies, p.fetchers[strings.Split(key, ":role.")[0]])
 		})
 
 	p.rolePolicies, rp = rp, p.rolePolicies
+	glg.Debugf("tmp cache becomes effective")
 	rp.Stop()
 	rp.Clear()
 
@@ -254,8 +245,16 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func fetchAndMergePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
-	sp, fetchErr := f.FetchWithRetry(ctx)
+func fetchAndCachePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
+	sp, err := f.FetchWithRetry(ctx)
+	if err != nil {
+		errMsg := "fetch policy fail"
+		glg.Debugf("%s, error: %v", errMsg, err)
+		if sp == nil {
+			return errors.Wrap(err, errMsg)
+		}
+	}
+
 	glg.DebugFunc(func() string {
 		rawpol, _ := json.Marshal(sp)
 		return fmt.Sprintf("will merge policy, domain: %s, body: %s", f.Domain(), (string)(rawpol))
@@ -267,11 +266,6 @@ func fetchAndMergePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
 		return errors.Wrap(err, errMsg)
 	}
 
-	if fetchErr != nil {
-		errMsg := "fetch policy fail"
-		glg.Debugf("%s, error: %v", errMsg, fetchErr)
-		// return errors.Wrap(fetchErr, errMsg)
-	}
 	return nil
 }
 
@@ -328,7 +322,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		}
 		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(fastime.Now())))
 
-		glg.Debugf("added assertion to the cache: %+v", ass)
+		glg.Debugf("added assertion to the tmp cache: %+v", ass)
 		return true
 	})
 	if retErr != nil {
