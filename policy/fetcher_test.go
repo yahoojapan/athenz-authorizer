@@ -694,7 +694,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// want objects
 			t.want = nil
 			t.wantPolicyCache = &taggedPolicy{ctime: fastime.Now()}
-			t.wantErrStr = `fetch policy HTTP request fail: Get https://non-existing-domain/domain/dummyDomain/signed_policy_data: dial tcp: lookup non-existing-domain: no such host`
+			t.wantErrStr = `fetch policy HTTP request fail: Get https://127.0.0.1/api/domain/dummyDomain/signed_policy_data: dial tcp 127.0.0.1:443: connect: connection refused`
 
 			// test input
 			var policyCache atomic.Value
@@ -704,7 +704,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				domain:      domain,
-				athenzURL:   "non-existing-domain",
+				athenzURL:   "127.0.0.1/api",
 				client:      client,
 				policyCache: policyCache,
 			}
