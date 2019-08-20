@@ -98,3 +98,4 @@ Note that only for contributions to the garm repository on the [GitHub](https://
 - [kevindiu](https://github.com/kevindiu)
 - [TakuyaMatsu](https://github.com/TakuyaMatsu)
 - [tatyano](https://github.com/tatyano)
+- [WindzCUHK](https://github.com/WindzCUHK)

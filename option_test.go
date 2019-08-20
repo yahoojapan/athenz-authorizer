@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/kpango/gache"
-	urlutil "github.com/yahoojapan/athenz-authorizer/internal/url"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v2/internal/url"
 )
 
 func TestWithEnablePubkeyd(t *testing.T) {
