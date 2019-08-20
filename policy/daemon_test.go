@@ -17,8 +17,6 @@ limitations under the License.
 package policy
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/go-cmp/cmp"
 	"context"
 	"fmt"
 	"math"
@@ -29,6 +27,8 @@ import (
 	"time"
 
 	"github.com/ardielle/ardielle-go/rdl"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"

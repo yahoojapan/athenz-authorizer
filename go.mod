@@ -3,6 +3,7 @@ module github.com/yahoojapan/athenz-authorizer/v2
 go 1.12
 
 require (
+	bou.ke/monkey v1.0.1 // indirect
 	github.com/ardielle/ardielle-go v1.5.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/go-cmp v0.3.1
