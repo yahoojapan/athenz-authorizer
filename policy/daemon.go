@@ -47,7 +47,7 @@ type policyd struct {
 	rolePolicies          gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
 	policyExpiredDuration time.Duration
 
-	refreshDuration time.Duration
+	refreshDuration  time.Duration
 	errRetryInterval time.Duration
 
 	pkp pubkey.Provider

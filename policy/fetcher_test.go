@@ -17,7 +17,6 @@ limitations under the License.
 package policy
 
 import (
-	"unsafe"
 	"context"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/ardielle/ardielle-go/rdl"
 	"github.com/kpango/fastime"

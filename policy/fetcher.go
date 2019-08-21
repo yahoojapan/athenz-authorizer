@@ -17,7 +17,6 @@ limitations under the License.
 package policy
 
 import (
-	"unsafe"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,6 +25,7 @@ import (
 	"net/http"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/kpango/fastime"
 	"github.com/kpango/glg"
