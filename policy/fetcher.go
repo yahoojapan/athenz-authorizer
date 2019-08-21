@@ -35,7 +35,7 @@ import (
 // SignedPolicyVerifier type defines the function signature to verify a signed policy.
 type SignedPolicyVerifier func(*SignedPolicy) error
 
-// Fetcher represents a daemon for user to verify the role token
+// Fetcher represents fetcher object for fetching signed policy
 type Fetcher interface {
 	Domain() string
 	Fetch(context.Context) (*SignedPolicy, error)
@@ -67,11 +67,12 @@ type taggedPolicy struct {
 	ctime      time.Time
 }
 
+// Domain returns the fetcher domain
 func (f *fetcher) Domain() string {
 	return f.domain
 }
 
-// Fetch fetches the policy. When calling concurrently, it is not guarantee that the cache will always keep the latest version.
+// Fetch fetches the policy. When calling concurrently, it is not guarantee that the cache will always have the latest version.
 func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	glg.Infof("will fetch policy for domain: %s", f.domain)
 	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
@@ -149,6 +150,7 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	return sp, nil
 }
 
+// FetchWithRetry fetches policy with retry. Returns cached policy if all retries failed too.
 func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 	var lastErr error
 	for i := -1; i < f.retryMaxCount; i++ {
