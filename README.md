@@ -66,7 +66,7 @@ The authorizer uses functional options pattern to initialize the instance. All t
 | PubkeyEtagExpTime         | ETag cache TTL of Athenz public key  data                                                                           | 168 Hours (1 Week)      | No       |                        |
 | PubkeyEtagFlushDur        | ETag cache purge duration                                                                                           | 84 Hours                | No       |                        |
 | PolicyRefreshDuration     | The refresh duration to update Athenz policy data                                                                   | 30 Minutes              | No       |                        |
-| PolicyExpireMargin        | The expire margin to update the policy data. It forces update the policy data before the policy expiration margin. | 3 Hours                 | No       |                        |
+| PolicyExpireMargin        | The expire margin to update the policy data. It forces update the policy data before the policy expiration margin.  | 3 Hours                 | No       |                        |
 
 ## License
 
