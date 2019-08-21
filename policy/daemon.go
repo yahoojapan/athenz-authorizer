@@ -86,7 +86,6 @@ func New(opts ...Option) (Daemon, error) {
 			},
 			client: p.client,
 		}
-		f.Init()
 		p.fetchers[domain] = &f
 	}
 

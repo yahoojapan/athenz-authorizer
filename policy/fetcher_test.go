@@ -17,6 +17,7 @@ limitations under the License.
 package policy
 
 import (
+	"unsafe"
 	"context"
 	"fmt"
 	"io"
@@ -122,82 +123,6 @@ func Test_flushAndClose(t *testing.T) {
 	}
 }
 
-func Test_fetcher_Init(t *testing.T) {
-	type fields struct {
-		domain        string
-		expireMargin  time.Duration
-		retryInterval time.Duration
-		retryMaxCount int
-		athenzURL     string
-		spVerifier    SignedPolicyVerifier
-		client        *http.Client
-		policyCache   atomic.Value
-	}
-	tests := []struct {
-		name      string
-		fields    fields
-		checkFunc func(*fetcher) error
-	}{
-		{
-			name:   "policy cache initialize",
-			fields: fields{},
-			checkFunc: func(got *fetcher) error {
-				gotCache := got.policyCache.Load()
-				if gotCache == nil {
-					return errors.New("policy cache == nil")
-				}
-				tp := gotCache.(*taggedPolicy)
-				if tp.etagExpiry != (time.Time{}) {
-					return errors.New("policy cache etagExpiry NOT initialized")
-				}
-				if fastime.Now().Add(time.Second).Before(tp.ctime) {
-					return errors.New("policy cache ctime NOT initialized")
-				}
-				return nil
-			},
-		},
-		{
-			name: "initialized policy cache is not overwritten",
-			fields: fields{
-				policyCache: func() (v atomic.Value) {
-					v.Store(&taggedPolicy{etag: "etag-139"})
-					return v
-				}(),
-			},
-			checkFunc: func(got *fetcher) error {
-				gotCache := got.policyCache.Load()
-				if gotCache == nil {
-					return errors.New("policy cache == nil")
-				}
-				tp := gotCache.(*taggedPolicy)
-				wantEtag := "etag-139"
-				if tp.etag != wantEtag {
-					return fmt.Errorf("cached tp etag = %v, want %v", tp.etag, wantEtag)
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &fetcher{
-				domain:        tt.fields.domain,
-				expireMargin:  tt.fields.expireMargin,
-				retryInterval: tt.fields.retryInterval,
-				retryMaxCount: tt.fields.retryMaxCount,
-				athenzURL:     tt.fields.athenzURL,
-				spVerifier:    tt.fields.spVerifier,
-				client:        tt.fields.client,
-				policyCache:   tt.fields.policyCache,
-			}
-			f.Init()
-			err := tt.checkFunc(f)
-			if err != nil {
-				t.Errorf("fetcher.FetchWithRetry(), %v", err)
-			}
-		})
-	}
-}
 func Test_fetcher_Domain(t *testing.T) {
 	type fields struct {
 		expireMargin  time.Duration
@@ -207,7 +132,7 @@ func Test_fetcher_Domain(t *testing.T) {
 		athenzURL     string
 		spVerifier    SignedPolicyVerifier
 		client        *http.Client
-		policyCache   atomic.Value
+		policyCache   unsafe.Pointer
 	}
 	tests := []struct {
 		name   string
@@ -250,7 +175,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 		athenzURL     string
 		spVerifier    SignedPolicyVerifier
 		client        *http.Client
-		policyCache   atomic.Value
+		policyCache   unsafe.Pointer
 	}
 	type args struct {
 		ctx context.Context
@@ -284,6 +209,9 @@ func Test_fetcher_Fetch(t *testing.T) {
 		return t, string(tByte), err
 	}
 	compareTaggedPolicy := func(a, b *taggedPolicy) error {
+		if a == b {
+			return nil
+		}
 		if a.etag != b.etag {
 			return errors.New("etag")
 		}
@@ -300,7 +228,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 	}
 	tests := []test{
 		func() (t test) {
-			t.name = "success, no etag"
+			t.name = "success, no cache"
 
 			// http response
 			domain := "dummyDomain"
@@ -310,6 +238,10 @@ func Test_fetcher_Fetch(t *testing.T) {
 			expires, expiresStr, err := createExpires(2 * expireMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if r.Header.Get("If-None-Match") != "" {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -353,8 +285,81 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = ""
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(&taggedPolicy{})
+			t.args = args{
+				ctx: context.Background(),
+			}
+			t.fields = fields{
+				expireMargin:  expireMargin,
+				retryInterval: time.Second,
+				retryMaxCount: 3,
+				domain:        domain,
+				athenzURL:     url,
+				spVerifier:    dummySignedPolicyVerifier,
+				client:        client,
+				// policyCache:   policyCache,
+			}
+
+			return t
+		}(),
+		func() (t test) {
+			t.name = "success, no etag"
+
+			// http response
+			domain := "dummyDomain"
+			expireMargin := time.Hour
+			etag := `"dummyEtag"`
+			zmsKeyID := "dummyZmsKeyId"
+			expires, expiresStr, err := createExpires(2 * expireMargin)
+			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if r.Header.Get("If-None-Match") != "" {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte(err.Error()))
+					return
+				}
+
+				w.Header().Add("ETag", etag)
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
+					"zmsKeyId": "%s",
+					"expires": %s
+				}}`, zmsKeyID, expiresStr)))
+			})
+
+			// want objects
+			sp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					KeyId:     "",
+					Signature: "",
+					SignedPolicyData: &util.SignedPolicyData{
+						Expires:      &rdl.Timestamp{Time: expires},
+						Modified:     nil,
+						PolicyData:   nil,
+						ZmsKeyId:     "dummyZmsKeyId",
+						ZmsSignature: "",
+					},
+				},
+			}
+			t.want = sp
+			t.wantPolicyCache = &taggedPolicy{
+				etag:       `"dummyEtag"`,
+				etagExpiry: expires.Add(-expireMargin),
+				sp:         sp,
+				ctime:      fastime.Now(),
+			}
+			t.wantErrStr = ""
+
+			// test input
+			policyCache := unsafe.Pointer(&taggedPolicy{})
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -385,15 +390,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
+				if r.Header.Get("If-None-Match") != `"dummyEtag"` {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte(err.Error()))
-					return
-				}
-
-				if r.Header.Get("If-None-Match") != `"dummyEtag"` {
-					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 
@@ -431,8 +435,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = ""
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(&taggedPolicy{
+			policyCache := unsafe.Pointer(&taggedPolicy{
 				etag:       etag,
 				etagExpiry: expires.Add(-expireMargin),
 			})
@@ -463,12 +466,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
 				if r.Header.Get("If-None-Match") == `"dummyEtag"` {
 					w.WriteHeader(http.StatusNotModified)
-				} else {
-					w.WriteHeader(http.StatusInternalServerError)
+					return
 				}
+
+				w.WriteHeader(http.StatusInternalServerError)
 			})
 
 			// want objects
@@ -496,8 +499,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = ""
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -528,15 +530,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
+				if r.Header.Get("If-None-Match") != "" {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte(err.Error()))
-					return
-				}
-
-				if r.Header.Get("If-None-Match") != "" {
-					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 
@@ -573,8 +574,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = ""
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(&taggedPolicy{
+			policyCache := unsafe.Pointer(&taggedPolicy{
 				etag:       "dummyOldEtag",
 				etagExpiry: fastime.Now().Add(-expireMargin),
 				sp:         nil,
@@ -606,12 +606,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
 				if r.Header.Get("If-None-Match") == `"dummyEtag"` {
 					w.WriteHeader(http.StatusNotModified)
-				} else {
-					w.WriteHeader(http.StatusInternalServerError)
+					return
 				}
+
+				w.WriteHeader(http.StatusInternalServerError)
 			})
 
 			// want objects
@@ -639,8 +639,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = ""
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -669,8 +668,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `create fetch policy request fail: parse https:// /domain/dummyDomain/signed_policy_data: invalid character " " in host name`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -697,8 +695,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `fetch policy HTTP request fail: Get https://127.0.0.1/api/domain/dummyDomain/signed_policy_data: dial tcp 127.0.0.1:443: connect: connection refused`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -726,8 +723,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `fetch policy HTTP response != 200 OK: Error fetching athenz policy`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -756,8 +752,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `policy decode fail: EOF`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -786,8 +781,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `invalid policy: dummy policy verify error`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -819,8 +813,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `invalid policy: policy without expiry`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -850,8 +843,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `invalid policy: policy already expired at 0001-01-01 00:00:00 +0000 UTC`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -881,8 +873,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			t.wantErrStr = `invalid policy: policy already expired at 2006-01-02 15:04:05.999 +0000 UTC`
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -919,7 +910,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				t.Errorf("fetcher.Fetch() = %v, want %v", got.SignedPolicyData, tt.want.SignedPolicyData)
 				return
 			}
-			gotPolicyCache := f.policyCache.Load().(*taggedPolicy)
+			gotPolicyCache := (*taggedPolicy)(f.policyCache)
 			if err = compareTaggedPolicy(gotPolicyCache, tt.wantPolicyCache); err != nil {
 				t.Errorf("fetcher.Fetch() policyCache = %v, want %v, error %v", gotPolicyCache, tt.wantPolicyCache, err)
 				return
@@ -937,7 +928,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		athenzURL     string
 		spVerifier    SignedPolicyVerifier
 		client        *http.Client
-		policyCache   atomic.Value
+		policyCache   unsafe.Pointer
 	}
 	type args struct {
 		ctx context.Context
@@ -956,6 +947,9 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		return srv, srv.Client(), strings.Replace(srv.URL, "https://", "", 1)
 	}
 	compareTaggedPolicy := func(a, b *taggedPolicy) error {
+		if a == b {
+			return nil
+		}
 		if a.etag != b.etag {
 			return errors.New("etag")
 		}
@@ -1012,8 +1006,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			t.cmpTP = compareTaggedPolicy
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -1089,8 +1082,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -1103,6 +1095,40 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 				spVerifier:    func(sp *SignedPolicy) error { return nil },
 				client:        client,
 				policyCache:   policyCache,
+			}
+
+			return t
+		}(),
+		func() (t test) {
+			t.name = "all fail, no policy cache"
+
+			// HTTP response
+			expireMargin := time.Hour
+			retryInterval := time.Millisecond
+			retryMaxCount := 2
+			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			})
+
+			// want objects
+			t.want = nil
+			t.wantPolicyCache = nil
+			t.wantErrStr = "no policy cache: max. retry count excess: fetch policy HTTP response != 200 OK: Error fetching athenz policy"
+			t.cmpTP = compareTaggedPolicy
+
+			// test input
+			t.args = args{
+				ctx: context.Background(),
+			}
+			t.fields = fields{
+				expireMargin:  expireMargin,
+				retryInterval: retryInterval,
+				retryMaxCount: retryMaxCount,
+				domain:        "dummyDomain",
+				athenzURL:     url,
+				spVerifier:    func(sp *SignedPolicy) error { return nil },
+				client:        client,
+				// policyCache:   policyCache,
 			}
 
 			return t
@@ -1143,8 +1169,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			t.cmpTP = compareTaggedPolicy
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -1194,8 +1219,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			t.cmpTP = compareTaggedPolicy
 
 			// test input
-			var policyCache atomic.Value
-			policyCache.Store(t.wantPolicyCache)
+			policyCache := unsafe.Pointer(t.wantPolicyCache)
 			t.args = args{
 				ctx: context.Background(),
 			}
@@ -1231,7 +1255,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("fetcher.FetchWithRetry() = %v, want %v", got, tt.want)
 			}
-			gotPolicyCache := f.policyCache.Load().(*taggedPolicy)
+			gotPolicyCache := (*taggedPolicy)(f.policyCache)
 			if err = tt.cmpTP(gotPolicyCache, tt.wantPolicyCache); err != nil {
 				t.Errorf("fetcher.FetchWithRetry() policyCache = %v, want %v, error %v", gotPolicyCache, tt.wantPolicyCache, err)
 				return

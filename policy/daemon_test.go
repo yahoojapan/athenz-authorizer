@@ -606,6 +606,7 @@ func Test_policyd_Update(t *testing.T) {
 					},
 				}
 			}
+			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*30))
 			domains := make([]string, 100)
 			fetchers := make(map[string]Fetcher, 100)
 			for i := 0; i < 100; i++ {
@@ -614,16 +615,16 @@ func Test_policyd_Update(t *testing.T) {
 				fetchers[d] = &fetcherMock{
 					domainMock: func() string { return d },
 					fetchWithRetryMock: func(ctx context.Context) (*SignedPolicy, error) {
-						if d == "discardDom0" {
+						if d == "discardDom" + "0" {
 							// blocking
 							<-ctx.Done()
+							cancel()
 							return nil, ctx.Err()
 						}
 						return createSp(d), nil
 					},
 				}
 			}
-			ctx, _ := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*30))
 
 			// prepare test
 			t.fields = fields{

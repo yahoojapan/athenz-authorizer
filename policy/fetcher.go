@@ -17,6 +17,7 @@ limitations under the License.
 package policy
 
 import (
+	"unsafe"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -56,7 +57,7 @@ type fetcher struct {
 	spVerifier SignedPolicyVerifier
 
 	client      *http.Client
-	policyCache atomic.Value
+	policyCache unsafe.Pointer
 }
 
 type taggedPolicy struct {
@@ -64,16 +65,6 @@ type taggedPolicy struct {
 	etagExpiry time.Time
 	sp         *SignedPolicy
 	ctime      time.Time
-}
-
-func (f *fetcher) Init() {
-	// prevent atomic.Value.Load() returns nil
-	if f.policyCache.Load() == nil {
-		f.policyCache.Store(&taggedPolicy{
-			etagExpiry: time.Time{},
-			ctime:      fastime.Now(),
-		})
-	}
 }
 
 func (f *fetcher) Domain() string {
@@ -95,10 +86,13 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	}
 
 	// etag header
-	tp := f.policyCache.Load().(*taggedPolicy)
-	if tp.etag != "" && tp.etagExpiry.After(fastime.Now()) {
-		glg.Debugf("request on domain: %s, with etag: %s", f.domain, tp.etag)
-		req.Header.Set("If-None-Match", tp.etag)
+	var tp *taggedPolicy
+	if f.policyCache != nil {
+		tp = (*taggedPolicy)(atomic.LoadPointer(&f.policyCache))
+		if tp.etag != "" && tp.etagExpiry.After(fastime.Now()) {
+			glg.Debugf("request on domain: %s, with etag: %s", f.domain, tp.etag)
+			req.Header.Set("If-None-Match", tp.etag)
+		}
 	}
 
 	res, err := f.client.Do(req.WithContext(ctx))
@@ -150,7 +144,7 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 		ctime:      fastime.Now(),
 	}
 	glg.Debugf("set policy cache for domain: %s, policy: %v", f.domain, newTp)
-	f.policyCache.Store(&newTp)
+	atomic.StorePointer(&f.policyCache, unsafe.Pointer(&newTp))
 
 	return sp, nil
 }
@@ -170,9 +164,12 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 	errMsg := "max. retry count excess"
 	glg.Info("Will use policy cache, since: %s, domain: %s, error: %v", errMsg, f.domain, lastErr)
 	if lastErr == nil {
-		lastErr = errors.New(fmt.Sprintf("retryMaxCount %v", f.retryMaxCount))
+		lastErr = fmt.Errorf("retryMaxCount %v", f.retryMaxCount)
 	}
-	return f.policyCache.Load().(*taggedPolicy).sp, errors.Wrap(lastErr, errMsg)
+	if f.policyCache == nil {
+		return nil, errors.Wrap(errors.Wrap(lastErr, errMsg), "no policy cache")
+	}
+	return (*taggedPolicy)(atomic.LoadPointer(&f.policyCache)).sp, errors.Wrap(lastErr, errMsg)
 }
 
 // flushAndClose helps to flush and close a ReadCloser. Used for request body internal.
