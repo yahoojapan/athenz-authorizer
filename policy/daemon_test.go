@@ -37,54 +37,93 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	gacheCmp := cmp.Comparer(func(x, y gache.Gache) bool {
+		ctx := context.Background()
+		return cmp.Equal(x.ToRawMap(ctx), y.ToRawMap(ctx), cmpopts.EquateEmpty())
+	})
+	fetcherCmp := cmp.Comparer(func(x, y Fetcher) bool {
+		return x.Domain() == y.Domain()
+	})
 	type args struct {
 		opts []Option
 	}
 	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(got Daemon) error
-		wantErr   bool
+		name    string
+		args    args
+		want    Daemon
+		wantErr string
 	}{
 		{
 			name: "new success",
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got Daemon) error {
-				p := got.(*policyd)
-				if p.expireMargin != time.Hour*3 {
-					return errors.New("invalid expireMargin")
-				}
-				return nil
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          3 * time.Hour,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
 			},
+			wantErr: "",
 		},
 		{
 			name: "new success with options",
 			args: args{
 				opts: []Option{WithExpireMargin("5s")},
 			},
-			checkFunc: func(got Daemon) error {
-				p := got.(*policyd)
-				if p.expireMargin != time.Second*5 {
-					return errors.New("invalid expireMargin")
-				}
-				return nil
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          5 * time.Second,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
 			},
+			wantErr: "",
+		},
+		{
+			name: "new success, domains with fetchers",
+			args: args{
+				opts: []Option{WithAthenzDomains("dom1", "dom2")},
+			},
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          3 * time.Hour,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
+				athenzDomains:         []string{"dom1", "dom2"},
+				fetchers: map[string]Fetcher{
+					"dom1": &fetcher{domain: "dom1"},
+					"dom2": &fetcher{domain: "dom2"},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "new fail, option error",
+			args: args{
+				opts: []Option{
+					func(*policyd) error { return errors.New("option error") },
+				},
+			},
+			want:    nil,
+			wantErr: "error create policyd: option error",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := New(tt.args.opts...)
-			if (err != nil) != tt.wantErr {
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
-			if tt.checkFunc != nil {
-				if err := tt.checkFunc(got); err != nil {
-					t.Errorf("New() = %v", err)
-				}
+			options := []cmp.Option{gacheCmp, fetcherCmp, cmp.AllowUnexported(policyd{}), cmpopts.EquateEmpty()}
+			if !cmp.Equal(got, tt.want, options...) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -603,7 +642,15 @@ func Test_policyd_Update(t *testing.T) {
 					},
 				}
 			}
-			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond))
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500) // timeout should be long enough to enter Fetch()
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Hour):
+					cancel()
+				}
+			}()
 			domains := make([]string, 100)
 			fetchers := make(map[string]Fetcher, 100)
 			for i := 0; i < 100; i++ {
@@ -623,8 +670,6 @@ func Test_policyd_Update(t *testing.T) {
 			}
 
 			// prepare test
-			time.Sleep(time.Millisecond * 2)	// pass timeout
-			cancel()
 			t.fields = fields{
 				rolePolicies:          gache.New(),
 				policyExpiredDuration: time.Hour,
@@ -636,7 +681,7 @@ func Test_policyd_Update(t *testing.T) {
 			}
 
 			// want
-			t.wantErr = context.DeadlineExceeded.Error()
+			t.wantErr = "fetch policy fail: " + context.DeadlineExceeded.Error()
 			t.wantRps = make(map[string]interface{})
 			return t
 		}(),
@@ -815,6 +860,24 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 				resource: "dummyRes",
 			},
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check policy, context cancel",
+			fields: fields{
+				rolePolicies: gache.New(),
+			},
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					return ctx
+				}(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: context.Canceled,
 		},
 		/*
 			test{
@@ -1002,7 +1065,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 			time.Sleep(time.Millisecond * 500) // wait for some background process to cleanup
 			lenEnd := runtime.Stack(b, true)
 			// t.Log(string(b[:lenEnd]))
-			if math.Abs(float64(lenStart-lenEnd)) > 10 {	// to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference
+			if math.Abs(float64(lenStart-lenEnd)) > 10 { // to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference
 				t.Errorf("go routine leak:\n%v", cmp.Diff(oldStack, string(b[:lenEnd])))
 			}
 		})
@@ -1070,8 +1133,8 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g: gache.New(),
-				f: fetcher,
+				g:   gache.New(),
+				f:   fetcher,
 			}
 
 			// want
@@ -1097,8 +1160,8 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g: gache.New(),
-				f: fetcher,
+				g:   gache.New(),
+				f:   fetcher,
 			}
 
 			// want
@@ -1123,8 +1186,8 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g: gache.New(),
-				f: fetcher,
+				g:   gache.New(),
+				f:   fetcher,
 			}
 
 			// want
@@ -1152,8 +1215,8 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			sp.SignedPolicyData.PolicyData.Policies[0].Assertions[0].Resource = "invalid-resource"
 			t.args = args{
 				ctx: ctx,
-				g: gache.New(),
-				f: fetcher,
+				g:   gache.New(),
+				f:   fetcher,
 			}
 
 			// want

@@ -48,7 +48,6 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	res := domres[1]
 
 	reg, err := regexp.Compile("^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$")
-
 	if err != nil {
 		return nil, errors.Wrap(err, "assertion format not correct")
 	}

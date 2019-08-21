@@ -100,6 +100,15 @@ func TestNewAssertion(t *testing.T) {
 			},
 			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
+		{
+			name: "invalid regex",
+			args: args{
+				resource: "dom:res(",
+				action:   "act",
+				effect:   "deny",
+			},
+			wantErr: errors.New("assertion format not correct: error parsing regexp: missing closing ): `^act-res($`"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

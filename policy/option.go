@@ -84,7 +84,7 @@ func WithPolicyExpiredDuration(t string) Option {
 		}
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid flush duration")
 		}
 		pol.policyExpiredDuration = rd
 		return nil

@@ -212,6 +212,72 @@ func TestWithAthenzDomains(t *testing.T) {
 	}
 }
 
+func TestWithPolicyExpiredDuration(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				"1h",
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if pol.policyExpiredDuration != time.Hour {
+					return fmt.Errorf("Error")
+				}
+
+				return nil
+			},
+		}, {
+			name: "invalid format",
+			args: args{
+				"dummy",
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err == nil {
+					return fmt.Errorf("expected error, but not return")
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "empty value",
+			args: args{
+				"",
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(pol, &policyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", pol)
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyExpiredDuration(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyExpiredDuration() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestWithRefreshDuration(t *testing.T) {
 	type args struct {
 		t string
