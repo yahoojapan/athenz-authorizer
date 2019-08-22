@@ -1290,7 +1290,7 @@ func Test_taggedPolicy_String(t *testing.T) {
 				ctime:      time.Unix(1566454350, 167000000),
 				// sp: &SignedPolicy{},
 			},
-			want: `{ ctime: 2019-08-22 15:12:30.167 +0900 JST, etag: "etag", etagExpiry: 2019-09-03 04:59:10.167 +0900 JST, sp.domain:  }`,
+			want: `{ ctime: 2019-08-22 06:12:30.167 +0000 UTC, etag: "etag", etagExpiry: 2019-09-02 19:59:10.167 +0000 UTC, sp.domain:  }`,
 		},
 		{
 			name: "policy without data",

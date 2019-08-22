@@ -179,7 +179,7 @@ func (t *taggedPolicy) String() string {
 	if t.sp != nil && t.sp.SignedPolicyData != nil && t.sp.SignedPolicyData.PolicyData != nil {
 		policyDomain = t.sp.SignedPolicyData.PolicyData.Domain
 	}
-	return fmt.Sprintf("{ ctime: %s, etag: %s, etagExpiry: %s, sp.domain: %s }", t.ctime.String(), t.etag, t.etagExpiry.String(), policyDomain)
+	return fmt.Sprintf("{ ctime: %s, etag: %s, etagExpiry: %s, sp.domain: %s }", t.ctime.UTC().String(), t.etag, t.etagExpiry.UTC().String(), policyDomain)
 }
 
 // flushAndClose helps to flush and close a ReadCloser. Used for request body internal.
