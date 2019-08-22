@@ -138,14 +138,14 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	// set policy cache
 	etag := res.Header.Get("ETag")
 	etagExpiry := sp.SignedPolicyData.Expires.Time.Add(-f.expireMargin)
-	newTp := taggedPolicy{
+	newTp := &taggedPolicy{
 		etag:       etag,
 		etagExpiry: etagExpiry,
 		sp:         sp,
 		ctime:      fastime.Now(),
 	}
-	glg.Debugf("set policy cache for domain: %s, policy: %v", f.domain, newTp)
-	atomic.StorePointer(&f.policyCache, unsafe.Pointer(&newTp))
+	glg.Debugf("set policy cache for domain: %s, policy: %s", f.domain, newTp)
+	atomic.StorePointer(&f.policyCache, unsafe.Pointer(newTp))
 
 	return sp, nil
 }
@@ -172,6 +172,14 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 		return nil, errors.Wrap(errors.Wrap(lastErr, errMsg), "no policy cache")
 	}
 	return (*taggedPolicy)(atomic.LoadPointer(&f.policyCache)).sp, errors.Wrap(lastErr, errMsg)
+}
+
+func (t *taggedPolicy) String() string {
+	var policyDomain string
+	if t.sp != nil && t.sp.SignedPolicyData != nil && t.sp.SignedPolicyData.PolicyData != nil {
+		policyDomain = t.sp.SignedPolicyData.PolicyData.Domain
+	}
+	return fmt.Sprintf("{ ctime: %s, etag: %s, etagExpiry: %s, sp.domain: %s }", t.ctime.String(), t.etag, t.etagExpiry.String(), policyDomain)
 }
 
 // flushAndClose helps to flush and close a ReadCloser. Used for request body internal.

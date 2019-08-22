@@ -1264,3 +1264,74 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 	}
 
 }
+
+func Test_taggedPolicy_String(t *testing.T) {
+	type fields struct {
+		etag       string
+		etagExpiry time.Time
+		sp         *SignedPolicy
+		ctime      time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "default value",
+			fields: fields{},
+			want:   `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: , etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
+		},
+		{
+			name: "custom value",
+			fields: fields{
+				etag:       `"etag"`,
+				etagExpiry: time.Unix(1567454350, 167000000),
+				ctime:      time.Unix(1566454350, 167000000),
+				// sp: &SignedPolicy{},
+			},
+			want: `{ ctime: 2019-08-22 15:12:30.167 +0900 JST, etag: "etag", etagExpiry: 2019-09-03 04:59:10.167 +0900 JST, sp.domain:  }`,
+		},
+		{
+			name: "policy without data",
+			fields: fields{
+				etag: `"etag"`,
+				sp: &SignedPolicy{
+					DomainSignedPolicyData: util.DomainSignedPolicyData{
+						SignedPolicyData: &util.SignedPolicyData{
+							PolicyData: nil,
+						},
+					},
+				},
+			},
+			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: "etag", etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
+		},
+		{
+			name: "policy with data",
+			fields: fields{
+				etag: `"etag"`,
+				sp: &SignedPolicy{
+					DomainSignedPolicyData: util.DomainSignedPolicyData{
+						SignedPolicyData: &util.SignedPolicyData{
+							PolicyData: &util.PolicyData{Domain: "domain"},
+						},
+					},
+				},
+			},
+			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: "etag", etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain: domain }`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tp := &taggedPolicy{
+				etag:       tt.fields.etag,
+				etagExpiry: tt.fields.etagExpiry,
+				sp:         tt.fields.sp,
+				ctime:      tt.fields.ctime,
+			}
+			if got := tp.String(); got != tt.want {
+				t.Errorf("taggedPolicy.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

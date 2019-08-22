@@ -146,8 +146,9 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 
 // Update updates and cache policy data
 func (p *policyd) Update(ctx context.Context) error {
-	glg.Info("will update policy")
-	defer glg.Info("update policy done")
+	jobID := fastime.Now().Unix()
+	glg.Infof("[%d] will update policy", jobID)
+	defer glg.Infof("[%d] update policy done", jobID)
 	eg := errgroup.Group{}
 	rp := gache.New()
 
