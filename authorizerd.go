@@ -25,6 +25,7 @@ import (
 
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
@@ -35,6 +36,7 @@ import (
 
 // Authorizerd represents a daemon for user to verify the role token
 type Authorizerd interface {
+	Init(ctx context.Context) error
 	Start(ctx context.Context) <-chan error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
@@ -155,6 +157,28 @@ func New(opts ...Option) (Authorizerd, error) {
 		role.WithJWKProvider(jwkProvider))
 
 	return prov, nil
+}
+
+// Init initializes child daemons synchronously.
+func (a *authorizer) Init(ctx context.Context) error {
+	var eg errgroup.Group
+	if !a.disablePubkeyd {
+		eg.Go(func() error {
+			return a.pubkeyd.Update(ctx)
+		})
+	}
+	if !a.disablePolicyd {
+		eg.Go(func() error {
+			return a.policyd.Update(ctx)
+		})
+	}
+	if !a.disableJwkd {
+		eg.Go(func() error {
+			return a.jwkd.Update(ctx)
+		})
+	}
+
+	return eg.Wait()
 }
 
 // Start starts authorizer daemon.
