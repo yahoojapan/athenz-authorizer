@@ -193,31 +193,30 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 	go func() {
 		defer close(ech)
 		wg := new(sync.WaitGroup)
+		wg.Add(len(roles))
+		allowed := false
+
 		for _, role := range roles {
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
-			wg.Add(1)
 			go func(ch chan<- error) {
 				defer wg.Done()
-				select {
-				case <-cctx.Done():
-					ch <- cctx.Err()
+				asss, ok := p.rolePolicies.Get(dr)
+				if !ok {
 					return
-				default:
-					asss, ok := p.rolePolicies.Get(dr)
-					if !ok {
-						return
-					}
+				}
 
-					for _, ass := range asss.([]*Assertion) {
-						glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
-						select {
-						case <-cctx.Done():
-							ch <- cctx.Err()
-							return
-						default:
-							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
+				for _, ass := range asss.([]*Assertion) {
+					glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
+					select {
+					case <-cctx.Done():
+						ch <- cctx.Err()
+						return
+					default:
+						if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
+							if eff := ass.Effect; eff != nil {
 								ch <- ass.Effect
-								return
+							} else {
+								allowed = true
 							}
 						}
 					}
@@ -225,13 +224,21 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 			}(ech)
 		}
 		wg.Wait()
-		ech <- errors.Wrap(ErrNoMatch, "no match")
+
+		if allowed {
+			ech <- nil
+		} else {
+			ech <- errors.Wrap(ErrNoMatch, "no match")
+		}
 	}()
 
-	err := <-ech
-
-	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
-	return err
+	select {
+	case <-cctx.Done():
+		return cctx.Err()
+	case err := <-ech:
+		glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
+		return err
+	}
 }
 
 func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
