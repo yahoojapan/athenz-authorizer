@@ -695,39 +695,37 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
 		},
-		/*
-			test{
-				name: "check policy deny with multiple roles with allow and deny",
-				fields: fields{
-					rolePolicies: func() gache.Gache {
-						g := gache.New()
-						for i := 0; i < 200; i++ {
-							g.Set("dummyDom:role.dummyRole", []*Assertion{
-								func() *Assertion {
-									a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
-									return a
-								}(),
-							})
-						}
-						g.Set("dummyDom:role.dummyRole1", []*Assertion{
+		{
+			name: "check policy deny with multiple roles with allow and deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					for i := 0; i < 200; i++ {
+						g.Set("dummyDom:role.dummyRole", []*Assertion{
 							func() *Assertion {
-								a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+								a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
 								return a
 							}(),
 						})
-						return g
-					}(),
-				},
-				args: args{
-					ctx:      context.Background(),
-					domain:   "dummyDom",
-					roles:    []string{"dummyRole", "dummyRole1"},
-					action:   "dummyAct",
-					resource: "dummyRes",
-				},
-				want: errors.New("policy deny: Access Check was explicitly denied"),
+					}
+					g.Set("dummyDom:role.dummyRole1", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+							return a
+						}(),
+					})
+					return g
+				}(),
 			},
-		*/
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("policy deny: Access Check was explicitly denied"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
