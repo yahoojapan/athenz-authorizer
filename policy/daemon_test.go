@@ -700,20 +700,43 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 			fields: fields{
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
+					asss := make([]*Assertion, 0, 200)
+					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
 					for i := 0; i < 200; i++ {
-						g.Set("dummyDom:role.dummyRole", []*Assertion{
-							func() *Assertion {
-								a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
-								return a
-							}(),
-						})
+						asss = append(asss, a)
 					}
+					g.Set("dummyDom:role.dummyRole", asss)
 					g.Set("dummyDom:role.dummyRole1", []*Assertion{
 						func() *Assertion {
 							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
 							return a
 						}(),
 					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("policy deny: Access Check was explicitly denied"),
+		},
+		{
+			name: "check policy deny with single role with allow and deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					asss := make([]*Assertion, 0, 200)
+					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+					for i := 0; i < 199; i++ {
+						asss = append(asss, a)
+					}
+					da, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
+					asss = append(asss, da)
+					g.Set("dummyDom:role.dummyRole", asss)
 					return g
 				}(),
 			},
