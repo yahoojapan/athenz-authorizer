@@ -215,6 +215,7 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 						if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
 							if eff := ass.Effect; eff != nil {
 								ch <- ass.Effect
+								return
 							} else {
 								allowed = true
 							}
