@@ -200,24 +200,30 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
 			go func(ch chan<- error) {
 				defer wg.Done()
-				asss, ok := p.rolePolicies.Get(dr)
-				if !ok {
+				select {
+				case <-cctx.Done():
+					ch <- cctx.Err()
 					return
-				}
-
-				for _, ass := range asss.([]*Assertion) {
-					glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
-					select {
-					case <-cctx.Done():
-						ch <- cctx.Err()
+				default:
+					asss, ok := p.rolePolicies.Get(dr)
+					if !ok {
 						return
-					default:
-						if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
-							if eff := ass.Effect; eff != nil {
-								ch <- ass.Effect
-								return
-							} else {
-								allowed = true
+					}
+
+					for _, ass := range asss.([]*Assertion) {
+						glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
+						select {
+						case <-cctx.Done():
+							ch <- cctx.Err()
+							return
+						default:
+							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
+								if eff := ass.Effect; eff != nil {
+									ch <- ass.Effect
+									return
+								} else {
+									allowed = true
+								}
 							}
 						}
 					}
