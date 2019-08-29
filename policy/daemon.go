@@ -228,16 +228,19 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 			}(ech)
 		}
 		wg.Wait()
-		ech <- errors.Wrap(ErrNoMatch, "no match")
 	}()
 
-	select {
-	case <-cctx.Done():
-		return cctx.Err()
-	case err := <-ech:
-		glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
-		return err
+	allowed := false
+	for err := range ech {
+		if err != nil {
+			return err
+		}
+		allowed = true
 	}
+	if allowed {
+		return nil
+	}
+	return errors.Wrap(ErrNoMatch, "no match")
 }
 
 func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
