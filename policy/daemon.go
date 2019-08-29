@@ -148,7 +148,6 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 func (p *policyd) Update(ctx context.Context) error {
 	jobID := fastime.Now().Unix()
 	glg.Infof("[%d] will update policy", jobID)
-	defer glg.Infof("[%d] update policy done", jobID)
 	eg := errgroup.Group{}
 	rp := gache.New()
 
@@ -172,6 +171,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	}
 
 	if err := eg.Wait(); err != nil {
+		glg.Warnf("[%d] update policy fail", jobID)
 		return err
 	}
 
@@ -187,6 +187,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	rp.Stop()
 	rp.Clear()
 
+	glg.Infof("[%d] update policy done", jobID)
 	return nil
 }
 
