@@ -133,7 +133,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithRefreshDuration(prov.policyRefreshDuration),
 			policy.WithErrRetryInterval(prov.policyErrRetryInterval),
 			policy.WithHTTPClient(prov.client),
-			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
+			policy.WithPubKeyProvider(pubkeyProvider),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
@@ -161,20 +161,32 @@ func New(opts ...Option) (Authorizerd, error) {
 
 // Init initializes child daemons synchronously.
 func (a *authorizer) Init(ctx context.Context) error {
-	var eg errgroup.Group
-	if !a.disablePubkeyd {
-		eg.Go(func() error {
-			return a.pubkeyd.Update(ctx)
-		})
-	}
-	if !a.disablePolicyd {
-		eg.Go(func() error {
-			return a.policyd.Update(ctx)
-		})
-	}
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		select {
+		case <-egCtx.Done():
+			return egCtx.Err()
+		default:
+			if !a.disablePubkeyd {
+				err := a.pubkeyd.Update(egCtx)
+				if err != nil {
+					return err
+				}
+			}
+			if !a.disablePolicyd {
+				return a.policyd.Update(egCtx)
+			}
+			return nil
+		}
+	})
 	if !a.disableJwkd {
 		eg.Go(func() error {
-			return a.jwkd.Update(ctx)
+			select {
+			case <-egCtx.Done():
+				return egCtx.Err()
+			default:
+				return a.jwkd.Update(egCtx)
+			}
 		})
 	}
 
