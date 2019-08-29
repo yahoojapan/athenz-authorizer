@@ -192,9 +192,10 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 
 	go func() {
 		defer close(ech)
+
 		wg := new(sync.WaitGroup)
 		wg.Add(len(roles))
-		allowed := false
+		rp := p.rolePolicies
 
 		for _, role := range roles {
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
@@ -205,7 +206,7 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 					ch <- cctx.Err()
 					return
 				default:
-					asss, ok := p.rolePolicies.Get(dr)
+					asss, ok := rp.Get(dr)
 					if !ok {
 						return
 					}
@@ -218,12 +219,8 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 							return
 						default:
 							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
-								if eff := ass.Effect; eff != nil {
-									ch <- ass.Effect
-									return
-								} else {
-									allowed = true
-								}
+								ch <- ass.Effect
+								return
 							}
 						}
 					}
@@ -231,12 +228,7 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 			}(ech)
 		}
 		wg.Wait()
-
-		if allowed {
-			ech <- nil
-		} else {
-			ech <- errors.Wrap(ErrNoMatch, "no match")
-		}
+		ech <- errors.Wrap(ErrNoMatch, "no match")
 	}()
 
 	select {
@@ -392,9 +384,13 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		}
 
 		var asss []*Assertion
-		r := ass.Role
-		if r, ok := rp.Get(r); ok {
-			asss = append(r.([]*Assertion), a)
+		if r, ok := rp.Get(ass.Role); ok {
+			asss = r.([]*Assertion)
+			if a.Effect == nil {
+				asss = append(asss, a)
+			} else {
+				asss = append([]*Assertion{a}, asss...)
+			}
 		} else {
 			asss = []*Assertion{a}
 		}

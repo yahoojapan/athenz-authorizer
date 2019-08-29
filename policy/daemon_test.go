@@ -730,12 +730,13 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 				rolePolicies: func() gache.Gache {
 					g := gache.New()
 					asss := make([]*Assertion, 0, 200)
+					da, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
 					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
+
+					asss = append(asss, da)
 					for i := 0; i < 199; i++ {
 						asss = append(asss, a)
 					}
-					da, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
-					asss = append(asss, da)
 					g.Set("dummyDom:role.dummyRole", asss)
 					return g
 				}(),
