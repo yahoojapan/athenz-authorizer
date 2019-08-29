@@ -424,8 +424,8 @@ func Test_policyd_Update(t *testing.T) {
 			}))
 			srv := httptest.NewTLSServer(handler)
 
-			domains := make([]string, 1000)
-			for i := 0; i < 1000; i++ {
+			domains := make([]string, 500)
+			for i := 0; i < 500; i++ {
 				domains[i] = fmt.Sprintf("dummyDom%d", i)
 			}
 
