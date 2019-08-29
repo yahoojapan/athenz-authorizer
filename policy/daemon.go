@@ -237,14 +237,18 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 	allowed := false
 	for err := range ech {
 		if err != nil { // denied assertion is prioritize, so return directly
+			glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
 			return err
 		}
 		allowed = true
 	}
 	if allowed {
+		glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, nil)
 		return nil
 	}
-	return errors.Wrap(ErrNoMatch, "no match")
+	err := errors.Wrap(ErrNoMatch, "no match")
+	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
+	return err
 }
 
 // GetPolicyCache returns the cached role policy data
@@ -382,6 +386,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 
 	// cache
 	var retErr error
+	now := fastime.Now()
 	assm.Range(func(k interface{}, val interface{}) bool {
 		ass := val.(*util.Assertion)
 		a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
@@ -392,8 +397,8 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		}
 
 		var asss []*Assertion
-		if r, ok := rp.Get(ass.Role); ok {
-			asss = r.([]*Assertion)
+		if p, ok := rp.Get(ass.Role); ok {
+			asss = p.([]*Assertion)
 			if a.Effect == nil {
 				asss = append(asss, a) // append allowed policies to the end of the slice
 			} else {
@@ -402,7 +407,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		} else {
 			asss = []*Assertion{a}
 		}
-		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(fastime.Now())))
+		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(now)))
 
 		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true
