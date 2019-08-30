@@ -45,24 +45,26 @@ type Daemon interface {
 }
 
 type policyd struct {
-	expireMargin          time.Duration // expire margin force update policy when the policy expire time hit the margin
-	rolePolicies          gache.Gache   //*sync.Map // map[<domain>:role.<role>][]Assertion
+	expireMargin time.Duration // expire margin force update policy when the policy expire time hit the margin
+
+	// The rolePolicies map has the format of  map[<domain>:role.<role>][]*Assertion
+	// The []*Assertion contains deny policies first, and following the allow policies
+	// When CheckPolicy function called, the []*Assertion is check by order, in current implementation the deny policy is prioritize,
+	// so we need to put the deny policies in lower index.
+	rolePolicies          gache.Gache
 	policyExpiredDuration time.Duration
 
-	refreshDuration time.Duration
-	//flushDur time.Duration
+	refreshDuration  time.Duration
 	errRetryInterval time.Duration
-
-	pkp pubkey.Provider
 
 	etagCache    gache.Gache
 	etagFlushDur time.Duration
 
-	// www.athenz.com/zts/v1
 	athenzURL     string
 	athenzDomains []string
 
 	client *http.Client
+	pkp    pubkey.Provider
 }
 
 type etagCache struct {
@@ -185,6 +187,7 @@ func (p *policyd) Update(ctx context.Context) error {
 
 // CheckPolicy checks the specified request has privilege to access the resources or not.
 // If return is nil then the request is allowed, otherwise the request is rejected.
+// Only action and resource is supporting wildcard, domain and role is not supporting wildcard.
 func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
 	ech := make(chan error, len(roles))
 	cctx, cancel := context.WithCancel(ctx)
@@ -192,10 +195,13 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 
 	go func() {
 		defer close(ech)
+
 		wg := new(sync.WaitGroup)
+		wg.Add(len(roles))
+		rp := p.rolePolicies
+
 		for _, role := range roles {
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
-			wg.Add(1)
 			go func(ch chan<- error) {
 				defer wg.Done()
 				select {
@@ -203,7 +209,7 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 					ch <- cctx.Err()
 					return
 				default:
-					asss, ok := p.rolePolicies.Get(dr)
+					asss, ok := rp.Get(dr)
 					if !ok {
 						return
 					}
@@ -215,6 +221,7 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 							ch <- cctx.Err()
 							return
 						default:
+							// deny policies come first in rolePolicies, so it will return first before allow policies is checked
 							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
 								ch <- ass.Effect
 								return
@@ -225,15 +232,26 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 			}(ech)
 		}
 		wg.Wait()
-		ech <- errors.Wrap(ErrNoMatch, "no match")
 	}()
 
-	err := <-ech
-
+	allowed := false
+	for err := range ech {
+		if err != nil { // denied assertion is prioritize, so return directly
+			glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
+			return err
+		}
+		allowed = true
+	}
+	if allowed {
+		glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, nil)
+		return nil
+	}
+	err := errors.Wrap(ErrNoMatch, "no match")
 	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
 	return err
 }
 
+// GetPolicyCache returns the cached role policy data
 func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
@@ -368,6 +386,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 
 	// cache
 	var retErr error
+	now := fastime.Now()
 	assm.Range(func(k interface{}, val interface{}) bool {
 		ass := val.(*util.Assertion)
 		a, err := NewAssertion(ass.Action, ass.Resource, ass.Effect)
@@ -378,13 +397,17 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		}
 
 		var asss []*Assertion
-		r := ass.Role
-		if r, ok := rp.Get(r); ok {
-			asss = append(r.([]*Assertion), a)
+		if p, ok := rp.Get(ass.Role); ok {
+			asss = p.([]*Assertion)
+			if a.Effect == nil {
+				asss = append(asss, a) // append allowed policies to the end of the slice
+			} else {
+				asss = append([]*Assertion{a}, asss...) // append denied policies to the head
+			}
 		} else {
 			asss = []*Assertion{a}
 		}
-		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(fastime.Now())))
+		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(now)))
 
 		glg.Debugf("added assertion to the cache: %+v", ass)
 		return true
