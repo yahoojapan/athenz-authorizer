@@ -25,6 +25,7 @@ import (
 
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
@@ -35,6 +36,7 @@ import (
 
 // Authorizerd represents a daemon for user to verify the role token
 type Authorizerd interface {
+	Init(ctx context.Context) error
 	Start(ctx context.Context) <-chan error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
@@ -131,7 +133,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithRefreshDuration(prov.policyRefreshDuration),
 			policy.WithErrRetryInterval(prov.policyErrRetryInterval),
 			policy.WithHTTPClient(prov.client),
-			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
+			policy.WithPubKeyProvider(pubkeyProvider),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
@@ -155,6 +157,40 @@ func New(opts ...Option) (Authorizerd, error) {
 		role.WithJWKProvider(jwkProvider))
 
 	return prov, nil
+}
+
+// Init initializes child daemons synchronously.
+func (a *authorizer) Init(ctx context.Context) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		select {
+		case <-egCtx.Done():
+			return egCtx.Err()
+		default:
+			if !a.disablePubkeyd {
+				err := a.pubkeyd.Update(egCtx)
+				if err != nil {
+					return err
+				}
+			}
+			if !a.disablePolicyd {
+				return a.policyd.Update(egCtx)
+			}
+			return nil
+		}
+	})
+	if !a.disableJwkd {
+		eg.Go(func() error {
+			select {
+			case <-egCtx.Done():
+				return egCtx.Err()
+			default:
+				return a.jwkd.Update(egCtx)
+			}
+		})
+	}
+
+	return eg.Wait()
 }
 
 // Start starts authorizer daemon.
