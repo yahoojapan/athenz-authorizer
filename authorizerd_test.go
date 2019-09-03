@@ -204,9 +204,8 @@ func Test_authorizer_Init(t *testing.T) {
 						UpdateFunc: func(context.Context) error {
 							if pubkeydDone {
 								return nil
-							} else {
-								return errors.New("policyd error")
 							}
+							return errors.New("policyd error")
 						},
 					},
 					jwkd:           nil,
