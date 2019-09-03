@@ -174,7 +174,7 @@ func (p *policyd) Update(ctx context.Context) error {
 	}
 
 	if err := eg.Wait(); err != nil {
-		glg.Warnf("[%d] update policy fail", jobID)
+		glg.Errorf("[%d] update policy fail", jobID)
 		return err
 	}
 
