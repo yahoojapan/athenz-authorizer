@@ -100,11 +100,6 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.Update(ctx); err != nil {
-		glg.Debugf("Error initialize policy data, err: %v", err)
-		ech <- errors.Wrap(err, "error update policy")
-		fch <- struct{}{}
-	}
 
 	go func() {
 		defer close(fch)

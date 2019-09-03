@@ -198,7 +198,7 @@ func Test_policyd_Start(t *testing.T) {
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
-					refreshDuration:       time.Second,
+					refreshDuration:       time.Millisecond * 30,
 					expireMargin:          time.Hour,
 					athenzDomains:         []string{domain},
 					fetchers:              fetchers,
@@ -360,7 +360,7 @@ func Test_policyd_Start(t *testing.T) {
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
-					refreshDuration:       time.Minute,
+					refreshDuration:       time.Millisecond * 30,
 					errRetryInterval:      time.Millisecond * 5,
 					expireMargin:          time.Hour,
 					athenzDomains:         []string{domain},
@@ -370,9 +370,9 @@ func Test_policyd_Start(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(p *policyd, ch <-chan error) error {
-					time.Sleep(time.Millisecond * 300)
+					time.Sleep(time.Millisecond * 120)
 					cancel()
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(time.Millisecond * 30)
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")

@@ -868,7 +868,7 @@ func Test_pubkeyd_Update(t *testing.T) {
 	}
 }
 
-func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
+func Test_pubkeyd_Start(t *testing.T) {
 	type fields struct {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
@@ -928,8 +928,22 @@ func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
 				},
 				checkFunc: func(c *pubkeyd, ch <-chan error) error {
 					cancel()
+					err := <-ch
+
+					// check error
+					wantErr := context.Canceled
+					if err != wantErr {
+						return fmt.Errorf("got: %v, want: %v", err, wantErr)
+					}
+					for err := range ch {
+						if err != nil {
+							return err
+						}
+					}
+					err = nil
+
+					// check pubkey cache
 					ind := 0
-					var err error
 					checker := func(key interface{}, value interface{}) bool {
 						ind++
 						valType := fmt.Sprint(reflect.TypeOf(value))
@@ -949,19 +963,23 @@ func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
 						}
 						return nil
 					}
-					err = check(c.confCache.ZMSPubKeys, 1)
+					err = check(c.confCache.ZMSPubKeys, 0)
 					if err != nil {
 						return err
 					}
 					err = nil
 					ind = 0
-					err = check(c.confCache.ZTSPubKeys, 1)
+					err = check(c.confCache.ZTSPubKeys, 0)
 					if err != nil {
 						return err
 					}
-					err = nil
-					ind = 0
 
+					// check etag cache
+					ecLen := len(c.etagCache.ToRawMap(context.Background()))
+					wantEcLen := 0
+					if ecLen != wantEcLen {
+						return errors.Errorf("invalid length ZMSPubKeys. got: %d, want: %d", ecLen, wantEcLen)
+					}
 					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
 						if key != "zms" && key != "zts" {
 							err = errors.Errorf("unexpected key %s", key)
@@ -974,6 +992,10 @@ func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
 						}
 						return true
 					})
+					if err != nil {
+						return err
+					}
+
 					return nil
 				},
 			}
@@ -999,7 +1021,7 @@ func Test_pubkeyd_StartpubkeyUpdater(t *testing.T) {
 				fields: fields{
 					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain:    "dummyDom",
-					refreshDuration:  time.Minute,
+					refreshDuration:  10 * time.Millisecond,
 					errRetryInterval: time.Minute,
 					etagCache:        gache.New(),
 					etagExpTime:      time.Minute,

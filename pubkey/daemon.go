@@ -106,10 +106,6 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.Update(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update pubkey")
-		fch <- struct{}{}
-	}
 
 	go func() {
 		defer close(fch)

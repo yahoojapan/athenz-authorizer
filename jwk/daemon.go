@@ -65,10 +65,6 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting jwk updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := j.Update(ctx); err != nil {
-		ech <- errors.Wrap(err, "error update athenz json web key")
-		fch <- struct{}{}
-	}
 
 	go func() {
 		defer close(fch)
