@@ -54,6 +54,7 @@ type policyd struct {
 
 	refreshDuration  time.Duration
 	errRetryInterval time.Duration
+	retryAttempts    int
 
 	athenzURL     string
 	athenzDomains []string
@@ -82,7 +83,7 @@ func New(opts ...Option) (Daemon, error) {
 			domain:        domain,
 			expireMargin:  p.expireMargin,
 			retryInterval: p.errRetryInterval,
-			retryMaxCount: 3,
+			retryAttempts: p.retryAttempts,
 			athenzURL:     p.athenzURL,
 			spVerifier: func(sp *SignedPolicy) error {
 				return sp.Verify(p.pkp)

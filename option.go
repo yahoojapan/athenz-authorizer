@@ -202,6 +202,14 @@ func WithPolicyErrRetryInterval(i string) Option {
 	}
 }
 
+// WithPolicyRetryAttempts returns a PolicyRetryAttempts functional option
+func WithPolicyRetryAttempts(c int) Option {
+	return func(authz *authorizer) error {
+		authz.policyRetryAttempts = c
+		return nil
+	}
+}
+
 // WithPolicyExpireMargin returns a PolicyExpireMargin functional option
 func WithPolicyExpireMargin(t string) Option {
 	return func(authz *authorizer) error {

@@ -116,7 +116,8 @@ func TestWithRefreshDuration(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -182,7 +183,8 @@ func TestWithErrRetryInterval(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",

@@ -119,6 +119,42 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 		})
 	}
 }
+
+func TestWithPolicyRetryAttempts(t *testing.T) {
+	type args struct {
+		c int
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				c: 2,
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.policyRetryAttempts != 2 {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyRetryAttempts(tt.args.c)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyRetryAttempts() error = %v", err)
+			}
+		})
+	}
+}
 func TestWithPolicyRefreshDuration(t *testing.T) {
 	type args struct {
 		t string

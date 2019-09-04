@@ -64,6 +64,7 @@ func TestNew(t *testing.T) {
 				policyExpiredDuration: 1 * time.Minute,
 				refreshDuration:       30 * time.Minute,
 				errRetryInterval:      1 * time.Minute,
+				retryAttempts:         2,
 				client:                http.DefaultClient,
 			},
 			wantErr: "",
@@ -79,6 +80,7 @@ func TestNew(t *testing.T) {
 				policyExpiredDuration: 1 * time.Minute,
 				refreshDuration:       30 * time.Minute,
 				errRetryInterval:      1 * time.Minute,
+				retryAttempts:         2,
 				client:                http.DefaultClient,
 			},
 			wantErr: "",
@@ -94,6 +96,7 @@ func TestNew(t *testing.T) {
 				policyExpiredDuration: 1 * time.Minute,
 				refreshDuration:       30 * time.Minute,
 				errRetryInterval:      1 * time.Minute,
+				retryAttempts:         2,
 				client:                http.DefaultClient,
 				athenzDomains:         []string{"dom1", "dom2"},
 				fetchers: map[string]Fetcher{
@@ -1084,7 +1087,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 			}
 
 			// check runtime stack for go routine leak
-			time.Sleep(time.Millisecond * 500) // wait for some background process to cleanup
+			time.Sleep(time.Millisecond * 1500) // wait for some background process to cleanup
 			lenEnd := runtime.Stack(b, true)
 			// t.Log(string(b[:lenEnd]))
 			if math.Abs(float64(lenStart-lenEnd)) > 10 { // to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference

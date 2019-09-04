@@ -31,6 +31,7 @@ var (
 		WithPolicyExpiredDuration("1m"),
 		WithRefreshDuration("30m"),
 		WithErrRetryInterval("1m"),
+		WithRetryAttempts(2),
 		WithHTTPClient(http.DefaultClient),
 	}
 )
@@ -137,6 +138,14 @@ func WithErrRetryInterval(i string) Option {
 			return errors.Wrap(err, "invalid err retry interval")
 		}
 		pol.errRetryInterval = ri
+		return nil
+	}
+}
+
+// WithRetryAttempts returns an RetryAttempts functional option
+func WithRetryAttempts(c int) Option {
+	return func(pol *policyd) error {
+		pol.retryAttempts = c
 		return nil
 	}
 }

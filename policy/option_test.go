@@ -52,7 +52,8 @@ func TestWithExpireMargin(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -237,7 +238,8 @@ func TestWithPolicyExpiredDuration(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -303,7 +305,8 @@ func TestWithRefreshDuration(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -485,7 +488,8 @@ func TestWithErrRetryInterval(t *testing.T) {
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -521,6 +525,43 @@ func TestWithErrRetryInterval(t *testing.T) {
 			got := WithErrRetryInterval(tt.args.i)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithErrRetryInterval() error= %v", err)
+			}
+		})
+	}
+}
+
+func TestWithRetryAttempts(t *testing.T) {
+	type args struct {
+		c int
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				c: 2,
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if pol.retryAttempts != 2 {
+					return fmt.Errorf("Error")
+				}
+
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRetryAttempts(tt.args.c)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRetryAttempts() error= %v", err)
 			}
 		})
 	}
