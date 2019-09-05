@@ -100,6 +100,44 @@ func Test_jwkd_Start(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(500)
+			}))
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+
+			return test{
+				name: "canceled context",
+				fields: fields{
+					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
+					refreshDuration:  time.Millisecond * 10,
+					errRetryInterval: time.Millisecond,
+					client:           srv.Client(),
+				},
+				args: args{
+					ctx: ctx,
+				},
+				checkFunc: func(j *jwkd, ch <-chan error) error {
+					err := <-ch
+					wantErr := context.Canceled
+					if err != wantErr {
+						return fmt.Errorf("got: %v, want: %v", err, wantErr)
+					}
+					for err = range ch {
+						if err != nil {
+							return err
+						}
+					}
+
+					if k := j.keys.Load(); k != nil {
+						return errors.New("keys updated")
+					}
+
+					return nil
+				},
+			}
+		}(),
+		func() test {
 			k := `{
 "e":"AQAB",
 "kty":"RSA",

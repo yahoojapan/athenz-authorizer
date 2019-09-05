@@ -42,18 +42,18 @@ func (c *Claim) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
 
-	if c.VerifyExpiresAt(now, true) == false {
+	if !c.VerifyExpiresAt(now, true) {
 		delta := time.Unix(now, 0).Sub(time.Unix(c.ExpiresAt, 0))
 		vErr.Inner = fmt.Errorf("token is expired by %v", delta)
 		vErr.Errors |= jwt.ValidationErrorExpired
 	}
 
-	if c.VerifyIssuedAt(now, false) == false {
+	if !c.VerifyIssuedAt(now, false) {
 		vErr.Inner = fmt.Errorf("Token used before issued")
 		vErr.Errors |= jwt.ValidationErrorIssuedAt
 	}
 
-	if c.VerifyNotBefore(now, false) == false {
+	if !c.VerifyNotBefore(now, false) {
 		vErr.Inner = fmt.Errorf("token is not valid yet")
 		vErr.Errors |= jwt.ValidationErrorNotValidYet
 	}

@@ -39,6 +39,33 @@ func (cm *ConfdMock) Start(ctx context.Context) <-chan error {
 	return ech
 }
 
+type PubkeydMock struct {
+	StartFunc       func(context.Context) <-chan error
+	UpdateFunc      func(context.Context) error
+	GetProviderFunc func() pubkey.Provider
+}
+
+func (pm *PubkeydMock) Start(ctx context.Context) <-chan error {
+	if pm.StartFunc != nil {
+		return pm.StartFunc(ctx)
+	}
+	return nil
+}
+
+func (pm *PubkeydMock) Update(ctx context.Context) error {
+	if pm.UpdateFunc != nil {
+		return pm.UpdateFunc(ctx)
+	}
+	return nil
+}
+
+func (pm *PubkeydMock) GetProvider() pubkey.Provider {
+	if pm.GetProviderFunc != nil {
+		return pm.GetProviderFunc()
+	}
+	return nil
+}
+
 type PolicydMock struct {
 	UpdateFunc      func(context.Context) error
 	CheckPolicyFunc func(ctx context.Context, domain string, roles []string, action, resource string) error

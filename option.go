@@ -198,14 +198,6 @@ func WithPolicyExpireMargin(t string) Option {
 	}
 }
 
-// WithPolicyEtagFlushDuration returns a PolicyEtagFlushDur functional option
-func WithPolicyEtagFlushDuration(t string) Option {
-	return func(authz *authorizer) error {
-		authz.policyEtagFlushDur = t
-		return nil
-	}
-}
-
 /*
 	jwkd parameters
 */

@@ -102,6 +102,170 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func Test_authorizer_Init(t *testing.T) {
+	type fields struct {
+		pubkeyd        pubkey.Daemon
+		policyd        policy.Daemon
+		jwkd           jwk.Daemon
+		disablePubkeyd bool
+		disablePolicyd bool
+		disableJwkd    bool
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantErrStr string
+	}{
+		{
+			name: "cancelled context, no waiting",
+			fields: fields{
+				pubkeyd: &PubkeydMock{
+					UpdateFunc: func(context.Context) error {
+						time.Sleep(10 * time.Millisecond)
+						return errors.New("pubkeyd error")
+					},
+				},
+				policyd: nil,
+				jwkd: &JwkdMock{
+					UpdateFunc: func(context.Context) error {
+						time.Sleep(10 * time.Millisecond)
+						return errors.New("jwkd error")
+					},
+				},
+				disablePubkeyd: false,
+				disablePolicyd: true,
+				disableJwkd:    false,
+			},
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					return ctx
+				}(),
+			},
+			wantErrStr: context.Canceled.Error(),
+		},
+		{
+			name: "all disable",
+			fields: fields{
+				pubkeyd:        nil,
+				policyd:        nil,
+				jwkd:           nil,
+				disablePubkeyd: true,
+				disablePolicyd: true,
+				disableJwkd:    true,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErrStr: "",
+		},
+		{
+			name: "jwkd is not blocked",
+			fields: fields{
+				pubkeyd: &PubkeydMock{
+					UpdateFunc: func(context.Context) error {
+						time.Sleep(10 * time.Millisecond)
+						return errors.New("pubkeyd error")
+					},
+				},
+				policyd: nil,
+				jwkd: &JwkdMock{
+					UpdateFunc: func(context.Context) error {
+						return errors.New("jwkd done")
+					},
+				},
+				disablePubkeyd: false,
+				disablePolicyd: true,
+				disableJwkd:    false,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErrStr: "jwkd done",
+		},
+		{
+			name: "policyd is blocked by pubkeyd",
+			fields: *(func() *fields {
+				pubkeydDone := false
+				return &fields{
+					pubkeyd: &PubkeydMock{
+						UpdateFunc: func(context.Context) error {
+							time.Sleep(10 * time.Millisecond)
+							pubkeydDone = true
+							return nil
+						},
+					},
+					policyd: &PolicydMock{
+						UpdateFunc: func(context.Context) error {
+							if pubkeydDone {
+								return nil
+							}
+							return errors.New("policyd error")
+						},
+					},
+					jwkd:           nil,
+					disablePubkeyd: false,
+					disablePolicyd: true,
+					disableJwkd:    true,
+				}
+			}()),
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErrStr: "",
+		},
+		{
+			name: "all daemons init success",
+			fields: fields{
+				pubkeyd: &PubkeydMock{
+					UpdateFunc: func(context.Context) error {
+						return nil
+					},
+				},
+				policyd: &PolicydMock{
+					UpdateFunc: func(context.Context) error {
+						return nil
+					},
+				},
+				jwkd: &JwkdMock{
+					UpdateFunc: func(context.Context) error {
+						return nil
+					},
+				},
+				disablePubkeyd: false,
+				disablePolicyd: false,
+				disableJwkd:    false,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErrStr: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				pubkeyd:        tt.fields.pubkeyd,
+				policyd:        tt.fields.policyd,
+				jwkd:           tt.fields.jwkd,
+				disablePubkeyd: tt.fields.disablePubkeyd,
+				disablePolicyd: tt.fields.disablePolicyd,
+				disableJwkd:    tt.fields.disableJwkd,
+			}
+			err := a.Init(tt.args.ctx)
+			if (err == nil && tt.wantErrStr != "") || (err != nil && err.Error() != tt.wantErrStr) {
+				t.Errorf("authorizer.Init() error = %v, wantErr %v", err, tt.wantErrStr)
+				return
+			}
+		})
+	}
+}
+
 func Test_authorizer_Start(t *testing.T) {
 	type fields struct {
 		pubkeyd  pubkey.Daemon
@@ -503,7 +667,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -695,7 +858,6 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {
@@ -736,7 +898,6 @@ func Test_authorizer_verify(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -772,7 +933,6 @@ func Test_authorizer_verify(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
@@ -799,7 +959,6 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx       context.Context
@@ -971,7 +1130,6 @@ bu80CwTnWhmdBo36Ig==
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -998,7 +1156,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		policyExpireMargin    string
 		athenzDomains         []string
 		policyRefreshDuration string
-		policyEtagFlushDur    string
 	}
 	type args struct {
 		ctx context.Context
@@ -1039,7 +1196,6 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				policyExpireMargin:    tt.fields.policyExpireMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
-				policyEtagFlushDur:    tt.fields.policyEtagFlushDur,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)

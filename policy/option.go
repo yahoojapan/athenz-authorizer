@@ -28,7 +28,6 @@ import (
 var (
 	defaultOptions = []Option{
 		WithExpireMargin("3h"),
-		WithEtagFlushDuration("12h"),
 		WithPolicyExpiredDuration("1m"),
 		WithRefreshDuration("30m"),
 		WithErrRetryInterval("1m"),
@@ -38,21 +37,6 @@ var (
 
 // Option represents a functional option
 type Option func(*policyd) error
-
-// WithEtagFlushDuration returns an ETagFlushDur functional option
-func WithEtagFlushDuration(t string) Option {
-	return func(pol *policyd) error {
-		if t == "" {
-			return nil
-		}
-		etagFlushDur, err := time.ParseDuration(t)
-		if err != nil {
-			return errors.Wrap(err, "invalid flush duration")
-		}
-		pol.etagFlushDur = etagFlushDur
-		return nil
-	}
-}
 
 // WithExpireMargin returns an ExpiryMargin functional option
 func WithExpireMargin(t string) Option {
@@ -100,7 +84,7 @@ func WithPolicyExpiredDuration(t string) Option {
 		}
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid flush duration")
 		}
 		pol.policyExpiredDuration = rd
 		return nil

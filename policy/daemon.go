@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -57,32 +55,41 @@ type policyd struct {
 	refreshDuration  time.Duration
 	errRetryInterval time.Duration
 
-	etagCache    gache.Gache
-	etagFlushDur time.Duration
-
 	athenzURL     string
 	athenzDomains []string
 
-	client *http.Client
-	pkp    pubkey.Provider
-}
-
-type etagCache struct {
-	etag string
-	sp   *SignedPolicy
+	client   *http.Client
+	pkp      pubkey.Provider
+	fetchers map[string]Fetcher // used for concurrent read, should never be updated
 }
 
 // New represent the constructor of Policyd
 func New(opts ...Option) (Daemon, error) {
 	p := &policyd{
 		rolePolicies: gache.New(),
-		etagCache:    gache.New(),
 	}
 
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(p); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
+	}
+
+	// create fetchers
+	p.fetchers = make(map[string]Fetcher, len(p.athenzDomains))
+	for _, domain := range p.athenzDomains {
+		f := fetcher{
+			domain:        domain,
+			expireMargin:  p.expireMargin,
+			retryInterval: p.errRetryInterval,
+			retryMaxCount: 3,
+			athenzURL:     p.athenzURL,
+			spVerifier: func(sp *SignedPolicy) error {
+				return sp.Verify(p.pkp)
+			},
+			client: p.client,
+		}
+		p.fetchers[domain] = &f
 	}
 
 	return p, nil
@@ -93,17 +100,11 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 	glg.Info("Starting policyd updater")
 	ech := make(chan error, 100)
 	fch := make(chan struct{}, 1)
-	if err := p.Update(ctx); err != nil {
-		glg.Debugf("Error initialize policy data, err: %v", err)
-		ech <- errors.Wrap(err, "error update policy")
-		fch <- struct{}{}
-	}
 
 	go func() {
 		defer close(fch)
 		defer close(ech)
 
-		p.etagCache.StartExpired(ctx, p.etagFlushDur)
 		ticker := time.NewTicker(p.refreshDuration)
 		for {
 			select {
@@ -143,45 +144,48 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 
 // Update updates and cache policy data
 func (p *policyd) Update(ctx context.Context) error {
-	glg.Info("Updating policy")
-	defer glg.Info("Updated policy")
+	jobID := fastime.Now().Unix()
+	glg.Infof("[%d] will update policy", jobID)
 	eg := errgroup.Group{}
 	rp := gache.New()
 
-	for _, domain := range p.athenzDomains {
+	for _, fetcher := range p.fetchers {
+		f := fetcher // for closure
 		select {
 		case <-ctx.Done():
 			glg.Info("Update policy interrupted")
 			return ctx.Err()
 		default:
-			dom := domain
 			eg.Go(func() error {
 				select {
 				case <-ctx.Done():
 					glg.Info("Update policy interrupted")
 					return ctx.Err()
 				default:
-					return p.fetchAndCachePolicy(ctx, rp, dom)
+					return fetchAndCachePolicy(ctx, rp, f)
 				}
 			})
 		}
 	}
 
 	if err := eg.Wait(); err != nil {
+		glg.Errorf("[%d] update policy fail", jobID)
 		return err
 	}
 
 	rp.StartExpired(ctx, p.policyExpiredDuration).
 		EnableExpiredHook().
 		SetExpiredHook(func(ctx context.Context, key string) {
-			//key = <domain>:role.<role>
-			p.fetchAndCachePolicy(ctx, p.rolePolicies, strings.Split(key, ":role.")[0])
+			// key = <domain>:role.<role>
+			fetchAndCachePolicy(ctx, p.rolePolicies, p.fetchers[strings.Split(key, ":role.")[0]])
 		})
 
 	p.rolePolicies, rp = rp, p.rolePolicies
+	glg.Debugf("tmp cache becomes effective")
 	rp.Stop()
 	rp.Clear()
 
+	glg.Infof("[%d] update policy done", jobID)
 	return nil
 }
 
@@ -256,99 +260,28 @@ func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return p.rolePolicies.ToRawMap(ctx)
 }
 
-func (p *policyd) fetchAndCachePolicy(ctx context.Context, g gache.Gache, dom string) error {
-	spd, upd, err := p.fetchPolicy(ctx, dom)
+func fetchAndCachePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
+	sp, err := f.FetchWithRetry(ctx)
 	if err != nil {
-		glg.Debugf("fetch policy failed, err: %v", err)
-		return errors.Wrap(err, "error fetch policy")
-	}
-
-	glg.DebugFunc(func() string {
-		rawpol, _ := json.Marshal(spd)
-		return fmt.Sprintf("fetched policy data, domain: %s,updated: %v, body: %s", dom, upd, (string)(rawpol))
-	})
-
-	if err = simplifyAndCachePolicy(ctx, g, spd); err != nil {
-		glg.Debugf("simplify and cache error: %v", err)
-		return errors.Wrap(err, "error simplify and cache")
-	}
-
-	return nil
-}
-
-func (p *policyd) fetchPolicy(ctx context.Context, domain string) (*SignedPolicy, bool, error) {
-	glg.Infof("Fetching policy for domain %s", domain)
-	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
-	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", p.athenzURL, domain)
-
-	glg.Debugf("fetching policy, url: %v", url)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		glg.Errorf("fetch policy error, domain: %s, error: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error creating fetch policy request")
-	}
-
-	// etag header
-	t, ok := p.etagCache.Get(domain)
-	if ok {
-		ec := t.(*etagCache)
-		glg.Debugf("request on domain: %s, using etag: %s", domain, ec.etag)
-		req.Header.Set("If-None-Match", ec.etag)
-	}
-
-	res, err := p.client.Do(req.WithContext(ctx))
-	if err != nil {
-		glg.Errorf("Error making HTTP request, domain: %s, error: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error making request")
-	}
-
-	// if server return NotModified, return policy from cache
-	if res.StatusCode == http.StatusNotModified {
-		cache := t.(*etagCache)
-		glg.Debugf("Server return not modified, keep using domain: %s, etag: %v", domain, cache.etag)
-		return cache.sp, false, nil
-	}
-
-	if res.StatusCode != http.StatusOK {
-		glg.Errorf("Domain %s: Server return not OK", domain)
-		return nil, false, errors.Wrap(ErrFetchPolicy, "error fetching policy data")
-	}
-
-	// read and decode
-	sp := new(SignedPolicy)
-	if err = json.NewDecoder(res.Body).Decode(&sp); err != nil {
-		glg.Errorf("Error decoding policy, domain: %s, err: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error decode response")
-	}
-
-	// verify policy data
-	if err = sp.Verify(p.pkp); err != nil {
-		glg.Errorf("Error verifying policy, domain: %s, err: %v", domain, err)
-		return nil, false, errors.Wrap(err, "error verify policy data")
-	}
-
-	if _, err = io.Copy(ioutil.Discard, res.Body); err != nil {
-		glg.Warn(errors.Wrap(err, "error io.copy"))
-	}
-	if err = res.Body.Close(); err != nil {
-		glg.Warn(errors.Wrap(err, "error body.close"))
-	}
-
-	// set etag cache
-	etag := res.Header.Get("ETag")
-	if etag != "" {
-		etagValidDur := sp.SignedPolicyData.Expires.Time.Sub(fastime.Now()) - p.expireMargin
-		glg.Debugf("Set domain %s with etag %v, duration: %s", domain, etag, etagValidDur)
-		if etagValidDur > 0 {
-			p.etagCache.SetWithExpire(domain, &etagCache{etag, sp}, etagValidDur)
-		} else {
-			// this triggers only if the new policies from server have expiry time < expiry margin
-			// hence, will not use ETag on next fetch request
-			p.etagCache.Delete(domain)
+		errMsg := "fetch policy fail"
+		glg.Errorf("%s, error: %v", errMsg, err)
+		if sp == nil {
+			return errors.Wrap(err, errMsg)
 		}
 	}
 
-	return sp, true, nil
+	glg.DebugFunc(func() string {
+		rawpol, _ := json.Marshal(sp)
+		return fmt.Sprintf("will merge policy, domain: %s, body: %s", f.Domain(), (string)(rawpol))
+	})
+
+	if err := simplifyAndCachePolicy(ctx, g, sp); err != nil {
+		errMsg := "simplify and cache policy fail"
+		glg.Debugf("%s, error: %v", errMsg, err)
+		return errors.Wrap(err, errMsg)
+	}
+
+	return nil
 }
 
 func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolicy) error {
@@ -409,7 +342,7 @@ func simplifyAndCachePolicy(ctx context.Context, rp gache.Gache, sp *SignedPolic
 		}
 		rp.SetWithExpire(ass.Role, asss, time.Duration(sp.DomainSignedPolicyData.SignedPolicyData.Expires.Sub(now)))
 
-		glg.Debugf("added assertion to the cache: %+v", ass)
+		glg.Debugf("added assertion to the tmp cache: %+v", ass)
 		return true
 	})
 	if retErr != nil {

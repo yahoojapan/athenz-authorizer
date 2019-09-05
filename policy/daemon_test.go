@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package policy
 
 import (
@@ -20,73 +21,109 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/ardielle/ardielle-go/rdl"
-	cmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
 func TestNew(t *testing.T) {
+	gacheCmp := cmp.Comparer(func(x, y gache.Gache) bool {
+		ctx := context.Background()
+		return cmp.Equal(x.ToRawMap(ctx), y.ToRawMap(ctx), cmpopts.EquateEmpty())
+	})
+	fetcherCmp := cmp.Comparer(func(x, y Fetcher) bool {
+		return x.Domain() == y.Domain()
+	})
 	type args struct {
 		opts []Option
 	}
 	tests := []struct {
-		name      string
-		args      args
-		want      Daemon
-		checkFunc func(got Daemon) error
-		wantErr   bool
+		name    string
+		args    args
+		want    Daemon
+		wantErr string
 	}{
 		{
 			name: "new success",
 			args: args{
 				opts: []Option{},
 			},
-			checkFunc: func(got Daemon) error {
-				p := got.(*policyd)
-				if p.expireMargin != time.Hour*3 {
-					return errors.New("invalid expireMargin")
-				}
-				return nil
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          3 * time.Hour,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
 			},
+			wantErr: "",
 		},
 		{
 			name: "new success with options",
 			args: args{
 				opts: []Option{WithExpireMargin("5s")},
 			},
-			checkFunc: func(got Daemon) error {
-				p := got.(*policyd)
-				if p.expireMargin != time.Second*5 {
-					return errors.New("invalid expireMargin")
-				}
-				return nil
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          5 * time.Second,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
 			},
+			wantErr: "",
+		},
+		{
+			name: "new success, domains with fetchers",
+			args: args{
+				opts: []Option{WithAthenzDomains("dom1", "dom2")},
+			},
+			want: &policyd{
+				rolePolicies:          gache.New(),
+				expireMargin:          3 * time.Hour,
+				policyExpiredDuration: 1 * time.Minute,
+				refreshDuration:       30 * time.Minute,
+				errRetryInterval:      1 * time.Minute,
+				client:                http.DefaultClient,
+				athenzDomains:         []string{"dom1", "dom2"},
+				fetchers: map[string]Fetcher{
+					"dom1": &fetcher{domain: "dom1"},
+					"dom2": &fetcher{domain: "dom2"},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "new fail, option error",
+			args: args{
+				opts: []Option{
+					func(*policyd) error { return errors.New("option error") },
+				},
+			},
+			want:    nil,
+			wantErr: "error create policyd: option error",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := New(tt.args.opts...)
-			if (err != nil) != tt.wantErr {
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
-			if tt.checkFunc != nil {
-				if err := tt.checkFunc(got); err != nil {
-					t.Errorf("New() = %v", err)
-				}
+			options := []cmp.Option{gacheCmp, fetcherCmp, cmp.AllowUnexported(policyd{}), cmpopts.EquateEmpty()}
+			if !cmp.Equal(got, tt.want, options...) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -100,11 +137,9 @@ func Test_policyd_Start(t *testing.T) {
 		refreshDuration       time.Duration
 		errRetryInterval      time.Duration
 		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
 		athenzURL             string
 		athenzDomains         []string
-		client                *http.Client
+		fetchers              map[string]Fetcher
 	}
 	type args struct {
 		ctx context.Context
@@ -118,12 +153,44 @@ func Test_policyd_Start(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
+			domain := "dummyDom"
+			sp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					KeyId:     "dummyKeyID",
+					Signature: "dummySig",
+					SignedPolicyData: &util.SignedPolicyData{
+						ZmsKeyId:     "dummyKeyID",
+						ZmsSignature: "dummySig",
+						Modified:     &rdl.Timestamp{Time: fastime.Now()},
+						Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+						PolicyData: &util.PolicyData{
+							Domain: "dummyDom",
+							Policies: []*util.Policy{
+								{
+									Name:     "dummyDom:policy.dummyPol",
+									Modified: &rdl.Timestamp{Time: fastime.Now()},
+									Assertions: []*util.Assertion{
+										{
+											Role:     "dummyDom:role.dummyRole",
+											Action:   "dummyAct",
+											Resource: "dummyDom:dummyRes",
+											Effect:   "ALLOW",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fetchers := map[string]Fetcher{
+				"dummyDom": &fetcherMock{
+					domainMock: func() string { return domain },
+					fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+						return sp, nil
+					},
+				},
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
@@ -131,20 +198,10 @@ func Test_policyd_Start(t *testing.T) {
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					etagFlushDur:          time.Second,
-					refreshDuration:       time.Second,
+					refreshDuration:       time.Millisecond * 30,
 					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-					athenzDomains: []string{"dummyDom"},
+					athenzDomains:         []string{domain},
+					fetchers:              fetchers,
 				},
 				args: args{
 					ctx: ctx,
@@ -159,10 +216,6 @@ func Test_policyd_Start(t *testing.T) {
 					if len(asss.([]*Assertion)) != 1 {
 						return errors.Errorf("invalid length assertions. want: 1, result: %d", len(asss.([]*Assertion)))
 					}
-					_, ok = p.etagCache.Get("dummyDom")
-					if !ok {
-						return errors.New("etagCache is empty")
-					}
 					return nil
 				},
 				afterFunc: func() {
@@ -171,16 +224,49 @@ func Test_policyd_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
+			domain := "dummyDom"
+			sp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					KeyId:     "dummyKeyID",
+					Signature: "dummySig",
+					SignedPolicyData: &util.SignedPolicyData{
+						ZmsKeyId:     "dummyKeyID",
+						ZmsSignature: "dummySig",
+						Modified:     &rdl.Timestamp{Time: fastime.Now()},
+						Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+						PolicyData: &util.PolicyData{
+							Domain: "dummyDom",
+							Policies: []*util.Policy{
+								{
+									Name:     "dummyDom:policy.dummyPol",
+									Modified: &rdl.Timestamp{Time: fastime.Now()},
+									Assertions: []*util.Assertion{
+										{
+											Role:     "dummyDom:role.dummyRole",
+											Effect:   "ALLOW",
+											Action:   "",
+											Resource: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
 			c := 0
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				c++
-				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
-				res := fmt.Sprintf("dummyRes%d", c)
-				act := fmt.Sprintf("dummyAct%d", c)
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
-			}))
-			srv := httptest.NewTLSServer(handler)
+			fetchers := map[string]Fetcher{
+				"dummyDom": &fetcherMock{
+					domainMock: func() string { return domain },
+					fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+						c++
+						a := sp.SignedPolicyData.PolicyData.Policies[0].Assertions[0]
+						a.Action = fmt.Sprintf("dummyAct%d", c)
+						a.Resource = fmt.Sprintf("dummyDom:dummyRes%d", c)
+						return sp, nil
+					},
+				},
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
@@ -188,20 +274,10 @@ func Test_policyd_Start(t *testing.T) {
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					etagFlushDur:          time.Second,
 					refreshDuration:       time.Millisecond * 30,
 					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-					athenzDomains: []string{"dummyDom"},
+					athenzDomains:         []string{domain},
+					fetchers:              fetchers,
 				},
 				args: args{
 					ctx: ctx,
@@ -223,15 +299,6 @@ func Test_policyd_Start(t *testing.T) {
 						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
 					}
 
-					ec, ok := p.etagCache.Get("dummyDom")
-					if !ok {
-						return errors.New("etagCache is empty")
-					}
-					ecwant := fmt.Sprintf("dummyEtag%d", c)
-					if ec.(*etagCache).etag != ecwant {
-						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
-					}
-
 					return nil
 				},
 				afterFunc: func() {
@@ -240,20 +307,52 @@ func Test_policyd_Start(t *testing.T) {
 			}
 		}(),
 		func() test {
+			domain := "dummyDom"
+			sp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					KeyId:     "dummyKeyID",
+					Signature: "dummySig",
+					SignedPolicyData: &util.SignedPolicyData{
+						ZmsKeyId:     "dummyKeyID",
+						ZmsSignature: "dummySig",
+						Modified:     &rdl.Timestamp{Time: fastime.Now()},
+						Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+						PolicyData: &util.PolicyData{
+							Domain: "dummyDom",
+							Policies: []*util.Policy{
+								{
+									Name:     "dummyDom:policy.dummyPol",
+									Modified: &rdl.Timestamp{Time: fastime.Now()},
+									Assertions: []*util.Assertion{
+										{
+											Role:     "dummyDom:role.dummyRole",
+											Effect:   "ALLOW",
+											Action:   "",
+											Resource: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
 			c := 0
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if c < 3 {
-					c++
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				w.Header().Add("ETag", fmt.Sprintf("%v%d", "dummyEtag", c))
-				res := fmt.Sprintf("dummyRes%d", c)
-				act := fmt.Sprintf("dummyAct%d", c)
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:%s","action":"%s","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, res, act)))
-			}))
-			srv := httptest.NewTLSServer(handler)
+			fetchers := map[string]Fetcher{
+				"dummyDom": &fetcherMock{
+					domainMock: func() string { return domain },
+					fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+						a := sp.SignedPolicyData.PolicyData.Policies[0].Assertions[0]
+						c++
+						if c < 3 {
+							return nil, errors.New("fetchWithRetryMock error")
+						}
+						a.Action = fmt.Sprintf("dummyAct%d", c)
+						a.Resource = fmt.Sprintf("dummyDom:dummyRes%d", c)
+						return sp, nil
+					},
+				},
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
@@ -261,29 +360,19 @@ func Test_policyd_Start(t *testing.T) {
 				fields: fields{
 					rolePolicies:          gache.New(),
 					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					etagFlushDur:          time.Second,
-					refreshDuration:       time.Minute,
+					refreshDuration:       time.Millisecond * 30,
 					errRetryInterval:      time.Millisecond * 5,
 					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-					athenzDomains: []string{"dummyDom"},
+					athenzDomains:         []string{domain},
+					fetchers:              fetchers,
 				},
 				args: args{
 					ctx: ctx,
 				},
 				checkFunc: func(p *policyd, ch <-chan error) error {
-					time.Sleep(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 120)
 					cancel()
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(time.Millisecond * 30)
 					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
@@ -295,15 +384,6 @@ func Test_policyd_Start(t *testing.T) {
 					ass := asss.([]*Assertion)[0]
 					if ass.Reg.String() != fmt.Sprintf("^dummyact%d-dummyres%d$", c, c) {
 						return errors.Errorf("invalid assertion, got: %v, want: ^dummyact%d-dummyres%d$", ass.Reg.String(), c, c)
-					}
-
-					ec, ok := p.etagCache.Get("dummyDom")
-					if !ok {
-						return errors.New("etagCache is empty")
-					}
-					ecwant := fmt.Sprintf("dummyEtag%d", c)
-					if ec.(*etagCache).etag != ecwant {
-						return errors.Errorf("invalid etag, got: %v, want: %s", ec, ecwant)
 					}
 
 					return nil
@@ -327,11 +407,9 @@ func Test_policyd_Start(t *testing.T) {
 				refreshDuration:       tt.fields.refreshDuration,
 				errRetryInterval:      tt.fields.errRetryInterval,
 				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
+				fetchers:              tt.fields.fetchers,
 			}
 			ch := p.Start(tt.args.ctx)
 			if tt.checkFunc != nil {
@@ -351,173 +429,265 @@ func Test_policyd_Update(t *testing.T) {
 		refreshDuration       time.Duration
 		errRetryInterval      time.Duration
 		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
+		fetchers              map[string]Fetcher
 	}
 	type args struct {
 		ctx context.Context
 	}
 	type test struct {
-		name       string
-		fields     fields
-		args       args
-		beforeFunc func()
-		checkFunc  func(pol *policyd) error
-		wantErr    string
-		afterFunc  func()
+		name    string
+		fields  fields
+		args    args
+		wantErr string
+		wantRps map[string]interface{}
 	}
 	tests := []test{
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "cancelled context, no actions"
 
-			return test{
-				name: "Update policy success",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-					athenzDomains: []string{"dummyDom"},
-				},
-				args: args{
-					ctx: context.Background(),
-				},
-				wantErr: "",
-				checkFunc: func(pol *policyd) error {
-					pols, ok := pol.rolePolicies.Get("dummyDom:role.dummyRole")
-					if !ok {
-						return errors.New("role policies not found")
-					}
-					if len(pols.([]*Assertion)) != 1 {
-						return errors.New("role policies not correct")
-					}
-
-					return nil
+			// dummy values
+			domain := "dummyDom"
+			fetchers := make(map[string]Fetcher)
+			fetchers[domain] = &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return nil, errors.New("fetchWithRetryMock executed")
 				},
 			}
+			ctx, cancel := context.WithCancel(context.Background())
+
+			// prepare test
+			cancel()
+			t.fields = fields{
+				rolePolicies:  gache.New(),
+				athenzDomains: []string{domain},
+				fetchers:      fetchers,
+			}
+			t.args = args{
+				ctx: ctx,
+			}
+
+			// want
+			t.wantErr = context.Canceled.Error()
+			t.wantRps = make(map[string]interface{})
+			return t
 		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				domain := strings.Split(r.URL.Path, "/")[2]
+		func() (t test) {
+			t.name = "Update policy success"
 
-				w.Header().Add("ETag", domain+"Etag")
-				w.WriteHeader(http.StatusOK)
-				spd := fmt.Sprintf(`{"signedPolicyData":{"policyData":{"domain":"%s","policies":[{"name":"%s:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"%s:role.dummyRole","resource":"%s:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`, domain, domain, domain, domain)
-				w.Write([]byte(spd))
-			}))
-			srv := httptest.NewTLSServer(handler)
+			// dummy values
+			domain := "dummyDom"
+			fetchers := make(map[string]Fetcher)
+			sp := &SignedPolicy{
+				util.DomainSignedPolicyData{
+					KeyId:     "dummyKeyID",
+					Signature: "dummySig",
+					SignedPolicyData: &util.SignedPolicyData{
+						ZmsKeyId:     "dummyKeyID",
+						ZmsSignature: "dummySig",
+						Modified:     &rdl.Timestamp{Time: fastime.Now()},
+						Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+						PolicyData: &util.PolicyData{
+							Domain: "dummyDom",
+							Policies: []*util.Policy{
+								{
+									Name:     "dummyDom:policy.dummyPol",
+									Modified: &rdl.Timestamp{Time: fastime.Now()},
+									Assertions: []*util.Assertion{
+										{
+											Role:     "dummyDom:role.dummyRole",
+											Effect:   "ALLOW",
+											Action:   "dummyAct",
+											Resource: "dummyDom:dummyRes",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fetchers[domain] = &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return sp, nil
+				},
+			}
+			ctx := context.Background()
 
+			// prepare test
+			t.fields = fields{
+				rolePolicies:          gache.New(),
+				policyExpiredDuration: time.Hour,
+				athenzDomains:         []string{domain},
+				fetchers:              fetchers,
+			}
+			t.args = args{
+				ctx: ctx,
+			}
+
+			// want
+			wantAssertion, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "ALLOW")
+			t.wantErr = ""
+			t.wantRps = make(map[string]interface{})
+			t.wantRps["dummyDom:role.dummyRole"] = []*Assertion{wantAssertion}
+			return t
+		}(),
+		func() (t test) {
+			t.name = "Update policy success with multiple athenz domains"
+
+			// dummy values
+			createSp := func(domain string) *SignedPolicy {
+				return &SignedPolicy{
+					util.DomainSignedPolicyData{
+						KeyId:     "dummyKeyID",
+						Signature: "dummySig",
+						SignedPolicyData: &util.SignedPolicyData{
+							ZmsKeyId:     "dummyKeyID",
+							ZmsSignature: "dummySig",
+							Modified:     &rdl.Timestamp{Time: fastime.Now()},
+							Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+							PolicyData: &util.PolicyData{
+								Domain: domain,
+								Policies: []*util.Policy{
+									{
+										Name:     fmt.Sprintf("%s:policy.dummyPol", domain),
+										Modified: &rdl.Timestamp{Time: fastime.Now()},
+										Assertions: []*util.Assertion{
+											{
+												Role:     fmt.Sprintf("%s:role.dummyRole", domain),
+												Effect:   "ALLOW",
+												Action:   "dummyAct",
+												Resource: fmt.Sprintf("%s:dummyRes", domain),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
 			domains := make([]string, 1000)
+			fetchers := make(map[string]Fetcher, 1000)
 			for i := 0; i < 1000; i++ {
-				domains[i] = fmt.Sprintf("dummyDom%d", i)
-			}
-
-			return test{
-				name: "Update policy success with multiple athenz domains",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					policyExpiredDuration: time.Second * 120,
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
+				d := fmt.Sprintf("dummyDom%d", i)
+				domains[i] = d
+				fetchers[d] = &fetcherMock{
+					domainMock: func() string { return d },
+					fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+						return createSp(d), nil
 					},
-					athenzDomains: domains,
-				},
-				args: args{
-					ctx: context.Background(),
-				},
-				checkFunc: func(pol *policyd) error {
-					gotLen := len(pol.rolePolicies.ToRawMap(context.Background()))
-					wantLen := len(domains)
-					if gotLen != wantLen {
-						return fmt.Errorf("role policies length is not correct, got: %v, want: %v", gotLen, wantLen)
-					}
-
-					for _, dom := range domains {
-						domRole := fmt.Sprintf("%s:role.dummyRole", dom)
-						pols, ok := pol.rolePolicies.Get(domRole)
-						if !ok {
-							return errors.Errorf("role policies %s not found", domRole)
-						}
-						if len(pols.([]*Assertion)) != 1 {
-							return errors.Errorf("role policies of %s not correct", domRole)
-						}
-					}
-
-					return nil
-				},
+				}
 			}
+			ctx := context.Background()
+
+			// prepare test
+			t.fields = fields{
+				rolePolicies:          gache.New(),
+				policyExpiredDuration: time.Hour,
+				athenzDomains:         domains,
+				fetchers:              fetchers,
+			}
+			t.args = args{
+				ctx: ctx,
+			}
+
+			// want
+			t.wantErr = ""
+			t.wantRps = make(map[string]interface{}, 1000)
+			for i := 0; i < 1000; i++ {
+				d := fmt.Sprintf("dummyDom%d", i)
+				key := fmt.Sprintf("%s:role.dummyRole", d)
+				wantAssertion, _ := NewAssertion("dummyAct", fmt.Sprintf("%s:dummyRes", d), "ALLOW")
+				t.wantRps[key] = []*Assertion{wantAssertion}
+			}
+			return t
 		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "Update error, context timeout, no partial update"
 
-			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*10))
-			return test{
-				name: "Update error, context timeout",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
+			// dummy values
+			createSp := func(domain string) *SignedPolicy {
+				return &SignedPolicy{
+					util.DomainSignedPolicyData{
+						KeyId:     "dummyKeyID",
+						Signature: "dummySig",
+						SignedPolicyData: &util.SignedPolicyData{
+							ZmsKeyId:     "dummyKeyID",
+							ZmsSignature: "dummySig",
+							Modified:     &rdl.Timestamp{Time: fastime.Now()},
+							Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+							PolicyData: &util.PolicyData{
+								Domain: domain,
+								Policies: []*util.Policy{
+									{
+										Name:     fmt.Sprintf("%s:policy.dummyPol", domain),
+										Modified: &rdl.Timestamp{Time: fastime.Now()},
+										Assertions: []*util.Assertion{
+											{
+												Role:     fmt.Sprintf("%s:role.dummyRole", domain),
+												Effect:   "ALLOW",
+												Action:   "dummyAct",
+												Resource: fmt.Sprintf("%s:dummyRes", domain),
+											},
+										},
+									},
+								},
 							},
-						}
+						},
 					},
-					athenzDomains: []string{"dummyDom"},
-				},
-				args: args{
-					ctx: ctx,
-				},
-				wantErr: "context deadline exceeded",
-				beforeFunc: func() {
-					time.Sleep(time.Second)
-				},
-				afterFunc: func() {
-					cancel()
-				},
+				}
 			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500) // timeout should be long enough to enter Fetch()
+			go func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Hour):
+					cancel()
+				}
+			}()
+			domains := make([]string, 100)
+			fetchers := make(map[string]Fetcher, 100)
+			for i := 0; i < 100; i++ {
+				d := fmt.Sprintf("discardDom%d", i)
+				domains[i] = d
+				fetchers[d] = &fetcherMock{
+					domainMock: func() string { return d },
+					fetchWithRetryMock: func(ctx context.Context) (*SignedPolicy, error) {
+						if d == "discardDom"+"0" {
+							// blocking
+							<-ctx.Done()
+							return nil, ctx.Err()
+						}
+						return createSp(d), nil
+					},
+				}
+			}
+
+			// prepare test
+			t.fields = fields{
+				rolePolicies:          gache.New(),
+				policyExpiredDuration: time.Hour,
+				athenzDomains:         domains,
+				fetchers:              fetchers,
+			}
+			t.args = args{
+				ctx: ctx,
+			}
+
+			// want
+			t.wantErr = "fetch policy fail: " + context.DeadlineExceeded.Error()
+			t.wantRps = make(map[string]interface{})
+			return t
 		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.afterFunc != nil {
-				defer tt.afterFunc()
-			}
-
 			p := &policyd{
 				expireMargin:          tt.fields.expireMargin,
 				rolePolicies:          tt.fields.rolePolicies,
@@ -525,22 +695,20 @@ func Test_policyd_Update(t *testing.T) {
 				refreshDuration:       tt.fields.refreshDuration,
 				errRetryInterval:      tt.fields.errRetryInterval,
 				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
+				fetchers:              tt.fields.fetchers,
 			}
-			if tt.beforeFunc != nil {
-				tt.beforeFunc()
+			err := p.Update(tt.args.ctx)
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
+				t.Errorf("policyd.Update() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if err := p.Update(tt.args.ctx); (err != nil) && tt.wantErr != "" && err.Error() != tt.wantErr {
-				t.Errorf("policy.Update() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.checkFunc != nil {
-				if err := tt.checkFunc(p); err != nil {
-					t.Errorf("policy.Update() error = %v", err)
-				}
+			gotRps := p.GetPolicyCache(context.Background())
+			if !cmp.Equal(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "Reg")) {
+				t.Errorf("policyd.Update() rolePolicies = %v, want %v", gotRps, tt.wantRps)
+				t.Errorf("policyd.Update() rolePolicies diff = %s", cmp.Diff(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "Reg")))
 			}
 		})
 	}
@@ -553,8 +721,6 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
 		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
 		athenzURL        string
 		athenzDomains    []string
 		client           *http.Client
@@ -696,6 +862,24 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
 		},
 		{
+			name: "check policy, canceled context",
+			fields: fields{
+				rolePolicies: gache.New(),
+			},
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					return ctx
+				}(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole"},
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: context.Canceled,
+		},
+		{
 			name: "check policy deny with multiple roles with allow and deny",
 			fields: fields{
 				rolePolicies: func() gache.Gache {
@@ -759,8 +943,6 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 				refreshDuration:  tt.fields.refreshDuration,
 				errRetryInterval: tt.fields.errRetryInterval,
 				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
 				athenzURL:        tt.fields.athenzURL,
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
@@ -788,8 +970,6 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 		refreshDuration  time.Duration
 		errRetryInterval time.Duration
 		pkp              pubkey.Provider
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
 		athenzURL        string
 		athenzDomains    []string
 		client           *http.Client
@@ -881,8 +1061,6 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 				refreshDuration:  tt.fields.refreshDuration,
 				errRetryInterval: tt.fields.errRetryInterval,
 				pkp:              tt.fields.pkp,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
 				athenzURL:        tt.fields.athenzURL,
 				athenzDomains:    tt.fields.athenzDomains,
 				client:           tt.fields.client,
@@ -890,7 +1068,8 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 
 			b := make([]byte, 10240)
 			lenStart := runtime.Stack(b, true)
-			// t.Log(string(b[:len]))
+			oldStack := string(b[:lenStart])
+			// t.Log(oldStack)
 			err := p.CheckPolicy(tt.args.ctx, tt.args.domain, tt.args.roles, tt.args.action, tt.args.resource)
 			if err == nil {
 				if tt.want != nil {
@@ -905,1111 +1084,180 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 			}
 
 			// check runtime stack for go routine leak
-			time.Sleep(time.Second) // wait for some background process to cleanup
+			time.Sleep(time.Millisecond * 500) // wait for some background process to cleanup
 			lenEnd := runtime.Stack(b, true)
-			// t.Log(string(b[:len]))
-			if math.Abs(float64(lenStart-lenEnd)) > 5 {
-				t.Errorf("go routine leak:\n%v", string(b[:lenEnd]))
+			// t.Log(string(b[:lenEnd]))
+			if math.Abs(float64(lenStart-lenEnd)) > 10 { // to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference
+				t.Errorf("go routine leak:\n%v", cmp.Diff(oldStack, string(b[:lenEnd])))
 			}
 		})
 	}
 }
 
-func Test_policyd_fetchAndCachePolicy(t *testing.T) {
-	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
-		athenzURL             string
-		athenzDomains         []string
-		client                *http.Client
-	}
+func Test_fetchAndCachePolicy(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		g   gache.Gache
-		dom string
+		f   Fetcher
 	}
 	type test struct {
-		name      string
-		fields    fields
-		args      args
-		checkFunc func(pol *policyd) error
-		wantErr   bool
+		name    string
+		args    args
+		wantErr string
+		wantRps map[string]interface{}
 	}
-	tests := []test{
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"dummyDom:dummyRes","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
-			g := gache.New()
-
-			return test{
-				name: "fetch policy success with updated policy",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
+	createDummySp := func() *SignedPolicy {
+		return &SignedPolicy{
+			util.DomainSignedPolicyData{
+				KeyId:     "dummyKeyID",
+				Signature: "dummySig",
+				SignedPolicyData: &util.SignedPolicyData{
+					ZmsKeyId:     "dummyKeyID",
+					ZmsSignature: "dummySig",
+					Modified:     &rdl.Timestamp{Time: fastime.Now()},
+					Expires:      &rdl.Timestamp{Time: fastime.Now().Add(time.Hour)},
+					PolicyData: &util.PolicyData{
+						Domain: "dummyDom",
+						Policies: []*util.Policy{
+							{
+								Name:     "dummyDom:policy.dummyPol",
+								Modified: &rdl.Timestamp{Time: fastime.Now()},
+								Assertions: []*util.Assertion{
+									{
+										Role:     "dummyDom:role.dummyRole",
+										Effect:   "ALLOW",
+										Action:   "dummyAct",
+										Resource: "dummyDom:dummyRes",
+									},
+								},
 							},
-						}
+						},
 					},
 				},
-				args: args{
-					ctx: context.Background(),
-					g:   g,
-					dom: "dummyDom",
-				},
-				checkFunc: func(pol *policyd) error {
-					pols, ok := g.Get("dummyDom:role.dummyRole")
-					if !ok {
-						return errors.New("role policies not found")
-					}
-					if len(pols.([]*Assertion)) != 1 {
-						return errors.New("role policies not correct")
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			}))
-			srv := httptest.NewTLSServer(handler)
-			g := gache.New()
-
-			return test{
-				name: "fetch policy failed",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-				},
-				args: args{
-					ctx: context.Background(),
-					g:   g,
-					dom: "dummyDomain",
-				},
-				wantErr: true,
-			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("ETag", "dummyEtag")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"policyData":{"domain":"dummyDom","policies":[{"name":"dummyDom:policy.dummyPol","modified":"2099-02-14T05:42:07.219Z","assertions":[{"role":"dummyDom:role.dummyRole","resource":"","action":"dummyAct","effect":"ALLOW"}]}]},"zmsSignature":"dummySig","zmsKeyId":"dummyKeyID","modified":"2099-03-04T04:33:27.318Z","expires":"2099-03-21T08:11:18.729Z"},"signature":"dummySig","keyId":"dummyKeyID"}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
-
-			return test{
-				name: "simplifyAndCache failed",
-				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return nil
-							},
-						}
-					},
-				},
-				args: args{
-					ctx: context.Background(),
-					g:   gache.New(),
-					dom: "dummyDom",
-				},
-				wantErr: true,
-			}
-		}(),
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
-			}
-			if err := p.fetchAndCachePolicy(tt.args.ctx, tt.args.g, tt.args.dom); (err != nil) != tt.wantErr {
-				t.Errorf("policy.fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.checkFunc != nil {
-				if err := tt.checkFunc(p); err != nil {
-					t.Errorf("policy.fetchAndCachePolicy() error = %v", err)
-				}
-			}
-		})
-	}
-}
-
-func Test_policyd_fetchPolicy(t *testing.T) {
-	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
-		athenzURL             string
-		athenzDomains         []string
-		client                *http.Client
-	}
-	type args struct {
-		ctx    context.Context
-		domain string
-	}
-	type test struct {
-		name      string
-		fields    fields
-		args      args
-		checkFunc func(p *policyd, sp *SignedPolicy, upd bool, err error) error
-	}
-	mockPkp := func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-		return VerifierMock{
-			VerifyFunc: func(d, s string) error {
-				return nil
 			},
 		}
 	}
 	tests := []test{
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				tByte, err := rdl.Timestamp{
-					Time: fastime.Now().Add(1 * time.Hour).UTC(),
-				}.MarshalJSON()
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-				} else {
-					w.Header().Add("ETag", "dummyEtag")
-					w.Header().Set("Content-Type", "application/json; charset=utf-8")
-					w.WriteHeader(http.StatusOK)
-					json := fmt.Sprintf(`{"signedPolicyData":{
-						"zmsKeyId": "1",
-						"expires": %v
-					}}`, string(tByte))
-					w.Write([]byte(json))
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "fetch success, update cache"
 
-			return test{
-				name: "test fetch success",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Minute,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if err != nil {
-						return err
-					}
-
-					etag, ok := p.etagCache.Get("dummyDomain")
-					if !ok {
-						return errors.New("etag not set")
-					}
-					etagCac := etag.(*etagCache)
-					if etagCac.etag != "dummyEtag" {
-						return errors.New("etag header not correct")
-					}
-
-					want := &SignedPolicy{
-						util.DomainSignedPolicyData{
-							SignedPolicyData: &util.SignedPolicyData{
-								ZmsKeyId: "1",
-							},
-						},
-					}
-
-					if !cmp.Equal(etagCac.sp, sp) {
-						return errors.Errorf("etag value not match, got: %v, want: %v", etag, want)
-					}
-
-					if upd == false {
-						return errors.New("Invalid upd flag")
-					}
-
-					return err
+			// dummy values
+			domain := "dummyDom"
+			sp := createDummySp()
+			fetcher := &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return sp, nil
 				},
 			}
+			ctx := context.Background()
+
+			// prepare test
+			t.args = args{
+				ctx: ctx,
+				g:   gache.New(),
+				f:   fetcher,
+			}
+
+			// want
+			wantAssertion, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "ALLOW")
+			t.wantErr = ""
+			t.wantRps = make(map[string]interface{})
+			t.wantRps["dummyDom:role.dummyRole"] = []*Assertion{wantAssertion}
+			return t
 		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "fetch failed, no cache, error"
 
-			return test{
-				name: "test fetch error url",
-				fields: fields{
-					athenzURL:             " ",
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Second,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummy",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if sp != nil {
-						return errors.New("invalid return")
-					}
-					if upd != false {
-						return errors.New("invalid return ")
-					}
-					wantErr := `error creating fetch policy request: parse https:// /domain/dummy/signed_policy_data: invalid character " " in host name`
-					if err.Error() != wantErr {
-						return errors.Errorf("got error: %v, want: %v", err, wantErr)
-					}
-
-					return nil
+			// dummy values
+			domain := "dummyDom"
+			fetcher := &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return nil, errors.New("no cache")
 				},
 			}
+			ctx := context.Background()
+
+			// prepare test
+			t.args = args{
+				ctx: ctx,
+				g:   gache.New(),
+				f:   fetcher,
+			}
+
+			// want
+			t.wantErr = "fetch policy fail: no cache"
+			t.wantRps = make(map[string]interface{})
+			return t
 		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("If-None-Match") != "dummyEtag" {
-					w.Header().Add("ETag", "dummyEtag")
-					w.WriteHeader(http.StatusOK)
-				} else {
-					w.WriteHeader(http.StatusNotModified)
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "fetch failed, but with cached policy, update cache"
 
-			etagCac := gache.New()
-			etagCac.Set("dummyDomain", &etagCache{
-				etag: "dummyEtag",
-				sp: &SignedPolicy{
-					util.DomainSignedPolicyData{
-						SignedPolicyData: &util.SignedPolicyData{
-							Expires: func() *rdl.Timestamp {
-								t := rdl.NewTimestamp(fastime.Now().Add(time.Hour))
-								return &t
-							}(),
-						},
-					},
-				},
-			})
-
-			return test{
-				name: "test etag exists and response 304",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Second,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if err != nil {
-						return err
-					}
-
-					etag, ok := p.etagCache.Get("dummyDomain")
-					if !ok {
-						return errors.New("etag not set")
-					}
-					etagCac := etag.(*etagCache)
-					if etagCac.etag != "dummyEtag" {
-						return errors.New("etag header not correct")
-					}
-
-					if etagCac.sp != sp {
-						return errors.Errorf("etag value not match, got: %v, want: %v", etag, sp)
-					}
-
-					if upd != false {
-						return errors.New("Invalid upd flag")
-					}
-
-					return err
+			// dummy values
+			domain := "dummyDom"
+			sp := createDummySp()
+			fetcher := &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return sp, errors.New("something wrong, return cache")
 				},
 			}
+			ctx := context.Background()
+
+			// prepare test
+			t.args = args{
+				ctx: ctx,
+				g:   gache.New(),
+				f:   fetcher,
+			}
+
+			// want
+			wantAssertion, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "ALLOW")
+			t.wantErr = ""
+			t.wantRps = make(map[string]interface{})
+			t.wantRps["dummyDom:role.dummyRole"] = []*Assertion{wantAssertion}
+			return t
 		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("If-None-Match") == "dummyOldEtag" {
-					w.Header().Add("ETag", "dummyNewEtag")
-					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"signedPolicyData":{
-						"zmsKeyId":"dummyNewId",
-						"expires":"2099-03-21T08:11:18.729Z"
-					}}`))
-				} else {
-					w.WriteHeader(http.StatusNotModified)
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
+		func() (t test) {
+			t.name = "simplifyAndCache failed, error"
 
-			etagCac := gache.New()
-			etagCac.Set("dummyDomain", &etagCache{
-				etag: "dummyOldEtag",
-				sp: &SignedPolicy{
-					util.DomainSignedPolicyData{
-						SignedPolicyData: &util.SignedPolicyData{
-							Expires: &rdl.Timestamp{
-								Time: fastime.Now().Add(time.Hour).UTC(),
-							},
-						},
-					},
-				},
-			})
-
-			return test{
-				name: "test etag exists but response 200",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Second,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if err != nil {
-						return err
-					}
-
-					etag, ok := p.etagCache.Get("dummyDomain")
-					if !ok {
-						return errors.New("etag not set")
-					}
-					etagCac := etag.(*etagCache)
-					if etagCac.etag != "dummyNewEtag" {
-						return errors.New("etag header not correct")
-					}
-
-					if !cmp.Equal(etagCac.sp, sp) {
-						return errors.Errorf("etag value not match, got: %v, want: %v", etagCac, sp)
-					}
-
-					if upd != true {
-						return errors.New("Invalid upd flag")
-					}
-
-					return err
+			// dummy values
+			domain := "dummyDom"
+			sp := createDummySp()
+			fetcher := &fetcherMock{
+				domainMock: func() string { return domain },
+				fetchWithRetryMock: func(context.Context) (*SignedPolicy, error) {
+					return sp, nil
 				},
 			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
-			srv := httptest.NewTLSServer(handler)
+			ctx := context.Background()
 
-			return test{
-				name: "test fetch error make https request",
-				fields: fields{
-					athenzURL:             "dummyURL",
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if sp != nil {
-						return errors.Errorf("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("Invalid upd flag")
-					}
-					wantErr := "error making request: Get https://dummyURL/domain/dummyDomain/signed_policy_data: dial tcp: lookup dummyURL"
-					if !strings.HasPrefix(err.Error(), wantErr) {
-						return errors.Errorf("invalid error, got: %v, want: %v", err, wantErr)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			}))
-			srv := httptest.NewTLSServer(handler)
-
-			return test{
-				name: "test fetch error return not ok",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if sp != nil {
-						return errors.Errorf("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("Invalid upd flag")
-					}
-					wantErr := "error fetching policy data: Error fetching athenz policy"
-					if err.Error() != wantErr {
-						return errors.Errorf("invalid error, got: %v, want: %v", err, wantErr)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(""))
-			}))
-			srv := httptest.NewTLSServer(handler)
-
-			return test{
-				name: "test fetch error decode policy",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if sp != nil {
-						return errors.Errorf("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("Invalid upd flag")
-					}
-					wantErr := "error decode response: EOF"
-					if err.Error() != wantErr {
-						return errors.Errorf("invalid error, got: %v, want: %v", err, wantErr)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId":"1",
-					"expires":"2099-03-21T08:11:18.729Z"
-				}}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
-
-			return test{
-				name: "test fetch verify error",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             gache.New(),
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp: func(e pubkey.AthenzEnv, id string) authcore.Verifier {
-						return VerifierMock{
-							VerifyFunc: func(d, s string) error {
-								return errors.New("error")
-							},
-						}
-					},
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: "dummyDomain",
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					if sp != nil {
-						return errors.Errorf("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("Invalid upd flag")
-					}
-					wantErr := "error verify policy data: error verify signature: error"
-					if err.Error() != wantErr {
-						return errors.Errorf("invalid error, got: %v, want: %v", err, wantErr)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusNotModified)
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "cached-policy",
-						Expires: &rdl.Timestamp{
-							Time: fastime.Now().Add(-1 * time.Hour).UTC(),
-						},
-					},
-				},
-			}
-			wantSp := cachedSp
-
-			// old etag cache
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test policy already expired (304), no expiry checking, return expired policy",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					if err != nil {
-						return err
-					}
-					if !reflect.DeepEqual(sp, wantSp) {
-						return fmt.Errorf("SignedPolicy got: %+v, want: %+v", *sp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-					if upd != false {
-						return errors.New("upd should be false")
-					}
-					if fastime.Now().Before(sp.SignedPolicyData.Expires.Time) {
-						// strange behavior
-						return errors.New("returned policy should be expired")
-					}
-
-					// check etag cache values
-					etagCac, ok := p.etagCache.Get(domain)
-					if !ok {
-						return errors.New("etag cache should be found")
-					}
-					// check policy same
-					gotCachedSp := etagCac.(*etagCache).sp
-					if gotCachedSp != wantSp {
-						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("ETag", "\"dummyNewEtag\"")
-				w.Header().Set("Content-Type", "application/json; charset=utf-8")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId": "zmsKeyId-137"
-				}}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-144",
-					},
-				},
-			}
-			wantSp := cachedSp
-
-			// old etag cache, to confirm update
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test policy without expiry, keep etagCache, return error",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					wantError := "error verify policy data: policy without expiry"
-					if !strings.HasPrefix(err.Error(), wantError) {
-						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
-					}
-					if sp != nil {
-						return errors.New("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("upd should be false")
-					}
-
-					// check etag cache values
-					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
-					if !ok {
-						return errors.New("etag cache should be found")
-					}
-					// check etag
-					wantEtag := "\"dummyOldEtag\""
-					gotEtag := etagCac.(*etagCache).etag
-					if gotEtag != wantEtag {
-						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
-					}
-					// check policy equal
-					gotCachedSp := etagCac.(*etagCache).sp
-					if !reflect.DeepEqual(gotCachedSp, wantSp) {
-						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("ETag", "\"dummyNewEtag\"")
-				w.Header().Set("Content-Type", "application/json; charset=utf-8")
-				w.WriteHeader(http.StatusOK)
-				// only customized format works
-				w.Write([]byte(`{"signedPolicyData":{
-					"zmsKeyId": "zmsKeyId-235",
-					"expires":"2099-12-31"
-				}}`))
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-243",
-					},
-				},
-			}
-			wantSp := cachedSp
-
-			// old etag cache, to confirm delete
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test policy with invalid expiry, keep etagCache, return error",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Minute,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					wantError := "error verify policy data: policy already expired"
-					if !strings.HasPrefix(err.Error(), wantError) {
-						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
-					}
-					if sp != nil {
-						return errors.New("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("upd should be false")
-					}
-
-					// check etag cache values
-					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
-					if !ok {
-						return errors.New("etag cache should be found")
-					}
-					// check etag
-					wantEtag := "\"dummyOldEtag\""
-					gotEtag := etagCac.(*etagCache).etag
-					if gotEtag != wantEtag {
-						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
-					}
-					// check policy equal
-					gotCachedSp := etagCac.(*etagCache).sp
-					if !reflect.DeepEqual(gotCachedSp, wantSp) {
-						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				tByte, err := rdl.Timestamp{
-					Time: fastime.Now().Add(-1 * time.Hour).UTC(),
-				}.MarshalJSON()
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-				} else {
-					w.Header().Set("ETag", "\"dummyNewEtag\"")
-					w.Header().Set("Content-Type", "application/json; charset=utf-8")
-					w.WriteHeader(http.StatusOK)
-					json := fmt.Sprintf(`{"signedPolicyData":{
-						"zmsKeyId": "zmsKeyId-322",
-						"expires": %v
-					}}`, string(tByte))
-					w.Write([]byte(json))
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-332",
-					},
-				},
-			}
-			wantSp := cachedSp
-
-			// old etag cache, to confirm delete
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test policy already expired, expiry check fail, keep etagCache, return error",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          time.Minute,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					wantError := "error verify policy data: policy already expired"
-					if !strings.HasPrefix(err.Error(), wantError) {
-						return fmt.Errorf("err got: %v, want: %v", err.Error(), wantError)
-					}
-					if sp != nil {
-						return errors.New("sp should be nil")
-					}
-					if upd != false {
-						return errors.New("upd should be false")
-					}
-
-					// check etag cache values
-					etagCac, _, ok := p.etagCache.GetWithExpire(domain)
-					if !ok {
-						return errors.New("etag cache should be found")
-					}
-					// check etag
-					wantEtag := "\"dummyOldEtag\""
-					gotEtag := etagCac.(*etagCache).etag
-					if gotEtag != wantEtag {
-						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
-					}
-					// check policy equal
-					gotCachedSp := etagCac.(*etagCache).sp
-					if !reflect.DeepEqual(gotCachedSp, wantSp) {
-						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			policyExpires := rdl.Timestamp{
-				Time: fastime.Now().Add(1 * time.Hour).Truncate(time.Millisecond).UTC(),
-			}
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				tByte, err := policyExpires.MarshalJSON()
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-				} else {
-					w.Header().Set("ETag", "\"dummyNewEtag\"")
-					w.Header().Set("Content-Type", "application/json; charset=utf-8")
-					w.WriteHeader(http.StatusOK)
-					json := fmt.Sprintf(`{"signedPolicyData":{
-						"zmsKeyId": "zmsKeyId-403",
-						"expires": %v
-					}}`, string(tByte))
-					w.Write([]byte(json))
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-414",
-					},
-				},
-			}
-			wantSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-403",
-						Expires:  &policyExpires,
-					},
-				},
+			// prepare test
+			sp.SignedPolicyData.PolicyData.Policies[0].Assertions[0].Resource = "invalid-resource"
+			t.args = args{
+				ctx: ctx,
+				g:   gache.New(),
+				f:   fetcher,
 			}
 
-			// old etag cache, to confirm delete
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test policy expire within the expireMargin, remove etagCache, return policy",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          2 * time.Hour,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					if err != nil {
-						return err
-					}
-					if !reflect.DeepEqual(sp.DomainSignedPolicyData.SignedPolicyData, wantSp.DomainSignedPolicyData.SignedPolicyData) {
-						return fmt.Errorf("SignedPolicy got: %+v, want: %+v", *sp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-					if upd != true {
-						return errors.New("upd should be true")
-					}
-
-					// check etag cache empty
-					_, ok := p.etagCache.Get(domain)
-					if ok {
-						return errors.New("etag cache should be not found")
-					}
-
-					return nil
-				},
-			}
-		}(),
-		func() test {
-			domain := "dummyDomain"
-			policyExpires := rdl.Timestamp{
-				Time: fastime.Now().Add(1 * time.Hour).Truncate(time.Millisecond).UTC(),
-			}
-			expireMargin := 30 * time.Minute
-			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				tByte, err := policyExpires.MarshalJSON()
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-				} else {
-					w.Header().Set("ETag", "\"dummyNewEtag\"")
-					w.Header().Set("Content-Type", "application/json; charset=utf-8")
-					w.WriteHeader(http.StatusOK)
-					json := fmt.Sprintf(`{"signedPolicyData":{
-						"zmsKeyId": "zmsKeyId-482",
-						"expires": %v
-					}}`, string(tByte))
-					w.Write([]byte(json))
-				}
-			}))
-			srv := httptest.NewTLSServer(handler)
-			cachedSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-492",
-					},
-				},
-			}
-			wantSp := &SignedPolicy{
-				util.DomainSignedPolicyData{
-					SignedPolicyData: &util.SignedPolicyData{
-						ZmsKeyId: "zmsKeyId-482",
-						Expires:  &policyExpires,
-					},
-				},
-			}
-
-			// old etag cache, to confirm update
-			etagCac := gache.New()
-			etagCac.Set(domain, &etagCache{
-				etag: "\"dummyOldEtag\"",
-				sp:   cachedSp,
-			})
-
-			return test{
-				name: "test valid policy (200), set etagCache with (policyExpires - expireMargin)",
-				fields: fields{
-					athenzURL:             strings.Replace(srv.URL, "https://", "", 1),
-					policyExpiredDuration: time.Minute * 30,
-					etagCache:             etagCac,
-					expireMargin:          expireMargin,
-					client:                srv.Client(),
-					pkp:                   mockPkp,
-				},
-				args: args{
-					ctx:    context.Background(),
-					domain: domain,
-				},
-				checkFunc: func(p *policyd, sp *SignedPolicy, upd bool, err error) error {
-					// check return values
-					if err != nil {
-						return err
-					}
-					if !reflect.DeepEqual(sp.DomainSignedPolicyData.SignedPolicyData, wantSp.DomainSignedPolicyData.SignedPolicyData) {
-						return fmt.Errorf("SignedPolicy got: %+v, want: %+v", *sp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-					if upd != true {
-						return errors.New("upd should be true")
-					}
-
-					// check etag cache values
-					etagCac, gotExpiry, ok := p.etagCache.GetWithExpire(domain)
-					if !ok {
-						return errors.New("etag cache should be found")
-					}
-					// check etag
-					wantEtag := "\"dummyNewEtag\""
-					gotEtag := etagCac.(*etagCache).etag
-					if gotEtag != wantEtag {
-						return fmt.Errorf("etag got: %v, want: %v", gotEtag, wantEtag)
-					}
-					// check policy equal
-					gotCachedSp := etagCac.(*etagCache).sp
-					if !reflect.DeepEqual(gotCachedSp, wantSp) {
-						return fmt.Errorf("etag cache SignedPolicy got: %+v, want: %+v", *gotCachedSp.DomainSignedPolicyData.SignedPolicyData, *wantSp.DomainSignedPolicyData.SignedPolicyData)
-					}
-					// // check cache expire time
-					wantExpiry := wantSp.DomainSignedPolicyData.SignedPolicyData.Expires.UnixNano() - expireMargin.Nanoseconds()
-					if gotExpiry-wantExpiry > (time.Second * 1).Nanoseconds() {
-						return fmt.Errorf("etag cache expiry got: %v, want: %v", gotExpiry, wantExpiry)
-					}
-
-					return nil
-				},
-			}
+			// want
+			t.wantErr = "simplify and cache policy fail: assertion format not correct: Access denied due to invalid/empty policy resources"
+			t.wantRps = make(map[string]interface{})
+			return t
 		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
+			err := fetchAndCachePolicy(tt.args.ctx, tt.args.g, tt.args.f)
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
+				t.Errorf("fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			got, got1, err := p.fetchPolicy(tt.args.ctx, tt.args.domain)
-
-			if err := tt.checkFunc(p, got, got1, err); err != nil {
-				t.Errorf("policy.fetchPolicy() error = %v", err)
+			gotRps := tt.args.g.ToRawMap(context.Background())
+			if !cmp.Equal(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "Reg")) {
+				t.Errorf("fetchAndCachePolicy() g = %v, want %v", gotRps, tt.wantRps)
+				t.Errorf("fetchAndCachePolicy() g diff = %s", cmp.Diff(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "Reg")))
 			}
 		})
 	}
@@ -2699,8 +1947,6 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		refreshDuration       time.Duration
 		errRetryInterval      time.Duration
 		pkp                   pubkey.Provider
-		etagCache             gache.Gache
-		etagFlushDur          time.Duration
 		athenzURL             string
 		athenzDomains         []string
 		client                *http.Client
@@ -2769,8 +2015,6 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 				refreshDuration:       tt.fields.refreshDuration,
 				errRetryInterval:      tt.fields.errRetryInterval,
 				pkp:                   tt.fields.pkp,
-				etagCache:             tt.fields.etagCache,
-				etagFlushDur:          tt.fields.etagFlushDur,
 				athenzURL:             tt.fields.athenzURL,
 				athenzDomains:         tt.fields.athenzDomains,
 				client:                tt.fields.client,
