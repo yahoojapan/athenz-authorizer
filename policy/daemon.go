@@ -264,7 +264,7 @@ func fetchAndCachePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
 	sp, err := f.FetchWithRetry(ctx)
 	if err != nil {
 		errMsg := "fetch policy fail"
-		glg.Debugf("%s, error: %v", errMsg, err)
+		glg.Errorf("%s, error: %v", errMsg, err)
 		if sp == nil {
 			return errors.Wrap(err, errMsg)
 		}
