@@ -123,6 +123,52 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "parse invalid token with extra args after signature",
+			fields: fields{
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
+					return VerifierMock{
+						VerifyFunc: func(string, string) error {
+							return nil
+						},
+					}
+				},
+			},
+			args: args{
+				tok: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25;s=dummysignature;d=dummy1;r=users2",
+			},
+			want: &Token{
+				UnsignedToken: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25",
+				Domain:        "dummy.sidecartest",
+				ExpiryTime:    time.Unix(9999999999, 0),
+				KeyID:         "0",
+				Roles:         []string{"users"},
+				Signature:     "dummysignature;d=dummy1;r=users2",
+			},
+		},
+		{
+			name: "parse invalid token with 2 signature",
+			fields: fields{
+				pkp: func(pubkey.AthenzEnv, string) authcore.Verifier {
+					return VerifierMock{
+						VerifyFunc: func(string, string) error {
+							return nil
+						},
+					}
+				},
+			},
+			args: args{
+				tok: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25;s=dummysignature;s=dummysignature2",
+			},
+			want: &Token{
+				UnsignedToken: "v=Z1;d=dummy.sidecartest;r=users;p=takumats.tenant.test;h=dummyhost;a=e55ee6ddc3e3c27c;t=1550463321;e=9999999999;k=0;i=172.16.168.25",
+				Domain:        "dummy.sidecartest",
+				ExpiryTime:    time.Unix(9999999999, 0),
+				KeyID:         "0",
+				Roles:         []string{"users"},
+				Signature:     "dummysignature;s=dummysignature2",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
