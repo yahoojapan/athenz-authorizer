@@ -66,9 +66,10 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 
 	rt := &Token{
 		UnsignedToken: st[0],
+		Signature:     st[1],
 	}
 
-	for _, pair := range strings.Split(tok, ";") {
+	for _, pair := range strings.Split(st[0], ";") {
 		kv := strings.SplitN(pair, "=", 2)
 		if len(kv) != 2 {
 			return nil, errors.Wrap(ErrRoleTokenInvalid, "invalid key value format")
@@ -77,6 +78,7 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 			return nil, errors.Wrap(err, "error setting value")
 		}
 	}
+
 	return rt, nil
 }
 
