@@ -37,6 +37,15 @@ type RoleJWTClaim struct {
 	jwt.StandardClaims
 }
 
+type AccessTokenClaim struct {
+	clientId       string
+	userId         string
+	proxyPrincipal string
+	scope          []string
+	confirm        map[string]string
+	jwt.StandardClaims
+}
+
 // Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
 func (c *RoleJWTClaim) Valid() error {
 	vErr := new(jwt.ValidationError)
