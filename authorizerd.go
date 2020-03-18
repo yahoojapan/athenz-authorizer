@@ -88,6 +88,7 @@ type mode uint8
 const (
 	token mode = iota
 	jwt
+	accessToken
 )
 
 // New return Authorizerd
@@ -248,6 +249,11 @@ func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) er
 	return a.verify(ctx, jwt, tok, act, res)
 }
 
+// VerifyAccessToken verifies the access token for specific resource and return and verification error.
+func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string) error {
+	return a.verify(ctx, accessToken, tok, act, res)
+}
+
 func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
@@ -282,6 +288,14 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		}
 		domain = rc.Domain
 		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
+	case accessToken:
+		ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok)
+		if err != nil {
+			glg.Debugf("error parse and validate access tokenn, err: %v", err)
+			return errors.Wrap(err, "error verify access token")
+		}
+		domain = ac.Audience
+		roles = ac.Scope
 	}
 
 	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
