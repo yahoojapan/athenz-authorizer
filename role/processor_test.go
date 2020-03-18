@@ -359,7 +359,7 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *Claim
+		want    *RoleJWTClaim
 		wantErr bool
 	}
 
@@ -387,8 +387,8 @@ func Test_rtp_ParseAndValidateRoleJWT(t *testing.T) {
 				args: args{
 					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZSwiZXhwIjo5OTk5OTk5OTk5fQ.MBv8JoDPjlwhwCzPdkVH0C7HGjtLsVdVsbduNSbnIVtLEcD1yfsVqUKpUupYx2h6o_gKgjTbNG2C6zidV6YsxXu5s-D-YSN15MO_Mjm1WJducK0OJURC8o7u83LcgoEXZQTjA3gQVBGSbyNELCBQKN451OHMOPcIYDLdgXS4iqiZPPBxd1VuNGoMtUshZQR5mGp5F3Yk1YQg9QPicN4-gDh-PF5l87ouTj6O1WyxGuY2qHmGzun3xe_Ma1kzslbL95MtzOLR6seCaSCfanUxC2FjD2hPj4I7HZuYIIFsQRAb_pguhh4dkEkb3op5XcpgoHQr26SlkKAUEFLmUa6qvg`,
 				},
-				want: func() *Claim {
-					c := &Claim{}
+				want: func() *RoleJWTClaim {
+					c := &RoleJWTClaim{}
 					c.ExpiresAt = 9999999999
 					return c
 				}(),

@@ -23,8 +23,8 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// Claim represents role jwt claim data.
-type Claim struct {
+// RoleJWTClaim represents role jwt claim data.
+type RoleJWTClaim struct {
 	Domain   string `json:"d"`
 	Email    string `json:"email"`
 	KeyID    string `json:"k"`
@@ -38,7 +38,7 @@ type Claim struct {
 }
 
 // Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
-func (c *Claim) Valid() error {
+func (c *RoleJWTClaim) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
 

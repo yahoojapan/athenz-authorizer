@@ -105,14 +105,14 @@ type TokenMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
-	c       *role.Claim
+	c       *role.RoleJWTClaim
 }
 
 func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
 	return rm.rt, rm.wantErr
 }
 
-func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.Claim, error) {
+func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
 	return rm.c, rm.wantErr
 }
 
