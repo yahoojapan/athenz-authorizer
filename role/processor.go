@@ -28,6 +28,10 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
+var (
+	confirmationMethod = "x5t#S256"
+)
+
 // Processor represents the role token parser interface.
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
@@ -38,6 +42,10 @@ type Processor interface {
 type rtp struct {
 	pkp  pubkey.Provider
 	jwkp jwk.Provider
+	// If you go back to the issue time, set that time. Subtract if necessary (for example, token issuance time).
+	clientCertificateGoBackSeconds int64
+	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
+	clientCertificateOffsetSeconds int64
 }
 
 // New returns the Role instance.
@@ -111,6 +119,7 @@ func (r *rtp) validate(rt *Token) error {
 }
 
 func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*AccessTokenClaim, error) {
+
 	tok, err := jwt.ParseWithClaims(cred, &AccessTokenClaim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
@@ -121,8 +130,8 @@ func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (
 	}
 
 	// certificate bound access token
-	if cert != nil {
-		err := validateCertificateBoundAccessToken(cert, claims.Confirm["x5t#S256"])
+	if _, ok := claims.Confirm[confirmationMethod]; ok {
+		err := r.validateCertificateBoundAccessToken(cert, claims)
 		if err != nil {
 			return nil, err
 		}
@@ -131,10 +140,48 @@ func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (
 	return claims, nil
 }
 
-func validateCertificateBoundAccessToken(cert *x509.Certificate, certHash string) error {
+func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *AccessTokenClaim) error {
+	if cert == nil {
+		return errors.New("error mTLS client certificate is nil")
+	}
+
+	// cnf check
 	sum := sha256.Sum256(cert.Raw)
-	if base64.URLEncoding.EncodeToString(sum[:]) != certHash {
-		return errors.New("error mTLS client certificate confirmation failed")
+	if base64.URLEncoding.EncodeToString(sum[:]) == claims.Confirm[confirmationMethod] {
+		return nil
+	}
+
+	// If cnf check fails, check to allow if the certificate has been refresh
+	if err := r.validateCertPrincipal(cert, claims); err != nil {
+		return err
+	}
+
+	// ProxyPrincipal validation
+
+	return nil
+}
+
+func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *AccessTokenClaim) error {
+	// common name check
+	cn := cert.Subject.CommonName
+	if cn != "" {
+		return errors.New("error subject common name of client certificate is empty")
+	}
+	clientID := claims.ClientID
+	if clientID != "" {
+		return errors.New("error client_id of access token is empty")
+	}
+	if cn != clientID {
+		return errors.Errorf("error certificate and access token principal mismatch: %v vs %v", cn, clientID)
+	}
+
+	// Issue time check. If the certificate had been updated, it would have been issued later than the token.
+	if cert.NotBefore.Unix() < claims.IssuedAt-r.clientCertificateGoBackSeconds {
+		return errors.Errorf("error certificate: %v issued before token: %v", cert.NotBefore.Unix(), claims.IssuedAt)
+	}
+	// Issue tiem check. Determine if certificate's issue time is within an allowed range
+	if cert.NotBefore.Unix() > claims.IssuedAt+r.clientCertificateOffsetSeconds-r.clientCertificateGoBackSeconds {
+		return errors.Errorf("Certificate: %v past configured offset %v for token: %v", cert.NotBefore.Unix(), r.clientCertificateOffsetSeconds, claims.IssuedAt)
 	}
 	return nil
 }
