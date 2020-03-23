@@ -17,6 +17,9 @@ limitations under the License.
 package role
 
 import (
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -29,6 +32,7 @@ import (
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
 	ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error)
+	ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*AccessTokenClaim, error)
 }
 
 type rtp struct {
@@ -104,6 +108,35 @@ func (r *rtp) validate(rt *Token) error {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
+}
+
+func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*AccessTokenClaim, error) {
+	tok, err := jwt.ParseWithClaims(cred, &AccessTokenClaim{}, r.keyFunc)
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := tok.Claims.(*AccessTokenClaim)
+	if !ok || !tok.Valid {
+		return nil, errors.New("error invalid access token")
+	}
+
+	// certificate bound access token
+	if cert != nil {
+		err := validateCertificateBoundAccessToken(cert, claims.Confirm["x5t#S256"])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return claims, nil
+}
+
+func validateCertificateBoundAccessToken(cert *x509.Certificate, certHash string) error {
+	sum := sha256.Sum256(cert.Raw)
+	if base64.URLEncoding.EncodeToString(sum[:]) != certHash {
+		return errors.New("error mTLS client certificate confirmation failed")
+	}
+	return nil
 }
 
 // keyFunc extract the key id from the token, and return corresponding key

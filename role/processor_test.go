@@ -18,6 +18,8 @@ package role
 
 import (
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"reflect"
@@ -555,6 +557,162 @@ func Test_rtp_keyFunc(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("rtp.keyFunc() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
+	type fields struct {
+		pkp  pubkey.Provider
+		jwkp jwk.Provider
+	}
+	type args struct {
+		cred string
+		cert *x509.Certificate
+	}
+	type test struct {
+		name    string
+		fields  fields
+		args    args
+		want    *AccessTokenClaim
+		wantErr bool
+	}
+
+	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
+		keyData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
+		if e != nil {
+			panic(e.Error())
+		}
+		return key
+	}
+
+	LoadX509CertFromDisk := func(location string) *x509.Certificate {
+		certData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		block, pemError := pem.Decode(certData)
+		if pemError != nil {
+			panic(e.Error())
+		}
+		cert, e := x509.ParseCertificate(block.Bytes)
+		if e != nil {
+			panic(e.Error())
+		}
+		return cert
+	}
+
+	tests := []test{
+		func() test {
+			return test{
+				name: "verify access token success",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODQ1MTM0NDEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg0NTEzNDQxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiSXlENnRZc2pPR3ZCYTFyX3FKNzdSZGVtUy1URXBSYTFESEpKWXlWTWJMMCJ9fQ.GFBWlePkYYvjx8rSB0J1u4SRLGMTYNyyuCs1ugUoW8alA6XrklEf8xu38-SUo-hhX6y4CNSqcYUsql88wV6wzbTsvjqBE-Z1IUrnup_5LctxThQ2eoTZ9-Us3ZAwZF6cyKKa2PIowi1cRdlCKfLhP4dmN30__jRL9v_Og7aqXmMPCljNXHQv67IAnT02C9yGfb8ae71Pydix-4xPBTHPuiaLweXccHmNF4MaER1tlNmUrk2gXgBulpognMBR9q6Dj9-4jZTxflSgpKyb9H_DAsZ_xvRPuhWFe26G7aXB60-BbEB1lmVKpduQ9wTNCCpQOLoX_x_a9cSta33vDohGhQ`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./assets/dummyServer.crt")
+					}(),
+				},
+				want: func() *AccessTokenClaim {
+					c := AccessTokenClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1584513441,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
+						AuthTime: 1584513441,
+						Version:  1,
+						ClientID: "domain.tenant.service",
+						UserID:   "domain.tenant.service",
+						Scope:    []string{"admin", "user"},
+						Confirm:  map[string]string{"x5t#S256": "IyD6tYsjOGvBa1r_qJ77RdemS-TEpRa1DHJJYyVMbL0"},
+					}
+					return &c
+				}(),
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify access token fail, no expiration defined",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZX0.UtLx_xg2OWF7_sk9P7jcBsS9WqE4st_gvSskRoG92ktDXjSsBa-p2LmArFnFHp-cb3qnXUwc3_Ksg9w10r0iVpxg8lZfGUCmIfauaaoCuxRdogWIAaY4mIXyglQcSgIruo17wMJ-kHyJxr50lWMiyxFYf6ANUE8W2FaiDgwQuGraF4UQKDwmytGai1mHnc8_u5CanEmETWdax-Pe37BikPorljCIoYIyMTpIfdjM3A8s5Ipo8SHagnUPU0a-jS1sU2UjLo4vnDnPwur_6d5im9XuZD6DGHgaQRo4Zh-ZdvEJR8QTtdb2op14jzTaQGLYJNbPiH8yklBhtKMCAPHFuw`,
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify access token fail, expired jwt",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZSwiZXhwIjoxfQ.h5jrpuSZDjpqo8Ri-yUzq22qis_CIMuTQE6WR5myHW8Z8VhEOLInZU59kmu5Ardud3gjjtMI6kIJrUcVeYBcmE_MG4iMiah767hB-09Bm_lmh6mdEK3wP_m8_JX4OWKHqHyZSZgjJKGNCT-yHZEXuOLpydCLpIaL7znAA3-eDAnyUjZcVipA0J-BwS1I27zHOW6NumQEuXQMau2f1pH4Z77e3etNGA3yG7yG30YaqaSEWfah9BMZwgLx2fnuHAbcyNEpSl5nHZYdTyINtMsurUkDuou8c1G0WIvu4Rn2Wksey0GWdVNsclqeNaFsgsHyVwKsOVFvslQ3qTcwSjw73Q`,
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify access token fail, invalid signature",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZSwiZXhwIjoxfQ.h5jrpuSZDjpqo8Ri-yUzq22qis_CIMuTQE6WR5myHW8Z8VhEOLInZU59kmu5Ardud3gjjtMI6kIJrUcVeYBcmE_MG4iMiah767hB-09Bm_lmh6mdEK3wP_m8_JX4OWKHqHyZSZgjJKGNCT-yHZEXuOLpydCLpIaL7znAA3-eDAnyUjZcVipA0J-BwS1I27zHOW6NumQEuXQMau2f1pH4Z77e3etNGA3yG7yG30YaqaSEWfah9BMZwgLx2fnuHAbcyNEpSl5nHZYdTyINtMsurUkDuou8c1G0WIvu4Rn2Wksey0GWdVNsclqeNaFsgsHyVwKsOVFvslQ3qTcwSjw73Qe`,
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify access token fail, invalid jwt format",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+				},
+				args: args{
+					cred: `dummy`,
+				},
+				wantErr: true,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:  tt.fields.pkp,
+				jwkp: tt.fields.jwkp,
+			}
+			got, err := r.ParseAndValidateAccessToken(tt.args.cred, tt.args.cert)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("rtp.ParseAndValidateAccessToken() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("rtp.ParseAndValidateAccessToken() = %+v, want %v", got, tt.want)
 			}
 		})
 	}
