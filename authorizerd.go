@@ -249,37 +249,6 @@ func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) er
 	return a.verify(ctx, jwt, tok, act, res)
 }
 
-// VerifyAccessToken verifies the access token for specific resource and return and verification error.
-func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
-	// TODO:functionalize
-	if act == "" || res == "" {
-		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
-	}
-	// check if exists in verification success cache
-	_, ok := a.cache.Get(tok + act + res)
-	if ok {
-		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-		return nil
-	}
-
-	ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok, cert)
-	if err != nil {
-		glg.Debugf("error parse and validate access tokenn, err: %v", err)
-		return errors.Wrap(err, "error verify access token")
-	}
-	domain := ac.Audience
-	roles := ac.Scope
-
-	// TODO:functionalize
-	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
-		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "token unauthorized")
-	}
-	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
-	return nil
-}
-
 func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
@@ -321,6 +290,35 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		return errors.Wrap(err, "token unauthorized")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
+	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
+	return nil
+}
+
+// VerifyAccessToken verifies the access token for specific resource and return and verification error.
+func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
+	if act == "" || res == "" {
+		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
+	}
+	// check if exists in verification success cache
+	_, ok := a.cache.Get(tok + act + res)
+	if ok {
+		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+		return nil
+	}
+
+	ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok, cert)
+	if err != nil {
+		glg.Debugf("error parse and validate access tokenn, err: %v", err)
+		return errors.Wrap(err, "error verify access token")
+	}
+	domain := ac.Audience
+	roles := ac.Scope
+
+	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
+		glg.Debugf("error check, err: %v", err)
+		return errors.Wrap(err, "token unauthorized")
+	}
+	glg.Debugf("set access token result. tok: %s, act: %s, res: %s", tok, act, res)
 	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
 	return nil
 }
