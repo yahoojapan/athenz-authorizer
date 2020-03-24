@@ -41,3 +41,17 @@ func WithJWKProvider(jwkp jwk.Provider) Option {
 		r.jwkp = jwkp
 	}
 }
+
+// WithClientCertificateGoBackSeconds represents set clientCertificateGoBackSeconds functional option
+func WithClientCertificateGoBackSeconds(s int64) Option {
+	return func(r *rtp) {
+		r.clientCertificateGoBackSeconds = s
+	}
+}
+
+// WithClientCertificateOffsetSeconds represents set clientCertificateOffsetSeconds functional option
+func WithClientCertificateOffsetSeconds(s int64) Option {
+	return func(r *rtp) {
+		r.clientCertificateOffsetSeconds = s
+	}
+}

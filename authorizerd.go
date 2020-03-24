@@ -82,6 +82,10 @@ type authorizer struct {
 	disableJwkd         bool
 	jwkRefreshDuration  string
 	jwkErrRetryInterval string
+
+	// roleProcessor parameters
+	processorClientCertificateGoBackSeconds int64
+	processorClientCertificateOffsetSeconds int64
 }
 
 type mode uint8
@@ -155,7 +159,9 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	prov.roleProcessor = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
-		role.WithJWKProvider(jwkProvider))
+		role.WithJWKProvider(jwkProvider),
+		role.WithClientCertificateGoBackSeconds(prov.processorClientCertificateGoBackSeconds),
+		role.WithClientCertificateOffsetSeconds(prov.processorClientCertificateOffsetSeconds))
 
 	return prov, nil
 }

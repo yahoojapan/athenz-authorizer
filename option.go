@@ -233,3 +233,23 @@ func WithJwkErrRetryInterval(i string) Option {
 		return nil
 	}
 }
+
+/*
+	processor parameters
+*/
+
+// WithProcessorClientCertificateGoBackSeconds returns a ProcessorClientCertificateGoBackSeconds functional option
+func WithProcessorClientCertificateGoBackSeconds(s int64) Option {
+	return func(authz *authorizer) error {
+		authz.processorClientCertificateGoBackSeconds = s
+		return nil
+	}
+}
+
+// WithProcessorClientCertificateOffsetSeconds returns a ProcessorClientCertificateOffsetSeconds functional option
+func WithProcessorClientCertificateOffsetSeconds(s int64) Option {
+	return func(authz *authorizer) error {
+		authz.processorClientCertificateOffsetSeconds = s
+		return nil
+	}
+}
