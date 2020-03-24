@@ -156,7 +156,7 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return err
 	}
 
-	// auth_core is validating the proxy principal here.
+	// auth_core is validating the proxy principal here.(future work)
 
 	return nil
 }
