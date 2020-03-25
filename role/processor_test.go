@@ -19,6 +19,7 @@ package role
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -737,6 +738,22 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			return test{
+				name: "verify certificate bound access token fail, no cert",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableMTLSCertificateBoundAccessToken: true,
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiMmp0ODJmMnVNOGpFMkxNY2I0ZXJoaFRjLXV5MXlCMWlFeXA1TW5JNXVGNCJ9fQ.OyotreYeMFDTpDaIoPVnEBY1RnVuzRortfRKnkOfZUEv1wSSmgSPxBE9IfgxD57kCQUJtO4GUBUWX_DrIb8BMMVUaDlws6UTncaCUdTt_lJXuIZilh7vIA5oiRTtpADJrZUS3kH2ln6qTXa1QTeevg5qdfORya7ILiHdJUmQXbb9vndYcS4-4E3Xr7rqj7cD67rvySM8YIOsaMn2UX237VUo2rcs40XuHH6WCFfix4xxmgTxS7zr_uowqxpXrgpc0g_eT4On9gnuTDcAzwVy7qbgWMcEO-UrhV_FiPzIRj5RZFZBeHjNeU2QAAT-LAw7S6YJtlPpijfTM9qx6xC0GA`,
+					cert: nil,
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -752,6 +769,226 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("rtp.ParseAndValidateAccessToken() = %+v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
+	type fields struct {
+		pkp                                   pubkey.Provider
+		jwkp                                  jwk.Provider
+		enableMTLSCertificateBoundAccessToken bool
+		clientCertificateGoBackSeconds        int64
+		clientCertificateOffsetSeconds        int64
+	}
+	type args struct {
+		cert   *x509.Certificate
+		claims *AccessTokenClaim
+	}
+	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
+		keyData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
+		if e != nil {
+			panic(e.Error())
+		}
+		return key
+	}
+
+	LoadX509CertFromDisk := func(location string) *x509.Certificate {
+		certData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		block, _ := pem.Decode(certData)
+		if block == nil {
+			panic("pem decode error")
+		}
+		cert, e := x509.ParseCertificate(block.Bytes)
+		if e != nil {
+			panic(e.Error())
+		}
+		return cert
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "verify certificate bound accecss token success",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: func() *x509.Certificate {
+					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+				}(),
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					ClientID: "domain.tenant.service",
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+					Confirm:  map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "verify certificate bound accecss token success, refreshed certificate",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					KeyUsage: x509.KeyUsageDigitalSignature,
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+					NotBefore: time.Unix(1585122381+100, 0), // token's IssuedAt + 100
+					NotAfter:  time.Unix(9999999999, 0),
+				},
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					ClientID: "domain.tenant.service",
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+					Confirm:  map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "verify certificate bound accecss token fail, cert is nil",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: nil,
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					ClientID: "domain.tenant.service",
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+					Confirm:  map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify certificate bound accecss token fail, no confirmation claim",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: func() *x509.Certificate {
+					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+				}(),
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					ClientID: "domain.tenant.service",
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify certificate bound accecss token fail, cnf check fail and no client_id",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					KeyUsage: x509.KeyUsageDigitalSignature,
+					Subject: pkix.Name{
+						CommonName: "dummy",
+					},
+					NotBefore: time.Now(),
+					NotAfter:  time.Unix(9999999999, 0),
+				},
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+					//Confirm:  map[string]string{"x5t#S256": "INVALID CONFIRM"},
+					Confirm: map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:                                   tt.fields.pkp,
+				jwkp:                                  tt.fields.jwkp,
+				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
+				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
+				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
+			}
+			if err := r.validateCertificateBoundAccessToken(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
+				t.Errorf("rtp.validateCertificateBoundAccessToken() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
