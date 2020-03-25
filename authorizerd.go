@@ -84,6 +84,7 @@ type authorizer struct {
 	jwkErrRetryInterval string
 
 	// roleProcessor parameters
+	enableMTLSCertificateBoundAccessToken   bool
 	processorClientCertificateGoBackSeconds int64
 	processorClientCertificateOffsetSeconds int64
 }

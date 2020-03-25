@@ -238,6 +238,14 @@ func WithJwkErrRetryInterval(i string) Option {
 	processor parameters
 */
 
+// WithEnableMTLSCertificateBoundAccessToken returns a EnableMTLSCertificateBoundAccessToken functional option
+func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
+	return func(authz *authorizer) error {
+		authz.enableMTLSCertificateBoundAccessToken = b
+		return nil
+	}
+}
+
 // WithProcessorClientCertificateGoBackSeconds returns a ProcessorClientCertificateGoBackSeconds functional option
 func WithProcessorClientCertificateGoBackSeconds(s int64) Option {
 	return func(authz *authorizer) error {

@@ -42,6 +42,13 @@ func WithJWKProvider(jwkp jwk.Provider) Option {
 	}
 }
 
+// WithEnableMTLSCertificateBoundAccessToken represents set enableMTLSCertificateBoundAccessToken functional option
+func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
+	return func(r *rtp) {
+		r.enableMTLSCertificateBoundAccessToken = b
+	}
+}
+
 // WithClientCertificateGoBackSeconds represents set clientCertificateGoBackSeconds functional option
 func WithClientCertificateGoBackSeconds(s int64) Option {
 	return func(r *rtp) {

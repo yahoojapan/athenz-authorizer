@@ -40,8 +40,9 @@ type Processor interface {
 }
 
 type rtp struct {
-	pkp  pubkey.Provider
-	jwkp jwk.Provider
+	pkp                                   pubkey.Provider
+	jwkp                                  jwk.Provider
+	enableMTLSCertificateBoundAccessToken bool
 	// If you go back to the issue time, set that time. Subtract if necessary (for example, token issuance time).
 	clientCertificateGoBackSeconds int64
 	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
@@ -130,7 +131,7 @@ func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (
 	}
 
 	// certificate bound access token
-	if _, ok := claims.Confirm[confirmationMethod]; ok {
+	if r.enableMTLSCertificateBoundAccessToken {
 		err := r.validateCertificateBoundAccessToken(cert, claims)
 		if err != nil {
 			return nil, err
@@ -143,6 +144,10 @@ func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (
 func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
+	}
+
+	if _, ok := claims.Confirm[confirmationMethod]; !ok {
+		return errors.New("error token is not certificate bound access token")
 	}
 
 	// cnf check
