@@ -53,6 +53,9 @@ func TestNew(t *testing.T) {
 			want: &rtp{
 				nil,
 				nil,
+				false,
+				0,
+				0,
 			},
 		},
 	}
@@ -564,8 +567,11 @@ func Test_rtp_keyFunc(t *testing.T) {
 
 func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 	type fields struct {
-		pkp  pubkey.Provider
-		jwkp jwk.Provider
+		pkp                                   pubkey.Provider
+		jwkp                                  jwk.Provider
+		enableMTLSCertificateBoundAccessToken bool
+		clientCertificateGoBackSeconds        int64
+		clientCertificateOffsetSeconds        int64
 	}
 	type args struct {
 		cred string
@@ -596,9 +602,9 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 		if e != nil {
 			panic(e.Error())
 		}
-		block, pemError := pem.Decode(certData)
-		if pemError != nil {
-			panic(e.Error())
+		block, _ := pem.Decode(certData)
+		if block == nil {
+			panic("pem decode error")
 		}
 		cert, e := x509.ParseCertificate(block.Bytes)
 		if e != nil {
@@ -617,10 +623,7 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 					}),
 				},
 				args: args{
-					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODQ1MTM0NDEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg0NTEzNDQxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiSXlENnRZc2pPR3ZCYTFyX3FKNzdSZGVtUy1URXBSYTFESEpKWXlWTWJMMCJ9fQ.GFBWlePkYYvjx8rSB0J1u4SRLGMTYNyyuCs1ugUoW8alA6XrklEf8xu38-SUo-hhX6y4CNSqcYUsql88wV6wzbTsvjqBE-Z1IUrnup_5LctxThQ2eoTZ9-Us3ZAwZF6cyKKa2PIowi1cRdlCKfLhP4dmN30__jRL9v_Og7aqXmMPCljNXHQv67IAnT02C9yGfb8ae71Pydix-4xPBTHPuiaLweXccHmNF4MaER1tlNmUrk2gXgBulpognMBR9q6Dj9-4jZTxflSgpKyb9H_DAsZ_xvRPuhWFe26G7aXB60-BbEB1lmVKpduQ9wTNCCpQOLoX_x_a9cSta33vDohGhQ`,
-					cert: func() *x509.Certificate {
-						return LoadX509CertFromDisk("./assets/dummyServer.crt")
-					}(),
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODQ1MTM0NDEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg0NTEzNDQxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIn0.WYQqy87f6sBSJrtcw5ZcfjZx6kq4dT4elCY0_cfo7c6wMESkdGKXDDdZh8Dxq3qoZCl29oEYTFrDYDzWg_HPUZ34PTEt-W3g_5utZ3J3P7x6gyGKmk7aRFHsX7SVwlxcEBKENQMwctd6j54z4GYD8eTRdqTDSYYTWID7XSGDk77t5qX2tJOnbLYv4GuspRrkZBted-K_D6bhVMVptcKpMBfwtQErx345W0X0c5Am06pdK_7a3DJnQXJ1sOWKMjiQVgFIfjEkzzmkkWdaSPhqX-UUWHzPDTvfcgV-9Ojw_nxJq_WU04MaDSEyJDs6K-c4HniMEaQfHsYIgYLt4Lq3Cg`,
 				},
 				want: func() *AccessTokenClaim {
 					c := AccessTokenClaim{
@@ -636,7 +639,42 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 						ClientID: "domain.tenant.service",
 						UserID:   "domain.tenant.service",
 						Scope:    []string{"admin", "user"},
-						Confirm:  map[string]string{"x5t#S256": "IyD6tYsjOGvBa1r_qJ77RdemS-TEpRa1DHJJYyVMbL0"},
+					}
+					return &c
+				}(),
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify certificate bound access token success",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableMTLSCertificateBoundAccessToken: true,
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiMmp0ODJmMnVNOGpFMkxNY2I0ZXJoaFRjLXV5MXlCMWlFeXA1TW5JNXVGNCJ9fQ.OyotreYeMFDTpDaIoPVnEBY1RnVuzRortfRKnkOfZUEv1wSSmgSPxBE9IfgxD57kCQUJtO4GUBUWX_DrIb8BMMVUaDlws6UTncaCUdTt_lJXuIZilh7vIA5oiRTtpADJrZUS3kH2ln6qTXa1QTeevg5qdfORya7ILiHdJUmQXbb9vndYcS4-4E3Xr7rqj7cD67rvySM8YIOsaMn2UX237VUo2rcs40XuHH6WCFfix4xxmgTxS7zr_uowqxpXrgpc0g_eT4On9gnuTDcAzwVy7qbgWMcEO-UrhV_FiPzIRj5RZFZBeHjNeU2QAAT-LAw7S6YJtlPpijfTM9qx6xC0GA`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+					}(),
+				},
+				want: func() *AccessTokenClaim {
+					c := AccessTokenClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
+						AuthTime: 1585122381,
+						Version:  1,
+						ClientID: "domain.tenant.service",
+						UserID:   "domain.tenant.service",
+						Scope:    []string{"admin", "user"},
+						Confirm:  map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 					}
 					return &c
 				}(),
@@ -703,8 +741,9 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &rtp{
-				pkp:  tt.fields.pkp,
-				jwkp: tt.fields.jwkp,
+				pkp:                                   tt.fields.pkp,
+				jwkp:                                  tt.fields.jwkp,
+				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
 			}
 			got, err := r.ParseAndValidateAccessToken(tt.args.cred, tt.args.cert)
 			if (err != nil) != tt.wantErr {
