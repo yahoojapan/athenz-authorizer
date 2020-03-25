@@ -152,7 +152,7 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 
 	// cnf check
 	sum := sha256.Sum256(cert.Raw)
-	if base64.URLEncoding.EncodeToString(sum[:]) == claims.Confirm[confirmationMethod] {
+	if base64.RawURLEncoding.EncodeToString(sum[:]) == claims.Confirm[confirmationMethod] {
 		return nil
 	}
 
@@ -169,11 +169,11 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *AccessTokenClaim) error {
 	// common name check
 	cn := cert.Subject.CommonName
-	if cn != "" {
+	if cn == "" {
 		return errors.New("error subject common name of client certificate is empty")
 	}
 	clientID := claims.ClientID
-	if clientID != "" {
+	if clientID == "" {
 		return errors.New("error client_id of access token is empty")
 	}
 	if cn != clientID {
