@@ -971,8 +971,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					Version:  1,
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					//Confirm:  map[string]string{"x5t#S256": "INVALID CONFIRM"},
-					Confirm: map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+					Confirm:  map[string]string{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 				},
 			},
 			wantErr: true,
@@ -989,6 +988,260 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			}
 			if err := r.validateCertificateBoundAccessToken(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
 				t.Errorf("rtp.validateCertificateBoundAccessToken() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_rtp_validateCertPrincipal(t *testing.T) {
+	type fields struct {
+		pkp                                   pubkey.Provider
+		jwkp                                  jwk.Provider
+		enableMTLSCertificateBoundAccessToken bool
+		clientCertificateGoBackSeconds        int64
+		clientCertificateOffsetSeconds        int64
+	}
+	type args struct {
+		cert   *x509.Certificate
+		claims *AccessTokenClaim
+	}
+	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
+		keyData, e := ioutil.ReadFile(location)
+		if e != nil {
+			panic(e.Error())
+		}
+		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
+		if e != nil {
+			panic(e.Error())
+		}
+		return key
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "verify cert principal success",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					KeyUsage: x509.KeyUsageDigitalSignature,
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+					NotBefore: time.Unix(1585122381+100, 0), // token's IssuedAt + 100
+					NotAfter:  time.Unix(9999999999, 0),
+				},
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					ClientID: "domain.tenant.service",
+					Confirm:  map[string]string{"x5t#S256": "dummy"},
+				},
+			},
+		},
+		{
+			name: "verify cert principal success, token and certificate are issued at same time",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					KeyUsage: x509.KeyUsageDigitalSignature,
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+					NotBefore: time.Unix(1585122381, 0),
+					NotAfter:  time.Unix(9999999999, 0),
+				},
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					ClientID: "domain.tenant.service",
+					Confirm:  map[string]string{"x5t#S256": "dummy"},
+				},
+			},
+		},
+		{
+			name: "verify cert principal fail, CommonName is nil",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "", // empty common name
+					},
+				},
+				claims: &AccessTokenClaim{
+					StandardClaims: jwt.StandardClaims{
+						Subject:   "domain.tenant.service",
+						IssuedAt:  1585122381,
+						ExpiresAt: 9999999999,
+						Issuer:    "https://zts.athenz.io",
+						Audience:  "domain.provider",
+					},
+					ClientID: "domain.tenant.service",
+					Confirm:  map[string]string{"x5t#S256": "dummy"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify cert principal fail, CommonName is empty",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+				},
+				claims: &AccessTokenClaim{
+					ClientID: "", // empty client id
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify cert principal fail, ClientID is empty",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+				},
+				claims: &AccessTokenClaim{
+					ClientID: "",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify cert principal fail, principal mismatch",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.a",
+					},
+				},
+				claims: &AccessTokenClaim{
+					ClientID: "domain.tenant.b",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify cert principal fail, certificate that was generated before the token",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateGoBackSeconds:        3600,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+					NotBefore: time.Unix(1585122381-3600-100, 0), // token's IssuedAt - 3600(clientCertificateGoBackSeconds) - 100
+				},
+				claims: &AccessTokenClaim{
+					ClientID: "domain.tenant.service",
+					StandardClaims: jwt.StandardClaims{
+						IssuedAt: 1585122381,
+					},
+				},
+			},
+
+			wantErr: true,
+		},
+		{
+			name: "verify cert principal fail, certificate that was generated after the clientCertificateOffsetSeconds",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				clientCertificateGoBackSeconds:        3600,
+				clientCertificateOffsetSeconds:        3600,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "domain.tenant.service",
+					},
+					NotBefore: time.Unix(1585122381-3600+3600+100, 0), // token's IssuedAt - 3600(clientCertificateGoBackSeconds) +3600(clientCertificateOffsetSeconds) + 100
+				},
+				claims: &AccessTokenClaim{
+					ClientID: "domain.tenant.service",
+					StandardClaims: jwt.StandardClaims{
+						IssuedAt: 1585122381,
+					},
+				},
+			},
+
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:                                   tt.fields.pkp,
+				jwkp:                                  tt.fields.jwkp,
+				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
+				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
+				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
+			}
+			if err := r.validateCertPrincipal(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
+				t.Errorf("rtp.validateCertPrincipal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
