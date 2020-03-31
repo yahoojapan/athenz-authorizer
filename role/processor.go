@@ -50,12 +50,14 @@ type rtp struct {
 }
 
 // New returns the Role instance.
-func New(opts ...Option) Processor {
+func New(opts ...Option) (Processor, error) {
 	r := new(rtp)
 	for _, opt := range append(defaultOptions, opts...) {
-		opt(r)
+		if err := opt(r); err != nil {
+			return nil, err
+		}
 	}
-	return r
+	return r, nil
 }
 
 // ParseAndValidateRoleToken return the parsed and validated role token, and return any parsing and validate errors.

@@ -17,6 +17,9 @@ limitations under the License.
 package role
 
 import (
+	"time"
+
+	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
@@ -26,39 +29,58 @@ var (
 )
 
 // Option represents a functional options pattern interface
-type Option func(*rtp)
+type Option func(*rtp) error
 
 // WithPubkeyProvider represents set pubkey provider functional option
 func WithPubkeyProvider(pkp pubkey.Provider) Option {
-	return func(r *rtp) {
+	return func(r *rtp) error {
 		r.pkp = pkp
+		return nil
 	}
 }
 
 // WithJWKProvider represents set pubkey provider functional option
 func WithJWKProvider(jwkp jwk.Provider) Option {
-	return func(r *rtp) {
+	return func(r *rtp) error {
 		r.jwkp = jwkp
+		return nil
 	}
 }
 
 // WithEnableMTLSCertificateBoundAccessToken represents set enableMTLSCertificateBoundAccessToken functional option
 func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
-	return func(r *rtp) {
+	return func(r *rtp) error {
 		r.enableMTLSCertificateBoundAccessToken = b
+		return nil
 	}
 }
 
 // WithClientCertificateGoBackSeconds represents set clientCertificateGoBackSeconds functional option
-func WithClientCertificateGoBackSeconds(s int64) Option {
-	return func(r *rtp) {
-		r.clientCertificateGoBackSeconds = s
+func WithClientCertificateGoBackSeconds(t string) Option {
+	return func(r *rtp) error {
+		if t == "" {
+			return nil
+		}
+		rd, err := time.ParseDuration(t)
+		if err != nil {
+			return errors.Wrap(err, "invalid refresh duration")
+		}
+		r.clientCertificateGoBackSeconds = int64(rd.Seconds())
+		return nil
 	}
 }
 
 // WithClientCertificateOffsetSeconds represents set clientCertificateOffsetSeconds functional option
-func WithClientCertificateOffsetSeconds(s int64) Option {
-	return func(r *rtp) {
-		r.clientCertificateOffsetSeconds = s
+func WithClientCertificateOffsetSeconds(t string) Option {
+	return func(r *rtp) error {
+		if t == "" {
+			return nil
+		}
+		rd, err := time.ParseDuration(t)
+		if err != nil {
+			return errors.Wrap(err, "invalid offset duration")
+		}
+		r.clientCertificateOffsetSeconds = int64(rd.Seconds())
+		return nil
 	}
 }
