@@ -23,22 +23,12 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// RoleJWTClaim represents role jwt claim data.
-type RoleJWTClaim struct {
-	Domain   string `json:"d"`
-	Email    string `json:"email"`
-	KeyID    string `json:"k"`
-	MFA      string `json:"mfa"`
-	Role     string `json:"r"`
-	Salt     string `json:"a"`
-	UserID   string `json:"u"`
-	UserName string `json:"n"`
-	Version  string `json:"v"`
+type BaseClaim struct {
 	jwt.StandardClaims
 }
 
 // Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
-func (c *RoleJWTClaim) Valid() error {
+func (c *BaseClaim) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
 
@@ -63,6 +53,20 @@ func (c *RoleJWTClaim) Valid() error {
 	}
 
 	return vErr
+}
+
+// RoleJWTClaim represents role jwt claim data.
+type RoleJWTClaim struct {
+	Domain   string `json:"d"`
+	Email    string `json:"email"`
+	KeyID    string `json:"k"`
+	MFA      string `json:"mfa"`
+	Role     string `json:"r"`
+	Salt     string `json:"a"`
+	UserID   string `json:"u"`
+	UserName string `json:"n"`
+	Version  string `json:"v"`
+	BaseClaim
 }
 
 // AccessTokenClaim represents access token claim data.
@@ -75,33 +79,5 @@ type AccessTokenClaim struct {
 	ProxyPrincipal string            `json:"proxy,omitempty"`
 	Scope          []string          `json:"scp"`
 	Confirm        map[string]string `json:"cnf"`
-	jwt.StandardClaims
-}
-
-// Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
-func (c *AccessTokenClaim) Valid() error {
-	vErr := new(jwt.ValidationError)
-	now := jwt.TimeFunc().Unix()
-
-	if !c.VerifyExpiresAt(now, true) {
-		delta := time.Unix(now, 0).Sub(time.Unix(c.ExpiresAt, 0))
-		vErr.Inner = fmt.Errorf("token is expired by %v", delta)
-		vErr.Errors |= jwt.ValidationErrorExpired
-	}
-
-	if !c.VerifyIssuedAt(now, false) {
-		vErr.Inner = fmt.Errorf("Token used before issued")
-		vErr.Errors |= jwt.ValidationErrorIssuedAt
-	}
-
-	if !c.VerifyNotBefore(now, false) {
-		vErr.Inner = fmt.Errorf("token is not valid yet")
-		vErr.Errors |= jwt.ValidationErrorNotValidYet
-	}
-
-	if vErr.Errors == 0 {
-		return nil
-	}
-
-	return vErr
+	BaseClaim
 }
