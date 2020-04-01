@@ -36,7 +36,7 @@ var (
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
 	ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error)
-	ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*AccessTokenClaim, error)
+	ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error)
 }
 
 type rtp struct {
@@ -121,13 +121,13 @@ func (r *rtp) validate(rt *Token) error {
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
 }
 
-func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*AccessTokenClaim, error) {
+func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error) {
 
-	tok, err := jwt.ParseWithClaims(cred, &AccessTokenClaim{}, r.keyFunc)
+	tok, err := jwt.ParseWithClaims(cred, &ZTSAccessTokenClaim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
 	}
-	claims, ok := tok.Claims.(*AccessTokenClaim)
+	claims, ok := tok.Claims.(*ZTSAccessTokenClaim)
 	if !ok || !tok.Valid {
 		return nil, errors.New("error invalid access token")
 	}
@@ -143,7 +143,7 @@ func (r *rtp) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (
 	return claims, nil
 }
 
-func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *AccessTokenClaim) error {
+func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
 	}
@@ -168,7 +168,7 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	return nil
 }
 
-func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *AccessTokenClaim) error {
+func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
 	if r.clientCertificateOffsetSeconds == 0 {
 		return errors.New("error clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
 	}

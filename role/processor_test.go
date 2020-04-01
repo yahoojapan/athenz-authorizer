@@ -615,7 +615,7 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *AccessTokenClaim
+		want    *ZTSAccessTokenClaim
 		wantErr bool
 	}
 
@@ -659,8 +659,8 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 				args: args{
 					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODQ1MTM0NDEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg0NTEzNDQxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIn0.WYQqy87f6sBSJrtcw5ZcfjZx6kq4dT4elCY0_cfo7c6wMESkdGKXDDdZh8Dxq3qoZCl29oEYTFrDYDzWg_HPUZ34PTEt-W3g_5utZ3J3P7x6gyGKmk7aRFHsX7SVwlxcEBKENQMwctd6j54z4GYD8eTRdqTDSYYTWID7XSGDk77t5qX2tJOnbLYv4GuspRrkZBted-K_D6bhVMVptcKpMBfwtQErx345W0X0c5Am06pdK_7a3DJnQXJ1sOWKMjiQVgFIfjEkzzmkkWdaSPhqX-UUWHzPDTvfcgV-9Ojw_nxJq_WU04MaDSEyJDs6K-c4HniMEaQfHsYIgYLt4Lq3Cg`,
 				},
-				want: func() *AccessTokenClaim {
-					c := AccessTokenClaim{
+				want: func() *ZTSAccessTokenClaim {
+					c := ZTSAccessTokenClaim{
 						BaseClaim: BaseClaim{
 							StandardClaims: jwt.StandardClaims{
 								Subject:   "domain.tenant.service",
@@ -696,8 +696,8 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
 					}(),
 				},
-				want: func() *AccessTokenClaim {
-					c := AccessTokenClaim{
+				want: func() *ZTSAccessTokenClaim {
+					c := ZTSAccessTokenClaim{
 						BaseClaim: BaseClaim{
 							StandardClaims: jwt.StandardClaims{
 								Subject:   "domain.tenant.service",
@@ -821,7 +821,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 	}
 	type args struct {
 		cert   *x509.Certificate
-		claims *AccessTokenClaim
+		claims *ZTSAccessTokenClaim
 	}
 	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
 		keyData, e := ioutil.ReadFile(location)
@@ -868,7 +868,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 				cert: func() *x509.Certificate {
 					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
 				}(),
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -906,7 +906,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					NotBefore: time.Unix(1585122381+100, 0), // token's IssuedAt + 100
 					NotAfter:  time.Unix(9999999999, 0),
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -936,7 +936,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			},
 			args: args{
 				cert: nil,
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -968,7 +968,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 				cert: func() *x509.Certificate {
 					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
 				}(),
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -1004,7 +1004,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					NotBefore: time.Now(),
 					NotAfter:  time.Unix(9999999999, 0),
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -1050,7 +1050,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 	}
 	type args struct {
 		cert   *x509.Certificate
-		claims *AccessTokenClaim
+		claims *ZTSAccessTokenClaim
 	}
 	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
 		keyData, e := ioutil.ReadFile(location)
@@ -1087,7 +1087,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					NotBefore: time.Unix(1585122381+100, 0), // token's IssuedAt + 100
 					NotAfter:  time.Unix(9999999999, 0),
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -1120,7 +1120,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					NotBefore: time.Unix(1585122381, 0),
 					NotAfter:  time.Unix(9999999999, 0),
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -1150,7 +1150,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						CommonName: "", // empty common name
 					},
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
 							Subject:   "domain.tenant.service",
@@ -1181,7 +1181,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						CommonName: "domain.tenant.service",
 					},
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					ClientID: "", // empty client id
 				},
 			},
@@ -1202,7 +1202,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						CommonName: "domain.tenant.service",
 					},
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					ClientID: "",
 				},
 			},
@@ -1223,7 +1223,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						CommonName: "domain.tenant.a",
 					},
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					ClientID: "domain.tenant.b",
 				},
 			},
@@ -1246,7 +1246,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					},
 					NotBefore: time.Unix(1585122381-3600-100, 0), // token's IssuedAt - 3600(clientCertificateGoBackSeconds) - 100
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					ClientID: "domain.tenant.service",
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
@@ -1275,7 +1275,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					},
 					NotBefore: time.Unix(1585122381-3600+3600+100, 0), // token's IssuedAt - 3600(clientCertificateGoBackSeconds) +3600(clientCertificateOffsetSeconds) + 100
 				},
-				claims: &AccessTokenClaim{
+				claims: &ZTSAccessTokenClaim{
 					ClientID: "domain.tenant.service",
 					BaseClaim: BaseClaim{
 						StandardClaims: jwt.StandardClaims{
