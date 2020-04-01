@@ -85,8 +85,8 @@ type authorizer struct {
 
 	// roleProcessor parameters
 	enableMTLSCertificateBoundAccessToken   bool
-	processorClientCertificateGoBackSeconds int64
-	processorClientCertificateOffsetSeconds int64
+	processorClientCertificateGoBackSeconds string
+	processorClientCertificateOffsetSeconds string
 }
 
 type mode uint8
@@ -158,11 +158,14 @@ func New(opts ...Option) (Authorizerd, error) {
 		jwkProvider = prov.jwkd.GetProvider()
 	}
 
-	prov.roleProcessor = role.New(
+	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
 		role.WithClientCertificateGoBackSeconds(prov.processorClientCertificateGoBackSeconds),
-		role.WithClientCertificateOffsetSeconds(prov.processorClientCertificateOffsetSeconds))
+		role.WithClientCertificateOffsetSeconds(prov.processorClientCertificateOffsetSeconds),
+	); err != nil {
+		return nil, errors.Wrap(err, "error create role processor")
+	}
 
 	return prov, nil
 }

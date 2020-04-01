@@ -35,6 +35,9 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
+		WithATEnableMTLSCertificateBoundAccessToken(true),
+		WithATProcessorClientCertificateGoBackSeconds("1h"),
+		WithATProcessorClientCertificateOffsetSeconds("1h"),
 	}
 )
 
@@ -235,29 +238,29 @@ func WithJwkErrRetryInterval(i string) Option {
 }
 
 /*
-	processor parameters
+	access token parameters
 */
 
-// WithEnableMTLSCertificateBoundAccessToken returns a EnableMTLSCertificateBoundAccessToken functional option
-func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
+// WithATEnableMTLSCertificateBoundAccessToken returns a EnableMTLSCertificateBoundAccessToken functional option
+func WithATEnableMTLSCertificateBoundAccessToken(b bool) Option {
 	return func(authz *authorizer) error {
 		authz.enableMTLSCertificateBoundAccessToken = b
 		return nil
 	}
 }
 
-// WithProcessorClientCertificateGoBackSeconds returns a ProcessorClientCertificateGoBackSeconds functional option
-func WithProcessorClientCertificateGoBackSeconds(s int64) Option {
+// WithATProcessorClientCertificateGoBackSeconds returns a ProcessorClientCertificateGoBackSeconds functional option
+func WithATProcessorClientCertificateGoBackSeconds(t string) Option {
 	return func(authz *authorizer) error {
-		authz.processorClientCertificateGoBackSeconds = s
+		authz.processorClientCertificateGoBackSeconds = t
 		return nil
 	}
 }
 
-// WithProcessorClientCertificateOffsetSeconds returns a ProcessorClientCertificateOffsetSeconds functional option
-func WithProcessorClientCertificateOffsetSeconds(s int64) Option {
+// WithATProcessorClientCertificateOffsetSeconds returns a ProcessorClientCertificateOffsetSeconds functional option
+func WithATProcessorClientCertificateOffsetSeconds(t string) Option {
 	return func(authz *authorizer) error {
-		authz.processorClientCertificateOffsetSeconds = s
+		authz.processorClientCertificateOffsetSeconds = t
 		return nil
 	}
 }
