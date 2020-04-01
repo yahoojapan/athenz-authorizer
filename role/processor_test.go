@@ -62,7 +62,12 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
+			got, err := New(tt.args.opts...)
+			if err != nil {
+				t.Errorf("New() error = %v", err)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
@@ -628,12 +633,14 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 				},
 				want: func() *AccessTokenClaim {
 					c := AccessTokenClaim{
-						StandardClaims: jwt.StandardClaims{
-							Subject:   "domain.tenant.service",
-							IssuedAt:  1584513441,
-							ExpiresAt: 9999999999,
-							Issuer:    "https://zts.athenz.io",
-							Audience:  "domain.provider",
+						BaseClaim: BaseClaim{
+							StandardClaims: jwt.StandardClaims{
+								Subject:   "domain.tenant.service",
+								IssuedAt:  1584513441,
+								ExpiresAt: 9999999999,
+								Issuer:    "https://zts.athenz.io",
+								Audience:  "domain.provider",
+							},
 						},
 						AuthTime: 1584513441,
 						Version:  1,
@@ -663,12 +670,14 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 				},
 				want: func() *AccessTokenClaim {
 					c := AccessTokenClaim{
-						StandardClaims: jwt.StandardClaims{
-							Subject:   "domain.tenant.service",
-							IssuedAt:  1585122381,
-							ExpiresAt: 9999999999,
-							Issuer:    "https://zts.athenz.io",
-							Audience:  "domain.provider",
+						BaseClaim: BaseClaim{
+							StandardClaims: jwt.StandardClaims{
+								Subject:   "domain.tenant.service",
+								IssuedAt:  1585122381,
+								ExpiresAt: 9999999999,
+								Issuer:    "https://zts.athenz.io",
+								Audience:  "domain.provider",
+							},
 						},
 						AuthTime: 1585122381,
 						Version:  1,
@@ -832,12 +841,14 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
 				}(),
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					AuthTime: 1585122381,
 					Version:  1,
@@ -868,12 +879,14 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					NotAfter:  time.Unix(9999999999, 0),
 				},
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					AuthTime: 1585122381,
 					Version:  1,
@@ -896,12 +909,14 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			args: args{
 				cert: nil,
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					AuthTime: 1585122381,
 					Version:  1,
@@ -926,12 +941,14 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
 				}(),
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					AuthTime: 1585122381,
 					Version:  1,
@@ -960,12 +977,14 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					NotAfter:  time.Unix(9999999999, 0),
 				},
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					AuthTime: 1585122381,
 					Version:  1,
@@ -1041,12 +1060,14 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					NotAfter:  time.Unix(9999999999, 0),
 				},
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					ClientID: "domain.tenant.service",
 					Confirm:  map[string]string{"x5t#S256": "dummy"},
@@ -1072,12 +1093,14 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					NotAfter:  time.Unix(9999999999, 0),
 				},
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					ClientID: "domain.tenant.service",
 					Confirm:  map[string]string{"x5t#S256": "dummy"},
@@ -1100,12 +1123,14 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 					},
 				},
 				claims: &AccessTokenClaim{
-					StandardClaims: jwt.StandardClaims{
-						Subject:   "domain.tenant.service",
-						IssuedAt:  1585122381,
-						ExpiresAt: 9999999999,
-						Issuer:    "https://zts.athenz.io",
-						Audience:  "domain.provider",
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
 					},
 					ClientID: "domain.tenant.service",
 					Confirm:  map[string]string{"x5t#S256": "dummy"},
@@ -1195,8 +1220,10 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 				},
 				claims: &AccessTokenClaim{
 					ClientID: "domain.tenant.service",
-					StandardClaims: jwt.StandardClaims{
-						IssuedAt: 1585122381,
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							IssuedAt: 1585122381,
+						},
 					},
 				},
 			},
@@ -1222,8 +1249,10 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 				},
 				claims: &AccessTokenClaim{
 					ClientID: "domain.tenant.service",
-					StandardClaims: jwt.StandardClaims{
-						IssuedAt: 1585122381,
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							IssuedAt: 1585122381,
+						},
 					},
 				},
 			},
