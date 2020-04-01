@@ -41,9 +41,10 @@ func TestNew(t *testing.T) {
 		opts []Option
 	}
 	type test struct {
-		name string
-		args args
-		want Processor
+		name    string
+		args    args
+		want    Processor
+		wantErr bool
 	}
 	tests := []test{
 		{
@@ -58,12 +59,23 @@ func TestNew(t *testing.T) {
 				0,
 				0,
 			},
+			wantErr: false,
+		},
+		{
+			name: "new fail, option is error",
+			args: args{
+				opts: []Option{
+					WithClientCertificateGoBackSeconds("invalid-duration"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := New(tt.args.opts...)
-			if err != nil {
+			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v", err)
 				return
 			}
