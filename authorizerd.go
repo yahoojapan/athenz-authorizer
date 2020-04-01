@@ -218,7 +218,7 @@ func (a *authorizer) initVerifiers() error {
 	}
 
 	// resize
-	a.verifiers = append([]verifier(nil), verifiers[:len(verifiers)]...)
+	a.verifiers = append([]verifier(nil), verifiers...)
 	return nil
 }
 
