@@ -62,6 +62,22 @@ func TestNew(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "new success, use option",
+			args: args{
+				opts: []Option{
+					WithEnableMTLSCertificateBoundAccessToken(true),
+				},
+			},
+			want: &rtp{
+				nil,
+				nil,
+				true,
+				0,
+				0,
+			},
+			wantErr: false,
+		},
+		{
 			name: "new fail, option is error",
 			args: args{
 				opts: []Option{
