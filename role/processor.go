@@ -189,7 +189,7 @@ func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTok
 	if cert.NotBefore.Unix() < claims.IssuedAt-r.clientCertificateGoBackSeconds {
 		return errors.Errorf("error certificate: %v issued before token: %v", cert.NotBefore.Unix(), claims.IssuedAt)
 	}
-	// Issue tiem check. Determine if certificate's issue time is within an allowed range
+	// Issue time check. Determine if certificate's issue time is within an allowed range
 	if cert.NotBefore.Unix() > claims.IssuedAt+r.clientCertificateOffsetSeconds-r.clientCertificateGoBackSeconds {
 		return errors.Errorf("Certificate: %v past configured offset %v for token: %v", cert.NotBefore.Unix(), r.clientCertificateOffsetSeconds, claims.IssuedAt)
 	}

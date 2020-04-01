@@ -172,8 +172,8 @@ func New(opts ...Option) (Authorizerd, error) {
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
 		// WithEnableMTLSCertificateBoundAccessToken ?
-		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].processorClientCertificateGoBackSeconds),
-		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].processorClientCertificateOffsetSeconds),
+		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].certBackdateDur),
+		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].certOffsetDur),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create role processor")
 	}
@@ -187,33 +187,36 @@ func New(opts ...Option) (Authorizerd, error) {
 }
 
 func (a *authorizer) initVerifiers() error {
-	verifiers := make([]verifier, len(a.atpParams)+1+1)
+	// TODO: check empty credentials to speed up the checking
+	verifiers := make([]verifier, 0, len(a.atpParams)+1+1)
 
 	for _, atpParam := range a.atpParams {
-		if atpParam.verifyAccessToken {
-			atVerifier := func(r *http.Request, act, res string) error {
-				tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
-				if err != nil {
-					return err
-				}
-				// TODO: switch to change verify function by atpParam.type
-				return a.VerifyAccessToken(r.Context(), tokenString, r.Method, r.URL.Path, r.TLS.PeerCertificates[0])
+		atVerifier := func(r *http.Request, act, res string) error {
+			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
+			if err != nil {
+				return err
 			}
-			verifiers = append(verifiers, atVerifier)
+
+			// TODO: switch to change verify function by atpParam.type
+			return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 		}
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", atpParam)
+		verifiers = append(verifiers, atVerifier)
 	}
 
 	if a.verifyRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), r.Method, r.URL.Path)
+			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), act, res)
 		}
+		glg.Info("initVerifiers: added role token verifier")
 		verifiers = append(verifiers, rtVerifier)
 	}
 
 	if a.verifyRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, r.Method, r.URL.Path)
+			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
 		}
+		glg.Info("initVerifiers: added role certificate verifier")
 		verifiers = append(verifiers, rcVerifier)
 	}
 
@@ -359,14 +362,14 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 // VerifyAccessToken verifies the HTTP request on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	for _, verifier := range a.verifiers {
-		// AND logic on multiple credentials
+		// OR logic on multiple credentials
 		err := verifier(r, act, res)
-		if err != nil {
-			return err
+		if err == nil {
+			return nil
 		}
 	}
 
-	return nil
+	return ErrInvalidCredentials
 }
 
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
@@ -383,7 +386,7 @@ func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string
 
 	ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok, cert)
 	if err != nil {
-		glg.Debugf("error parse and validate access tokenn, err: %v", err)
+		glg.Debugf("error parse and validate access token, err: %v", err)
 		return errors.Wrap(err, "error verify access token")
 	}
 	domain := ac.Audience

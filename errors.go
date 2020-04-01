@@ -46,6 +46,9 @@ var (
 
 	// ErrInvalidParameters "Access denied due to invalid/empty action/resource values"
 	ErrInvalidParameters = errors.New("Access denied due to invalid/empty action/resource values")
+
+	// ErrInvalidCredentials "Access denied due to invalid credentials"
+	ErrInvalidCredentials = errors.New("Access denied due to invalid credentials")
 )
 
 /*

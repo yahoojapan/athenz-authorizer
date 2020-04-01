@@ -35,22 +35,16 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithNewATProcessorParam(ATProcessorParam{
-			verifyAccessToken:                       true,
-			enableMTLSCertificateBoundAccessToken:   true,
-			processorClientCertificateGoBackSeconds: "1h",
-			processorClientCertificateOffsetSeconds: "1h",
-		}),
+		// WithNewATProcessorParam(true, "1h", "1h"), // TODO: design how to have default, user cannot overwrite this one
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
 )
 
 type ATProcessorParam struct {
-	verifyAccessToken                       bool
-	enableMTLSCertificateBoundAccessToken   bool
-	processorClientCertificateGoBackSeconds string
-	processorClientCertificateOffsetSeconds string
+	verifyCertThumbprint bool
+	certBackdateDur      string
+	certOffsetDur        string
 }
 
 // Option represents a functional option
@@ -254,9 +248,13 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // WithNewATProcessor returns a functional option that appends the new access token processor parameters
-func WithNewATProcessorParam(atpParam ATProcessorParam) Option {
+func WithNewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetDur string) Option {
 	return func(authz *authorizer) error {
-		authz.atpParams = append(authz.atpParams, atpParam)
+		authz.atpParams = append(authz.atpParams, ATProcessorParam{
+			verifyCertThumbprint: verifyCertThumbprint,
+			certBackdateDur:      certBackdateDur,
+			certOffsetDur:        certOffsetDur,
+		})
 		return nil
 	}
 }
