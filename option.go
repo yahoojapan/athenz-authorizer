@@ -35,11 +35,23 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATEnableMTLSCertificateBoundAccessToken(true),
-		WithATProcessorClientCertificateGoBackSeconds("1h"),
-		WithATProcessorClientCertificateOffsetSeconds("1h"),
+		WithNewATProcessorParam(ATProcessorParam{
+			verifyAccessToken:                       true,
+			enableMTLSCertificateBoundAccessToken:   true,
+			processorClientCertificateGoBackSeconds: "1h",
+			processorClientCertificateOffsetSeconds: "1h",
+		}),
+		WithRTVerifyRoleToken(true),
+		WithRCVerifyRoleCert(true),
 	}
 )
+
+type ATProcessorParam struct {
+	verifyAccessToken                       bool
+	enableMTLSCertificateBoundAccessToken   bool
+	processorClientCertificateGoBackSeconds string
+	processorClientCertificateOffsetSeconds string
+}
 
 // Option represents a functional option
 type Option func(*authorizer) error
@@ -241,26 +253,42 @@ func WithJwkErrRetryInterval(i string) Option {
 	access token parameters
 */
 
-// WithATEnableMTLSCertificateBoundAccessToken returns a EnableMTLSCertificateBoundAccessToken functional option
-func WithATEnableMTLSCertificateBoundAccessToken(b bool) Option {
+// WithNewATProcessor returns a functional option that appends the new access token processor parameters
+func WithNewATProcessorParam(atpParam ATProcessorParam) Option {
 	return func(authz *authorizer) error {
-		authz.enableMTLSCertificateBoundAccessToken = b
+		authz.atpParams = append(authz.atpParams, atpParam)
 		return nil
 	}
 }
 
-// WithATProcessorClientCertificateGoBackSeconds returns a ProcessorClientCertificateGoBackSeconds functional option
-func WithATProcessorClientCertificateGoBackSeconds(t string) Option {
+/*
+	role token parameters
+*/
+
+// WithRTVerifyRoleToken returns a VerifyRoleToken functional option
+func WithRTVerifyRoleToken(b bool) Option {
 	return func(authz *authorizer) error {
-		authz.processorClientCertificateGoBackSeconds = t
+		authz.verifyRoleToken = b
 		return nil
 	}
 }
 
-// WithATProcessorClientCertificateOffsetSeconds returns a ProcessorClientCertificateOffsetSeconds functional option
-func WithATProcessorClientCertificateOffsetSeconds(t string) Option {
+// WithRTHeader returns a RTHeader functional option
+func WithRTHeader(h string) Option {
 	return func(authz *authorizer) error {
-		authz.processorClientCertificateOffsetSeconds = t
+		authz.rtHeader = h
+		return nil
+	}
+}
+
+/*
+	role certificate parameters
+*/
+
+// WithRCVerifyRoleCert returns a VerifyRoleCert functional option
+func WithRCVerifyRoleCert(b bool) Option {
+	return func(authz *authorizer) error {
+		authz.verifyRoleCert = b
 		return nil
 	}
 }

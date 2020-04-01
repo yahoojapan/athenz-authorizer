@@ -23,11 +23,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go/request"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/policy"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
@@ -38,12 +39,15 @@ import (
 type Authorizerd interface {
 	Init(ctx context.Context) error
 	Start(ctx context.Context) <-chan error
+	Verify(r *http.Request, act, res string) error
+	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
-	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
+
+type verifier func(r *http.Request, act, res string) error
 
 type authorizer struct {
 	//
@@ -51,6 +55,7 @@ type authorizer struct {
 	policyd       policy.Daemon
 	jwkd          jwk.Daemon
 	roleProcessor role.Processor
+	verifiers     []verifier
 
 	// common parameters
 	athenzURL string
@@ -83,10 +88,15 @@ type authorizer struct {
 	jwkRefreshDuration  string
 	jwkErrRetryInterval string
 
-	// roleProcessor parameters
-	enableMTLSCertificateBoundAccessToken   bool
-	processorClientCertificateGoBackSeconds string
-	processorClientCertificateOffsetSeconds string
+	// accessTokenProcessor parameters
+	atpParams []ATProcessorParam
+
+	// roleTokenProcessor parameters
+	verifyRoleToken bool
+	rtHeader        string
+
+	// roleCertificateProcessor parameters
+	verifyRoleCert bool
 }
 
 type mode uint8
@@ -161,13 +171,55 @@ func New(opts ...Option) (Authorizerd, error) {
 	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
-		role.WithClientCertificateGoBackSeconds(prov.processorClientCertificateGoBackSeconds),
-		role.WithClientCertificateOffsetSeconds(prov.processorClientCertificateOffsetSeconds),
+		// WithEnableMTLSCertificateBoundAccessToken ?
+		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].processorClientCertificateGoBackSeconds),
+		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].processorClientCertificateOffsetSeconds),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create role processor")
 	}
 
+	// create verifiers
+	if err = prov.initVerifiers(); err != nil {
+		return nil, errors.Wrap(err, "error create verifiers")
+	}
+
 	return prov, nil
+}
+
+func (a *authorizer) initVerifiers() error {
+	verifiers := make([]verifier, len(a.atpParams)+1+1)
+
+	for _, atpParam := range a.atpParams {
+		if atpParam.verifyAccessToken {
+			atVerifier := func(r *http.Request, act, res string) error {
+				tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
+				if err != nil {
+					return err
+				}
+				// TODO: switch to change verify function by atpParam.type
+				return a.VerifyAccessToken(r.Context(), tokenString, r.Method, r.URL.Path, r.TLS.PeerCertificates[0])
+			}
+			verifiers = append(verifiers, atVerifier)
+		}
+	}
+
+	if a.verifyRoleToken {
+		rtVerifier := func(r *http.Request, act, res string) error {
+			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), r.Method, r.URL.Path)
+		}
+		verifiers = append(verifiers, rtVerifier)
+	}
+
+	if a.verifyRoleCert {
+		rcVerifier := func(r *http.Request, act, res string) error {
+			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, r.Method, r.URL.Path)
+		}
+		verifiers = append(verifiers, rcVerifier)
+	}
+
+	// resize
+	a.verifiers = append([]verifier(nil), verifiers[:len(verifiers)]...)
+	return nil
 }
 
 // Init initializes child daemons synchronously.
@@ -304,7 +356,20 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 	return nil
 }
 
-// VerifyAccessToken verifies the access token for specific resource and return and verification error.
+// VerifyAccessToken verifies the HTTP request on the specific (action, resource) pair and returns verification error if unauthorized.
+func (a *authorizer) Verify(r *http.Request, act, res string) error {
+	for _, verifier := range a.verifiers {
+		// AND logic on multiple credentials
+		err := verifier(r, act, res)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
