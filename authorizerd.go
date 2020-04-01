@@ -168,12 +168,21 @@ func New(opts ...Option) (Authorizerd, error) {
 		jwkProvider = prov.jwkd.GetProvider()
 	}
 
+	// TODO: refactor the default values
+	atpParam := ATProcessorParam{
+		verifyCertThumbprint: true,
+		certBackdateDur:      "1h",
+		certOffsetDur:        "1h",
+	}
+	if len(prov.atpParams) > 0 {
+		atpParam = prov.atpParams[0]
+	}
 	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
-		// WithEnableMTLSCertificateBoundAccessToken ?
-		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].certBackdateDur),
-		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].certOffsetDur),
+		role.WithEnableMTLSCertificateBoundAccessToken(atpParam.verifyCertThumbprint),
+		role.WithClientCertificateGoBackSeconds(atpParam.certBackdateDur),
+		role.WithClientCertificateOffsetSeconds(atpParam.certOffsetDur),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create role processor")
 	}
