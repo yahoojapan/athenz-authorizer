@@ -190,19 +190,15 @@ func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
 	verifiers := make([]verifier, 0, len(a.atpParams)+1+1)
 
-	for _, atpParam := range a.atpParams {
-		atVerifier := func(r *http.Request, act, res string) error {
-			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
-			if err != nil {
-				return err
-			}
-
-			// TODO: switch to change verify function by atpParam.type
-			return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+	atVerifier := func(r *http.Request, act, res string) error {
+		tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
+		if err != nil {
+			return err
 		}
-		glg.Infof("initVerifiers: added access token verifier having param: %+v", atpParam)
-		verifiers = append(verifiers, atVerifier)
+		return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 	}
+	glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams[0])
+	verifiers = append(verifiers, atVerifier)
 
 	if a.verifyRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
@@ -385,6 +381,7 @@ func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string
 	}
 
 	// TODO: execute per roleProcessors
+	// TODO: switch to change verify function by roleProcessor.type
 	ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok, cert)
 	if err != nil {
 		glg.Debugf("error parse and validate access token, err: %v", err)
