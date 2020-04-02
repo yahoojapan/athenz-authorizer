@@ -750,43 +750,6 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 	}
 }
 
-// func TestWithATProcessorClientCertificateOffsetSeconds(t *testing.T) {
-// 	type args struct {
-// 		t string
-// 	}
-// 	tests := []struct {
-// 		name      string
-// 		args      args
-// 		want      Option
-// 		checkFunc func(Option) error
-// 	}{
-// 		{
-// 			name: "set success",
-// 			args: args{
-// 				t: "dummy",
-// 			},
-// 			checkFunc: func(opt Option) error {
-// 				authz := &authorizer{}
-// 				if err := opt(authz); err != nil {
-// 					return err
-// 				}
-// 				if authz.processorClientCertificateOffsetSeconds != "dummy" {
-// 					return fmt.Errorf("invalid param was set")
-// 				}
-// 				return nil
-// 			},
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			got := WithATProcessorClientCertificateOffsetSeconds(tt.args.t)
-// 			if err := tt.checkFunc(got); err != nil {
-// 				t.Errorf("WithATProcessorClientCertificateOffsetSeconds() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
-
 func TestNewATProcessorParam(t *testing.T) {
 	type args struct {
 		verifyCertThumbprint bool
@@ -816,6 +779,168 @@ func TestNewATProcessorParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewATProcessorParam(tt.args.verifyCertThumbprint, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewATProcessorParam() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithATProcessorParam(t *testing.T) {
+	type args struct {
+		atpParams []ATProcessorParam
+	}
+	type test struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			atpParams := []ATProcessorParam{
+				NewATProcessorParam(true, "2h", "2h"),
+			}
+			return test{
+				name: "set success",
+				args: args{
+					atpParams: atpParams,
+				},
+				checkFunc: func(opt Option) error {
+					authz := &authorizer{}
+					if err := opt(authz); err != nil {
+						return err
+					}
+					if !reflect.DeepEqual(authz.atpParams, atpParams) {
+						return fmt.Errorf("invalid param was set")
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithATProcessorParam(tt.args.atpParams)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
+			}
+		})
+	}
+}
+
+func TestWithRTVerifyRoleToken(t *testing.T) {
+	type args struct {
+		b bool
+	}
+	type test struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			isEnable := true
+			return test{
+				name: "set success",
+				args: args{
+					b: isEnable,
+				},
+				checkFunc: func(opt Option) error {
+					authz := &authorizer{}
+					if err := opt(authz); err != nil {
+						return err
+					}
+					if authz.verifyRoleToken != isEnable {
+						return fmt.Errorf("invalid param was set")
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRTVerifyRoleToken(tt.args.b)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRTVerifyRoleToken() = %v error: %v", got, err)
+			}
+		})
+	}
+}
+
+func TestWithRTHeader(t *testing.T) {
+	type args struct {
+		h string
+	}
+	type test struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			header := "TEST-HEADER"
+			return test{
+				name: "set success",
+				args: args{
+					h: header,
+				},
+				checkFunc: func(opt Option) error {
+					authz := &authorizer{}
+					if err := opt(authz); err != nil {
+						return err
+					}
+					if !reflect.DeepEqual(authz.rtHeader, header) {
+						return fmt.Errorf("invalid param was set")
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRTHeader(tt.args.h)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRTHeader() = %v error: %v", got, err)
+			}
+		})
+	}
+}
+
+func TestWithRCVerifyRoleCert(t *testing.T) {
+	type args struct {
+		b bool
+	}
+	type test struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			isEnable := true
+			return test{
+				name: "set success",
+				args: args{
+					b: isEnable,
+				},
+				checkFunc: func(opt Option) error {
+					authz := &authorizer{}
+					if err := opt(authz); err != nil {
+						return err
+					}
+					if authz.verifyRoleCert != isEnable {
+						return fmt.Errorf("invalid param was set")
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRCVerifyRoleCert(tt.args.b)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRCVerifyRoleCert() = %v error: %v", got, err)
 			}
 		})
 	}
