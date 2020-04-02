@@ -35,9 +35,9 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATEnableMTLSCertificateBoundAccessToken(true),
-		WithATProcessorClientCertificateGoBackSeconds("1h"),
-		WithATProcessorClientCertificateOffsetSeconds("1h"),
+		WithATEnableMTLSCertificateBoundAccessToken(false),
+		WithATProcessorClientCertificateGoBackSeconds("0s"),
+		WithATProcessorClientCertificateOffsetSeconds("0s"),
 	}
 )
 
