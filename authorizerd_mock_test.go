@@ -17,6 +17,7 @@ package authorizerd
 
 import (
 	"context"
+	"crypto/x509"
 	"time"
 
 	"github.com/pkg/errors"
@@ -105,7 +106,8 @@ type TokenMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
-	c       *role.RoleJWTClaim
+	rc      *role.RoleJWTClaim
+	zatc    *role.ZTSAccessTokenClaim
 }
 
 func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
@@ -113,7 +115,11 @@ func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) 
 }
 
 func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
-	return rm.c, rm.wantErr
+	return rm.rc, rm.wantErr
+}
+
+func (rm *TokenMock) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
+	return rm.zatc, rm.wantErr
 }
 
 type JwkdMock struct {
