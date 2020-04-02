@@ -384,6 +384,7 @@ func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string
 		return nil
 	}
 
+	// TODO: execute per roleProcessors
 	ac, err := a.roleProcessor.ParseAndValidateAccessToken(tok, cert)
 	if err != nil {
 		glg.Debugf("error parse and validate access token, err: %v", err)
