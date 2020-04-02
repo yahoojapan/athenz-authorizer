@@ -750,112 +750,72 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 	}
 }
 
-func TestWithATEnableMTLSCertificateBoundAccessToken(t *testing.T) {
-	type args struct {
-		b bool
-	}
-	tests := []struct {
-		name      string
-		args      args
-		want      Option
-		checkFunc func(Option) error
-	}{
-		{
-			name: "set success",
-			args: args{
-				b: true,
-			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.enableMTLSCertificateBoundAccessToken != true {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithATEnableMTLSCertificateBoundAccessToken(tt.args.b)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithATEnableMTLSCertificateBoundAccessToken() error = %v", err)
-			}
-		})
-	}
-}
+// func TestWithATProcessorClientCertificateOffsetSeconds(t *testing.T) {
+// 	type args struct {
+// 		t string
+// 	}
+// 	tests := []struct {
+// 		name      string
+// 		args      args
+// 		want      Option
+// 		checkFunc func(Option) error
+// 	}{
+// 		{
+// 			name: "set success",
+// 			args: args{
+// 				t: "dummy",
+// 			},
+// 			checkFunc: func(opt Option) error {
+// 				authz := &authorizer{}
+// 				if err := opt(authz); err != nil {
+// 					return err
+// 				}
+// 				if authz.processorClientCertificateOffsetSeconds != "dummy" {
+// 					return fmt.Errorf("invalid param was set")
+// 				}
+// 				return nil
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got := WithATProcessorClientCertificateOffsetSeconds(tt.args.t)
+// 			if err := tt.checkFunc(got); err != nil {
+// 				t.Errorf("WithATProcessorClientCertificateOffsetSeconds() = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }
 
-func TestWithATProcessorClientCertificateGoBackSeconds(t *testing.T) {
+func TestNewATProcessorParam(t *testing.T) {
 	type args struct {
-		t string
+		verifyCertThumbprint bool
+		certBackdateDur      string
+		certOffsetDur        string
 	}
 	tests := []struct {
-		name      string
-		args      args
-		want      Option
-		checkFunc func(Option) error
+		name string
+		args args
+		want ATProcessorParam
 	}{
 		{
-			name: "set success",
+			name: "create success",
 			args: args{
-				t: "dummy",
+				verifyCertThumbprint: true,
+				certBackdateDur:      "2h",
+				certOffsetDur:        "2h",
 			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.processorClientCertificateGoBackSeconds != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
+			want: ATProcessorParam{
+				verifyCertThumbprint: true,
+				certBackdateDur:      "2h",
+				certOffsetDur:        "2h",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorClientCertificateGoBackSeconds(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithATProcessorClientCertificateGoBackSeconds() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestWithATProcessorClientCertificateOffsetSeconds(t *testing.T) {
-	type args struct {
-		t string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		want      Option
-		checkFunc func(Option) error
-	}{
-		{
-			name: "set success",
-			args: args{
-				t: "dummy",
-			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.processorClientCertificateOffsetSeconds != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorClientCertificateOffsetSeconds(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithATProcessorClientCertificateOffsetSeconds() = %v, want %v", got, tt.want)
+			if got := NewATProcessorParam(tt.args.verifyCertThumbprint, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewATProcessorParam() = %v, want %v", got, tt.want)
 			}
 		})
 	}
