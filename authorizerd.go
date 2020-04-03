@@ -218,6 +218,10 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, rcVerifier)
 	}
 
+	if len(verifiers) < 1 {
+		return errors.New("error no verifiers")
+	}
+
 	// resize
 	a.verifiers = append([]verifier(nil), verifiers...)
 	return nil
