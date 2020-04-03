@@ -102,6 +102,130 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func Test_authorizer_initVerifiers(t *testing.T) {
+	type fields struct {
+		verifiers              []verifier
+		athenzURL              string
+		client                 *http.Client
+		cache                  gache.Gache
+		cacheExp               time.Duration
+		roleCertURIPrefix      string
+		disablePubkeyd         bool
+		pubkeyRefreshDuration  string
+		pubkeyErrRetryInterval string
+		pubkeySysAuthDomain    string
+		pubkeyEtagExpTime      string
+		pubkeyEtagFlushDur     string
+		disablePolicyd         bool
+		policyExpireMargin     string
+		athenzDomains          []string
+		policyRefreshDuration  string
+		policyErrRetryInterval string
+		disableJwkd            bool
+		jwkRefreshDuration     string
+		jwkErrRetryInterval    string
+		atpParams              []ATProcessorParam
+		verifyRoleToken        bool
+		rtHeader               string
+		verifyRoleCert         bool
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		wantErr   bool
+		checkFunc func(a authorizer) error
+	}{
+		{
+			name: "initVerifier sucess, no role flags",
+			fields: fields{
+				atpParams: []ATProcessorParam{
+					{
+						verifyCertThumbprint: true,
+					},
+				},
+				verifyRoleCert:  false,
+				verifyRoleToken: false,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 1 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name: "initVerifier sucess, no access token flags",
+			fields: fields{
+				verifyRoleCert: true,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 1 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name: "initVerifier sucess, no access token flags",
+			fields: fields{
+				verifyRoleCert:  true,
+				verifyRoleToken: true,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 2 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name:    "initVerifier fail, no verifiers",
+			fields:  fields{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				verifiers:              tt.fields.verifiers,
+				athenzURL:              tt.fields.athenzURL,
+				client:                 tt.fields.client,
+				cache:                  tt.fields.cache,
+				cacheExp:               tt.fields.cacheExp,
+				roleCertURIPrefix:      tt.fields.roleCertURIPrefix,
+				disablePubkeyd:         tt.fields.disablePubkeyd,
+				pubkeyRefreshDuration:  tt.fields.pubkeyRefreshDuration,
+				pubkeyErrRetryInterval: tt.fields.pubkeyErrRetryInterval,
+				pubkeySysAuthDomain:    tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:      tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:     tt.fields.pubkeyEtagFlushDur,
+				disablePolicyd:         tt.fields.disablePolicyd,
+				policyExpireMargin:     tt.fields.policyExpireMargin,
+				athenzDomains:          tt.fields.athenzDomains,
+				policyRefreshDuration:  tt.fields.policyRefreshDuration,
+				policyErrRetryInterval: tt.fields.policyErrRetryInterval,
+				disableJwkd:            tt.fields.disableJwkd,
+				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
+				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
+				atpParams:              tt.fields.atpParams,
+				verifyRoleToken:        tt.fields.verifyRoleToken,
+				rtHeader:               tt.fields.rtHeader,
+				verifyRoleCert:         tt.fields.verifyRoleCert,
+			}
+			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(*a); err != nil {
+					t.Errorf("VerifyRoleToken() error: %v", err)
+				}
+			}
+		})
+	}
+}
 func Test_authorizer_Init(t *testing.T) {
 	type fields struct {
 		pubkeyd        pubkey.Daemon
@@ -1204,6 +1328,90 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 	}
 }
 
+func Test_authorizer_Verify(t *testing.T) {
+	type fields struct {
+		verifiers []verifier
+	}
+	type args struct {
+		r   *http.Request
+		act string
+		res string
+	}
+	type test struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}
+	tests := []test{
+		{
+			name: "Verify success, 1 verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Verify success, multiple verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Verify fail, 1 verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Verify fail, multiple verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 2")
+					},
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 3")
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				verifiers: tt.fields.verifiers,
+			}
+			if err := a.Verify(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
 func Test_authorizer_VerifyAccessToken(t *testing.T) {
 	type fields struct {
 		policyd       policy.Daemon
