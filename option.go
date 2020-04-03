@@ -252,9 +252,12 @@ func WithJwkErrRetryInterval(i string) Option {
 // NewATProcessorParam returns a new access token processor parameters
 func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetDur string) ATProcessorParam {
 	return ATProcessorParam{
+		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
-		certBackdateDur:      certBackdateDur,
-		certOffsetDur:        certOffsetDur,
+		// If the time of issuance of the certificate is intentionally earlier, specify that time.
+		certBackdateDur: certBackdateDur,
+		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
+		certOffsetDur: certOffsetDur,
 	}
 }
 
