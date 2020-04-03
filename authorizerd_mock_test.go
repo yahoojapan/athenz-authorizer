@@ -106,7 +106,7 @@ type TokenMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
-	rc      *role.RoleJWTClaim
+	rjc     *role.RoleJWTClaim
 	zatc    *role.ZTSAccessTokenClaim
 }
 
@@ -115,7 +115,7 @@ func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) 
 }
 
 func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
-	return rm.rc, rm.wantErr
+	return rm.rjc, rm.wantErr
 }
 
 func (rm *TokenMock) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {

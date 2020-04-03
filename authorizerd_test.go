@@ -809,7 +809,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		func() test {
 			c := gache.New()
 			rm := &TokenMock{
-				rc:      &role.RoleJWTClaim{},
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{}
@@ -841,7 +841,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			rm := &TokenMock{
-				rc:      &role.RoleJWTClaim{},
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{}
@@ -866,7 +866,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			rm := &TokenMock{
-				rc:      &role.RoleJWTClaim{},
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{}
@@ -891,7 +891,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			rm := &TokenMock{
-				rc:      &role.RoleJWTClaim{},
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
 			cm := &PolicydMock{}
@@ -938,7 +938,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		func() test {
 			c := gache.New()
 			rm := &TokenMock{
-				rc: &role.RoleJWTClaim{},
+				rjc: &role.RoleJWTClaim{},
 			}
 			cm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
