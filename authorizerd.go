@@ -190,15 +190,17 @@ func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
 	verifiers := make([]verifier, 0, len(a.atpParams)+1+1)
 
-	atVerifier := func(r *http.Request, act, res string) error {
-		tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
-		if err != nil {
-			return err
+	if len(a.atpParams) > 0 {
+		atVerifier := func(r *http.Request, act, res string) error {
+			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
+			if err != nil {
+				return err
+			}
+			return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 		}
-		return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams[0])
+		verifiers = append(verifiers, atVerifier)
 	}
-	glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams[0])
-	verifiers = append(verifiers, atVerifier)
 
 	if a.verifyRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
@@ -355,7 +357,8 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 	return nil
 }
 
-// VerifyAccessToken verifies the HTTP request on the specific (action, resource) pair and returns verification error if unauthorized.
+// Verify returns error of verification.
+// Verifes each verifier and if one of them succeeds, the error will be nil(OR logic).
 func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	for _, verifier := range a.verifiers {
 		// OR logic on multiple credentials
