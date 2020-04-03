@@ -46,7 +46,9 @@ func TestWithPubkeyProvider(t *testing.T) {
 				},
 				checkFunc: func(opt Option) error {
 					pol := &rtp{}
-					opt(pol)
+					if err := opt(pol); err != nil {
+						return err
+					}
 					if reflect.ValueOf(pol.pkp) != reflect.ValueOf(pkp) {
 						return fmt.Errorf("Error")
 					}
@@ -62,7 +64,9 @@ func TestWithPubkeyProvider(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				pol := &rtp{}
-				opt(pol)
+				if err := opt(pol); err != nil {
+					return err
+				}
 				if !reflect.DeepEqual(pol, &rtp{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
@@ -101,7 +105,9 @@ func TestWithJWKProvider(t *testing.T) {
 				},
 				checkFunc: func(opt Option) error {
 					pol := &rtp{}
-					opt(pol)
+					if err := opt(pol); err != nil {
+						return err
+					}
 					if reflect.ValueOf(pol.jwkp) != reflect.ValueOf(pkp) {
 						return fmt.Errorf("Error")
 					}
@@ -117,7 +123,9 @@ func TestWithJWKProvider(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				pol := &rtp{}
-				opt(pol)
+				if err := opt(pol); err != nil {
+					return err
+				}
 				if !reflect.DeepEqual(pol, &rtp{}) {
 					return fmt.Errorf("expected no changes, but got %v", pol)
 				}
@@ -152,7 +160,9 @@ func TestWithEnableMTLSCertificateBoundAccessToken(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				r := &rtp{}
-				opt(r)
+				if err := opt(r); err != nil {
+					return err
+				}
 				if !r.enableMTLSCertificateBoundAccessToken {
 					return fmt.Errorf("Error")
 				}
@@ -186,7 +196,9 @@ func TestWithClientCertificateGoBackSeconds(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				r := &rtp{}
-				opt(r)
+				if err := opt(r); err != nil {
+					return err
+				}
 				if r.clientCertificateGoBackSeconds != 7200 {
 					return fmt.Errorf("Error")
 				}
@@ -200,7 +212,9 @@ func TestWithClientCertificateGoBackSeconds(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				r := &rtp{}
-				opt(r)
+				if err := opt(r); err != nil {
+					return err
+				}
 				if !reflect.DeepEqual(r, &rtp{}) {
 					return fmt.Errorf("expected no changes, but got %v", r)
 				}
@@ -247,7 +261,9 @@ func TestWithClientCertificateOffsetSeconds(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				r := &rtp{}
-				opt(r)
+				if err := opt(r); err != nil {
+					return err
+				}
 				if r.clientCertificateOffsetSeconds != 7200 {
 					return fmt.Errorf("Error")
 				}
@@ -261,7 +277,9 @@ func TestWithClientCertificateOffsetSeconds(t *testing.T) {
 			},
 			checkFunc: func(opt Option) error {
 				r := &rtp{}
-				opt(r)
+				if err := opt(r); err != nil {
+					return err
+				}
 				if !reflect.DeepEqual(r, &rtp{}) {
 					return fmt.Errorf("expected no changes, but got %v", r)
 				}
