@@ -818,7 +818,7 @@ func TestWithATProcessorParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorParam(tt.args.atpParams)
+			got := WithATProcessorParams(tt.args.atpParams)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
 			}
