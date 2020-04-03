@@ -118,7 +118,7 @@ func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, e
 	return rm.rjc, rm.wantErr
 }
 
-func (rm *TokenMock) ParseAndValidateAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
+func (rm *TokenMock) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
 	return rm.zatc, rm.wantErr
 }
 

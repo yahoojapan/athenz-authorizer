@@ -599,7 +599,7 @@ func Test_rtp_keyFunc(t *testing.T) {
 	}
 }
 
-func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
+func Test_rtp_ParseAndValidateZTSAccessToken(t *testing.T) {
 	type fields struct {
 		pkp                                   pubkey.Provider
 		jwkp                                  jwk.Provider
@@ -797,13 +797,13 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 				jwkp:                                  tt.fields.jwkp,
 				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
 			}
-			got, err := r.ParseAndValidateAccessToken(tt.args.cred, tt.args.cert)
+			got, err := r.ParseAndValidateZTSAccessToken(tt.args.cred, tt.args.cert)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("rtp.ParseAndValidateAccessToken() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("rtp.ParseAndValidateZTSAccessToken() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("rtp.ParseAndValidateAccessToken() = %+v, want %v", got, tt.want)
+				t.Errorf("rtp.ParseAndValidateZTSAccessToken() = %+v, want %v", got, tt.want)
 			}
 		})
 	}
