@@ -604,8 +604,6 @@ func Test_rtp_ParseAndValidateAccessToken(t *testing.T) {
 		pkp                                   pubkey.Provider
 		jwkp                                  jwk.Provider
 		enableMTLSCertificateBoundAccessToken bool
-		clientCertificateGoBackSeconds        int64
-		clientCertificateOffsetSeconds        int64
 	}
 	type args struct {
 		cred string
