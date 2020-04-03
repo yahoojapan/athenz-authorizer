@@ -190,6 +190,14 @@ func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
 	verifiers := make([]verifier, 0, len(a.atpParams)+1+1)
 
+	if a.verifyRoleCert {
+		rcVerifier := func(r *http.Request, act, res string) error {
+			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+		}
+		glg.Info("initVerifiers: added role certificate verifier")
+		verifiers = append(verifiers, rcVerifier)
+	}
+
 	if len(a.atpParams) > 0 {
 		atVerifier := func(r *http.Request, act, res string) error {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
@@ -208,14 +216,6 @@ func (a *authorizer) initVerifiers() error {
 		}
 		glg.Info("initVerifiers: added role token verifier")
 		verifiers = append(verifiers, rtVerifier)
-	}
-
-	if a.verifyRoleCert {
-		rcVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
-		}
-		glg.Info("initVerifiers: added role certificate verifier")
-		verifiers = append(verifiers, rcVerifier)
 	}
 
 	if len(verifiers) < 1 {
