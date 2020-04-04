@@ -642,7 +642,7 @@ func Test_policyd_Update(t *testing.T) {
 					},
 				}
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500) // timeout should be long enough to enter Fetch()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*999) // timeout should be long enough to enter Fetch()
 			go func() {
 				select {
 				case <-ctx.Done():
