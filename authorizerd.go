@@ -188,7 +188,7 @@ func New(opts ...Option) (Authorizerd, error) {
 
 func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
-	verifiers := make([]verifier, 0, 3) // rolecert, acess token,roletoken
+	verifiers := make([]verifier, 0, 3) // rolecert, acess token, roletoken
 
 	if a.verifyRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
