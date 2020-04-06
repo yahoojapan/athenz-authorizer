@@ -875,17 +875,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		cert   *x509.Certificate
 		claims *ZTSAccessTokenClaim
 	}
-	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
-		keyData, e := ioutil.ReadFile(location)
-		if e != nil {
-			panic(e.Error())
-		}
-		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
-		if e != nil {
-			panic(e.Error())
-		}
-		return key
-	}
 
 	LoadX509CertFromDisk := func(location string) *x509.Certificate {
 		certData, e := ioutil.ReadFile(location)
@@ -911,9 +900,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound accecss token success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 			},
 			args: args{
@@ -943,9 +929,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound accecss token success, refreshed certificate",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -981,9 +964,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound accecss token fail, cert is nil",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 			},
 			args: args{
@@ -1011,9 +991,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound accecss token fail, no confirmation claim",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 			},
 			args: args{
@@ -1042,9 +1019,6 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound accecss token fail, cnf check fail and no client_id",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 			},
 			args: args{
@@ -1104,17 +1078,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		cert   *x509.Certificate
 		claims *ZTSAccessTokenClaim
 	}
-	LoadRSAPublicKeyFromDisk := func(location string) *rsa.PublicKey {
-		keyData, e := ioutil.ReadFile(location)
-		if e != nil {
-			panic(e.Error())
-		}
-		key, e := jwt.ParseRSAPublicKeyFromPEM(keyData)
-		if e != nil {
-			panic(e.Error())
-		}
-		return key
-	}
 	tests := []struct {
 		name    string
 		fields  fields
@@ -1124,9 +1087,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1157,9 +1117,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal success, token and certificate are issued at same time",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1190,9 +1147,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, CommonName is nil",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1221,9 +1175,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, CommonName is empty",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1242,9 +1193,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, ClientID is empty",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1263,9 +1211,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, principal mismatch",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
 			},
@@ -1284,9 +1229,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, certificate that was generated before the token",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateGoBackSeconds:        3600,
 				clientCertificateOffsetSeconds:        3600,
@@ -1313,9 +1255,6 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 		{
 			name: "verify cert principal fail, certificate that was generated after the clientCertificateOffsetSeconds",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
-					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
-				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateGoBackSeconds:        3600,
 				clientCertificateOffsetSeconds:        3600,
