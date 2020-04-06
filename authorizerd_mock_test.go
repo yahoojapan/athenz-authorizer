@@ -102,7 +102,7 @@ func (pm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface{
 	return pm.policyCache
 }
 
-type TokenMock struct {
+type ProcessorMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
@@ -110,16 +110,16 @@ type TokenMock struct {
 	zatc    *role.ZTSAccessTokenClaim
 }
 
-func (rm *TokenMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
-	return rm.rt, rm.wantErr
+func (pm *ProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
+	return pm.rt, pm.wantErr
 }
 
-func (rm *TokenMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
-	return rm.rjc, rm.wantErr
+func (pm *ProcessorMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
+	return pm.rjc, pm.wantErr
 }
 
-func (rm *TokenMock) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
-	return rm.zatc, rm.wantErr
+func (pm *ProcessorMock) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
+	return pm.zatc, pm.wantErr
 }
 
 type JwkdMock struct {
