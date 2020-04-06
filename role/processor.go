@@ -186,13 +186,16 @@ func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTok
 		return errors.Errorf("error certificate and access token principal mismatch: %v vs %v", cn, clientID)
 	}
 
+	// usecase: new cert + old token, after certificate rotation
+	atIssueTime := claims.IssuedAt
+	certActualIssueTime := cert.NotBefore.Unix() + r.clientCertificateGoBackSeconds
 	// Issue time check. If the certificate had been updated, it would have been issued later than the token.
-	if cert.NotBefore.Unix() < claims.IssuedAt-r.clientCertificateGoBackSeconds {
-		return errors.Errorf("error certificate: %v issued before token: %v", cert.NotBefore.Unix(), claims.IssuedAt)
+	if certActualIssueTime < atIssueTime {
+		return errors.Errorf("error certificate: issued before access token: cert = %v, tok = %v", certActualIssueTime, atIssueTime)
 	}
 	// Issue time check. Determine if certificate's issue time is within an allowed range
-	if cert.NotBefore.Unix() > claims.IssuedAt+r.clientCertificateOffsetSeconds-r.clientCertificateGoBackSeconds {
-		return errors.Errorf("Certificate: %v past configured offset %v for token: %v", cert.NotBefore.Unix(), r.clientCertificateOffsetSeconds, claims.IssuedAt)
+	if certActualIssueTime > atIssueTime+r.clientCertificateOffsetSeconds {
+		return errors.Errorf("error certificate: access token too old: cert = %v, offset = %v, tok = %v", certActualIssueTime, r.clientCertificateOffsetSeconds, atIssueTime)
 	}
 	return nil
 }
