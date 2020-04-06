@@ -989,6 +989,36 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "verify certificate bound accecss token fail, invalid confirmation claim",
+			fields: fields{
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: func() *x509.Certificate {
+					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+				}(),
+				claims: &ZTSAccessTokenClaim{
+					BaseClaim: BaseClaim{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   "domain.tenant.service",
+							IssuedAt:  1585122381,
+							ExpiresAt: 9999999999,
+							Issuer:    "https://zts.athenz.io",
+							Audience:  "domain.provider",
+						},
+					},
+					AuthTime: 1585122381,
+					Version:  1,
+					ClientID: "domain.tenant.service",
+					UserID:   "domain.tenant.service",
+					Scope:    []string{"admin", "user"},
+					//  cnf when cert thumbprint is "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+					Confirm: map[string]string{"x5t#S256": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo"},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "verify certificate bound accecss token fail, no confirmation claim",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
