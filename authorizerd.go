@@ -223,7 +223,7 @@ func (a *authorizer) initVerifiers() error {
 	}
 
 	// resize
-	a.verifiers = make([]verifier, len(verifiers), len(verifiers))
+	a.verifiers = make([]verifier, len(verifiers))
 	copy(a.verifiers[0:], verifiers)
 	return nil
 }
