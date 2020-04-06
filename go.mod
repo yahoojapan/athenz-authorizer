@@ -1,6 +1,6 @@
 module github.com/yahoojapan/athenz-authorizer/v2
 
-go 1.13
+go 1.14
 
 require (
 	bou.ke/monkey v1.0.1 // indirect
