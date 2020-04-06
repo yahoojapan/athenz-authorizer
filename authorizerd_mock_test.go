@@ -75,31 +75,31 @@ type PolicydMock struct {
 	policyCache map[string]interface{}
 }
 
-func (pm *PolicydMock) Start(context.Context) <-chan error {
+func (pdm *PolicydMock) Start(context.Context) <-chan error {
 	ech := make(chan error, 1)
 	go func() {
-		time.Sleep(pm.policydExp)
+		time.Sleep(pdm.policydExp)
 		ech <- errors.New("policyd error")
 	}()
 	return ech
 }
 
-func (pm *PolicydMock) Update(ctx context.Context) error {
-	if pm.UpdateFunc != nil {
-		return pm.UpdateFunc(ctx)
+func (pdm *PolicydMock) Update(ctx context.Context) error {
+	if pdm.UpdateFunc != nil {
+		return pdm.UpdateFunc(ctx)
 	}
 	return nil
 }
 
-func (pm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	if pm.CheckPolicyFunc != nil {
-		return pm.CheckPolicyFunc(ctx, domain, roles, action, resource)
+func (pdm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
+	if pdm.CheckPolicyFunc != nil {
+		return pdm.CheckPolicyFunc(ctx, domain, roles, action, resource)
 	}
 	return nil
 }
 
-func (pm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return pm.policyCache
+func (pdm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface{} {
+	return pdm.policyCache
 }
 
 type ProcessorMock struct {
