@@ -784,7 +784,7 @@ func TestNewATProcessorParam(t *testing.T) {
 	}
 }
 
-func TestWithATProcessorParam(t *testing.T) {
+func TestWithATProcessorParams(t *testing.T) {
 	type args struct {
 		atpParams []ATProcessorParam
 	}
@@ -818,7 +818,7 @@ func TestWithATProcessorParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorParams(tt.args.atpParams)
+			got := WithATProcessorParams(tt.args.atpParams...)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
 			}

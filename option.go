@@ -35,9 +35,7 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParams([]ATProcessorParam{
-			NewATProcessorParam(true, "1h", "1h"),
-		}),
+		WithATProcessorParams(NewATProcessorParam(true, "1h", "1h")),
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
@@ -262,7 +260,7 @@ func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetD
 }
 
 // WithATProcessorParams returns a functional option that new access token processor parameters slice
-func WithATProcessorParams(atpParams []ATProcessorParam) Option {
+func WithATProcessorParams(atpParams ...ATProcessorParam) Option {
 	return func(authz *authorizer) error {
 		authz.atpParams = atpParams
 		return nil
