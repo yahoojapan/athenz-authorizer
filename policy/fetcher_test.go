@@ -665,7 +665,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// want objects
 			t.want = nil
 			t.wantPolicyCache = &taggedPolicy{ctime: fastime.Now()}
-			t.wantErrStr = `create fetch policy request fail: parse "https:// /domain/dummyDomain/signed_policy_data": invalid character " " in host name`
+			t.wantErrStr = `create fetch policy request fail: parse https:// /domain/dummyDomain/signed_policy_data: invalid character " " in host name`
 
 			// test input
 			policyCache := unsafe.Pointer(t.wantPolicyCache)
@@ -692,7 +692,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// want objects
 			t.want = nil
 			t.wantPolicyCache = &taggedPolicy{ctime: fastime.Now()}
-			t.wantErrStr = `fetch policy HTTP request fail: Get "https://127.0.0.1/api/domain/dummyDomain/signed_policy_data": dial tcp 127.0.0.1:443: connect: connection refused`
+			t.wantErrStr = `fetch policy HTTP request fail: Get https://127.0.0.1/api/domain/dummyDomain/signed_policy_data: dial tcp 127.0.0.1:443: connect: connection refused`
 
 			// test input
 			policyCache := unsafe.Pointer(t.wantPolicyCache)
