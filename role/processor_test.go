@@ -789,6 +789,60 @@ func Test_rtp_ParseAndValidateZTSAccessToken(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			return test{
+				name: "verify certificate bound access token fail, empty cnf (\"cnf\": \"\")",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableMTLSCertificateBoundAccessToken: true,
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjoiIn0.WMZ9THmblO-txpF75pLCiv58c9gfgqBRTssOH8Yx7WlXN9Z5jyOebIahlA3ULqiRiwaAd_5eXYRxS4iIFKGvThNPiVjocfIGq5Mj7mnkqM672N0zzbd79thI9aHieJvr7UB6yjSIkJSfRD-c36tmIFMrPkSQw-Rk1mUUTFTW1O40o1ZDZeK4UZP-plcJJ7MlDk7pCeMShEiKa-7iYxQsfSJqszeNqJEYPbMDudaqKhmu18m_Yo7Ac7Ur8ufaD3kUbOViV6Y4wJCGthtzeasx0lQ4b4ymqPgYF53RgdkoWVwwVCqw4XJPgbIwx8vPQ2vYY0zrhq_PSn251ZyI--pNJA`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+					}(),
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify certificate bound access token fail, empty cnf (cnf: \"cnf\": {\"x5t#S256\": {}})",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableMTLSCertificateBoundAccessToken: true,
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2Ijp7fX19.jil95otB9yKJCUTrpbl5h592HKQYDquhz5vSfeAv3fcmFkvSAIcwizKPlWfW2g3eF_VZVu3WRgJyHCwIfWKrOTqdGGJYJs1QmkDAYhjkpgsLCBVXAM63dBIGKRkpt2eO4biqPfjynE--RcJLK1qMVpoWUaQW0QnM5XjjVpgcJtR1l3sjnUXGO4J2L0Q_CAyHSoQvd00jlWA72c32V2L10mQ5BXtEaaEgC8nVc6sdLtAhfUOvyx7xhRFuWl9VL-OO8Z2_5jx1goF2E6Icejmjk5gtKTJa9Wo-ck-P4stphWbNQEpfia6JJXE3y-LKBvdZKmCJhVpKUY_ZWSOLaNQpgA`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+					}(),
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify certificate bound access token fail, empty cnf (\"cnf\": {})",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableMTLSCertificateBoundAccessToken: true,
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2Ijp7fX19.jil95otB9yKJCUTrpbl5h592HKQYDquhz5vSfeAv3fcmFkvSAIcwizKPlWfW2g3eF_VZVu3WRgJyHCwIfWKrOTqdGGJYJs1QmkDAYhjkpgsLCBVXAM63dBIGKRkpt2eO4biqPfjynE--RcJLK1qMVpoWUaQW0QnM5XjjVpgcJtR1l3sjnUXGO4J2L0Q_CAyHSoQvd00jlWA72c32V2L10mQ5BXtEaaEgC8nVc6sdLtAhfUOvyx7xhRFuWl9VL-OO8Z2_5jx1goF2E6Icejmjk5gtKTJa9Wo-ck-P4stphWbNQEpfia6JJXE3y-LKBvdZKmCJhVpKUY_ZWSOLaNQpgA`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+					}(),
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
