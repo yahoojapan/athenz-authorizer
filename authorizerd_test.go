@@ -19,11 +19,13 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
@@ -1435,12 +1437,27 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
+			now := fastime.Now()
 			c := gache.New()
 			pm := &ProcessorMock{
-				zatc:    &role.ZTSAccessTokenClaim{},
+				zatc: &role.ZTSAccessTokenClaim{
+					Scope: []string{"role"},
+					BaseClaim: role.BaseClaim{
+						StandardClaims: jwtgo.StandardClaims{
+							Audience: "domain",
+						},
+					},
+				},
 				wantErr: nil,
 			}
-			pdm := &PolicydMock{}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
 			return test{
 				name: "test verify success",
 				args: args{
@@ -1457,22 +1474,34 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				wantErr: "",
 				checkFunc: func(prov *authorizer) error {
-					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
 					}
 					return nil
 				},
 			}
 		}(),
 		func() test {
+			now := fastime.Now()
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
 			pm := &ProcessorMock{
 				zatc:    &role.ZTSAccessTokenClaim{},
 				wantErr: nil,
 			}
-			pdm := &PolicydMock{}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
 			return test{
 				name: "test use cache success",
 				args: args{
@@ -1488,6 +1517,17 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 					cacheExp:      time.Minute,
 				},
 				wantErr: "",
+				checkFunc: func(prov *authorizer) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
 			}
 		}(),
 		func() test {
