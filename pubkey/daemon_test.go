@@ -442,7 +442,7 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 					env: "dummyEnv",
 				},
 				checkFunc: func(c *pubkeyd, sac *SysAuthConfig, upd bool, err error) error {
-					wantErr := `error creating get pubkey request: parse https:// /domain/dummyDom/service/dummyEnv: invalid character " " in host name`
+					wantErr := `error creating get pubkey request: parse "https:// /domain/dummyDom/service/dummyEnv": invalid character " " in host name`
 					if err != nil {
 						if err.Error() == wantErr {
 							return nil
