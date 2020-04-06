@@ -148,13 +148,14 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return errors.New("error mTLS client certificate is nil")
 	}
 
-	if _, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]; !ok {
+	certThumbprint, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]
+	if !ok {
 		return errors.New("error token is not certificate bound access token")
 	}
 
 	// cnf check
 	sum := sha256.Sum256(cert.Raw)
-	if base64.RawURLEncoding.EncodeToString(sum[:]) == claims.Confirm[CONFIRM_METHOD_MEMBER] {
+	if base64.RawURLEncoding.EncodeToString(sum[:]) == certThumbprint {
 		return nil
 	}
 
