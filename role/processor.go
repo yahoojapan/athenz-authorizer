@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	confirmationMethod = "x5t#S256"
+	CONFIRM_METHOD_MEMBER = "x5t#S256"
 )
 
 // Processor represents the role token parser interface.
@@ -148,13 +148,13 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return errors.New("error mTLS client certificate is nil")
 	}
 
-	if _, ok := claims.Confirm[confirmationMethod]; !ok {
+	if _, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]; !ok {
 		return errors.New("error token is not certificate bound access token")
 	}
 
 	// cnf check
 	sum := sha256.Sum256(cert.Raw)
-	if base64.RawURLEncoding.EncodeToString(sum[:]) == claims.Confirm[confirmationMethod] {
+	if base64.RawURLEncoding.EncodeToString(sum[:]) == claims.Confirm[CONFIRM_METHOD_MEMBER] {
 		return nil
 	}
 
