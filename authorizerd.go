@@ -192,7 +192,10 @@ func (a *authorizer) initVerifiers() error {
 
 	if a.verifyRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+			if r.TLS != nil {
+				return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+			}
+			return a.VerifyRoleCert(r.Context(), nil, act, res)
 		}
 		glg.Info("initVerifiers: added role certificate verifier")
 		verifiers = append(verifiers, rcVerifier)
