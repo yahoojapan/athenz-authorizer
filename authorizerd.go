@@ -204,7 +204,10 @@ func (a *authorizer) initVerifiers() error {
 			if err != nil {
 				return err
 			}
-			return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+			if r.TLS != nil {
+				return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+			}
+			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
 		}
 		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams)
 		verifiers = append(verifiers, atVerifier)
