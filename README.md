@@ -74,7 +74,7 @@ The authorizer uses functional options pattern to initialize the instance. All t
 ## License
 
 ```markdown
-Copyright (C)  2018 Yahoo Japan Corporation Athenz team.
+Copyright (C) 2018 Yahoo Japan Corporation Athenz team.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
