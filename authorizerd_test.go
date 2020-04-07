@@ -53,7 +53,7 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*authorizer).athenzURL != "www.athenz.com/zts/v1" {
+				if prov.(*authorizer).athenzURL != "athenz.io/zts/v1" {
 					return errors.New("invalid url")
 				}
 				if prov.(*authorizer).pubkeyd == nil {

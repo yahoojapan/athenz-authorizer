@@ -39,44 +39,44 @@ func TestTrimHTTPScheme(t *testing.T) {
 		{
 			name: "no scheme success",
 			args: args{
-				urlStr: "www.athenz.com/path",
+				urlStr: "athenz.io/path",
 			},
-			want: "www.athenz.com/path",
+			want: "athenz.io/path",
 		},
 		{
 			name: "no scheme with port number success",
 			args: args{
-				urlStr: "www.athenz.com:8080/path",
+				urlStr: "athenz.io:8080/path",
 			},
-			want: "www.athenz.com:8080/path",
+			want: "athenz.io:8080/path",
 		},
 		{
 			name: "trim HTTP scheme success",
 			args: args{
-				urlStr: "http://www.athenz.com/path",
+				urlStr: "http://athenz.io/path",
 			},
-			want: "www.athenz.com/path",
+			want: "athenz.io/path",
 		},
 		{
 			name: "trim HTTPS scheme success",
 			args: args{
-				urlStr: "https://www.athenz.com/path/",
+				urlStr: "https://athenz.io/path/",
 			},
-			want: "www.athenz.com/path/",
+			want: "athenz.io/path/",
 		},
 		{
 			name: "trim HTTPS scheme with port number success",
 			args: args{
-				urlStr: "https://www.athenz.com:8080/path/",
+				urlStr: "https://athenz.io:8080/path/",
 			},
-			want: "www.athenz.com:8080/path/",
+			want: "athenz.io:8080/path/",
 		},
 		{
 			name: "non-http supported scheme",
 			args: args{
-				urlStr: "ftp://www.athenz.com/path",
+				urlStr: "ftp://athenz.io/path",
 			},
-			want: "ftp://www.athenz.com/path",
+			want: "ftp://athenz.io/path",
 		},
 	}
 	for _, tt := range tests {
@@ -101,21 +101,21 @@ func TestHasScheme(t *testing.T) {
 		{
 			name: "no schema",
 			args: args{
-				url: "www.athenz.com/path",
+				url: "athenz.io/path",
 			},
 			want: false,
 		},
 		{
 			name: "with schema",
 			args: args{
-				url: "ftp://www.athenz.com/path",
+				url: "ftp://athenz.io/path",
 			},
 			want: true,
 		},
 		{
 			name: "with schema",
 			args: args{
-				url: "a0+-.://www.athenz.com/path",
+				url: "a0+-.://athenz.io/path",
 			},
 			want: true,
 		},

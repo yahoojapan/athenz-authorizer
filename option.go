@@ -25,7 +25,7 @@ import (
 
 var (
 	defaultOptions = []Option{
-		WithAthenzURL("www.athenz.com/zts/v1"),
+		WithAthenzURL("athenz.io/zts/v1"),
 		WithTransport(nil),
 		WithCacheExp(time.Minute),
 		WithRoleCertURIPrefix("athenz://role/"),

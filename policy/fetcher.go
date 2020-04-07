@@ -75,7 +75,7 @@ func (f *fetcher) Domain() string {
 // Fetch fetches the policy. When calling concurrently, it is not guarantee that the cache will always have the latest version.
 func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	glg.Infof("will fetch policy for domain: %s", f.domain)
-	// https://{www.athenz.com/zts/v1}/domain/{athenz domain}/signed_policy_data
+	// https://{athenz.io/zts/v1}/domain/{athenz domain}/signed_policy_data
 	url := fmt.Sprintf("https://%s/domain/%s/signed_policy_data", f.athenzURL, f.domain)
 
 	glg.Debugf("will fetch policy from url: %s", url)
