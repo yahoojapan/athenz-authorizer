@@ -1012,8 +1012,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					//  cnf when cert thumbprint is "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-					Confirm: map[string]string{"x5t#S256": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo"},
+					Confirm:  map[string]string{"x5t#S256": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo"},
 				},
 			},
 			wantErr: true,
