@@ -28,7 +28,7 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
-var (
+const (
 	CONFIRM_METHOD_MEMBER = "x5t#S256"
 )
 
