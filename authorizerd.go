@@ -23,11 +23,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go/request"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
+	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/policy"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
@@ -38,11 +39,15 @@ import (
 type Authorizerd interface {
 	Init(ctx context.Context) error
 	Start(ctx context.Context) <-chan error
+	Verify(r *http.Request, act, res string) error
+	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
+
+type verifier func(r *http.Request, act, res string) error
 
 type authorizer struct {
 	//
@@ -50,6 +55,7 @@ type authorizer struct {
 	policyd       policy.Daemon
 	jwkd          jwk.Daemon
 	roleProcessor role.Processor
+	verifiers     []verifier
 
 	// common parameters
 	athenzURL string
@@ -81,6 +87,16 @@ type authorizer struct {
 	disableJwkd         bool
 	jwkRefreshDuration  string
 	jwkErrRetryInterval string
+
+	// accessTokenProcessor parameters
+	atpParams []ATProcessorParam
+
+	// roleTokenProcessor parameters
+	verifyRoleToken bool
+	rtHeader        string
+
+	// roleCertificateProcessor parameters
+	verifyRoleCert bool
 }
 
 type mode uint8
@@ -152,11 +168,70 @@ func New(opts ...Option) (Authorizerd, error) {
 		jwkProvider = prov.jwkd.GetProvider()
 	}
 
-	prov.roleProcessor = role.New(
+	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
-		role.WithJWKProvider(jwkProvider))
+		role.WithJWKProvider(jwkProvider),
+		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParams[0].verifyCertThumbprint),
+		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].certBackdateDur),
+		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].certOffsetDur),
+	); err != nil {
+		return nil, errors.Wrap(err, "error create role processor")
+	}
+
+	// create verifiers
+	if err = prov.initVerifiers(); err != nil {
+		return nil, errors.Wrap(err, "error create verifiers")
+	}
 
 	return prov, nil
+}
+
+func (a *authorizer) initVerifiers() error {
+	// TODO: check empty credentials to speed up the checking
+	verifiers := make([]verifier, 0, 3) // rolecert, acess token, roletoken
+
+	if a.verifyRoleCert {
+		rcVerifier := func(r *http.Request, act, res string) error {
+			if r.TLS != nil {
+				return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+			}
+			return a.VerifyRoleCert(r.Context(), nil, act, res)
+		}
+		glg.Info("initVerifiers: added role certificate verifier")
+		verifiers = append(verifiers, rcVerifier)
+	}
+
+	if len(a.atpParams) > 0 {
+		atVerifier := func(r *http.Request, act, res string) error {
+			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
+			if err != nil {
+				return err
+			}
+			if r.TLS != nil {
+				return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+			}
+			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
+		}
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams)
+		verifiers = append(verifiers, atVerifier)
+	}
+
+	if a.verifyRoleToken {
+		rtVerifier := func(r *http.Request, act, res string) error {
+			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), act, res)
+		}
+		glg.Info("initVerifiers: added role token verifier")
+		verifiers = append(verifiers, rtVerifier)
+	}
+
+	if len(verifiers) < 1 {
+		return errors.New("error no verifiers")
+	}
+
+	// resize
+	a.verifiers = make([]verifier, len(verifiers))
+	copy(a.verifiers[0:], verifiers)
+	return nil
 }
 
 // Init initializes child daemons synchronously.
@@ -289,6 +364,51 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		return errors.Wrap(err, "token unauthorized")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
+	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
+	return nil
+}
+
+// Verify returns error of verification.
+// Verifes each verifier and if one of them succeeds, the error will be nil(OR logic).
+func (a *authorizer) Verify(r *http.Request, act, res string) error {
+	for _, verifier := range a.verifiers {
+		// OR logic on multiple credentials
+		err := verifier(r, act, res)
+		if err == nil {
+			return nil
+		}
+	}
+
+	return ErrInvalidCredentials
+}
+
+// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
+func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
+	if act == "" || res == "" {
+		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
+	}
+	// check if exists in verification success cache
+	_, ok := a.cache.Get(tok + act + res)
+	if ok {
+		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+		return nil
+	}
+
+	// TODO: execute per roleProcessors
+	// TODO: switch to change verify function by roleProcessor.type
+	ac, err := a.roleProcessor.ParseAndValidateZTSAccessToken(tok, cert)
+	if err != nil {
+		glg.Debugf("error parse and validate access token, err: %v", err)
+		return errors.Wrap(err, "error verify access token")
+	}
+	domain := ac.Audience
+	roles := ac.Scope
+
+	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
+		glg.Debugf("error check, err: %v", err)
+		return errors.Wrap(err, "token unauthorized")
+	}
+	glg.Debugf("set access token result. tok: %s, act: %s, res: %s", tok, act, res)
 	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
 	return nil
 }

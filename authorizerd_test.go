@@ -19,11 +19,13 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
@@ -51,7 +53,7 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*authorizer).athenzURL != "www.athenz.com/zts/v1" {
+				if prov.(*authorizer).athenzURL != "athenz.io/zts/v1" {
 					return errors.New("invalid url")
 				}
 				if prov.(*authorizer).pubkeyd == nil {
@@ -102,6 +104,130 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func Test_authorizer_initVerifiers(t *testing.T) {
+	type fields struct {
+		verifiers              []verifier
+		athenzURL              string
+		client                 *http.Client
+		cache                  gache.Gache
+		cacheExp               time.Duration
+		roleCertURIPrefix      string
+		disablePubkeyd         bool
+		pubkeyRefreshDuration  string
+		pubkeyErrRetryInterval string
+		pubkeySysAuthDomain    string
+		pubkeyEtagExpTime      string
+		pubkeyEtagFlushDur     string
+		disablePolicyd         bool
+		policyExpireMargin     string
+		athenzDomains          []string
+		policyRefreshDuration  string
+		policyErrRetryInterval string
+		disableJwkd            bool
+		jwkRefreshDuration     string
+		jwkErrRetryInterval    string
+		atpParams              []ATProcessorParam
+		verifyRoleToken        bool
+		rtHeader               string
+		verifyRoleCert         bool
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		wantErr   bool
+		checkFunc func(a authorizer) error
+	}{
+		{
+			name: "initVerifier sucess, no role flags",
+			fields: fields{
+				atpParams: []ATProcessorParam{
+					{
+						verifyCertThumbprint: true,
+					},
+				},
+				verifyRoleCert:  false,
+				verifyRoleToken: false,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 1 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name: "initVerifier sucess, no access token flags",
+			fields: fields{
+				verifyRoleCert: true,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 1 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name: "initVerifier sucess, no access token flags",
+			fields: fields{
+				verifyRoleCert:  true,
+				verifyRoleToken: true,
+			},
+			wantErr: false,
+			checkFunc: func(a authorizer) error {
+				if len(a.verifiers) != 2 {
+					return errors.New("failed init verifier")
+				}
+				return nil
+			},
+		},
+		{
+			name:    "initVerifier fail, no verifiers",
+			fields:  fields{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				verifiers:              tt.fields.verifiers,
+				athenzURL:              tt.fields.athenzURL,
+				client:                 tt.fields.client,
+				cache:                  tt.fields.cache,
+				cacheExp:               tt.fields.cacheExp,
+				roleCertURIPrefix:      tt.fields.roleCertURIPrefix,
+				disablePubkeyd:         tt.fields.disablePubkeyd,
+				pubkeyRefreshDuration:  tt.fields.pubkeyRefreshDuration,
+				pubkeyErrRetryInterval: tt.fields.pubkeyErrRetryInterval,
+				pubkeySysAuthDomain:    tt.fields.pubkeySysAuthDomain,
+				pubkeyEtagExpTime:      tt.fields.pubkeyEtagExpTime,
+				pubkeyEtagFlushDur:     tt.fields.pubkeyEtagFlushDur,
+				disablePolicyd:         tt.fields.disablePolicyd,
+				policyExpireMargin:     tt.fields.policyExpireMargin,
+				athenzDomains:          tt.fields.athenzDomains,
+				policyRefreshDuration:  tt.fields.policyRefreshDuration,
+				policyErrRetryInterval: tt.fields.policyErrRetryInterval,
+				disableJwkd:            tt.fields.disableJwkd,
+				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
+				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
+				atpParams:              tt.fields.atpParams,
+				verifyRoleToken:        tt.fields.verifyRoleToken,
+				rtHeader:               tt.fields.rtHeader,
+				verifyRoleCert:         tt.fields.verifyRoleCert,
+			}
+			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(*a); err != nil {
+					t.Errorf("VerifyRoleToken() error: %v", err)
+				}
+			}
+		})
+	}
+}
 func Test_authorizer_Init(t *testing.T) {
 	type fields struct {
 		pubkeyd        pubkey.Daemon
@@ -287,7 +413,7 @@ func Test_authorizer_Start(t *testing.T) {
 	tests := []test{
 		func() test {
 			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*10))
-			cm := &ConfdMock{
+			pdm := &ConfdMock{
 				confdExp: time.Second,
 			}
 			pm := &PolicydMock{
@@ -297,7 +423,7 @@ func Test_authorizer_Start(t *testing.T) {
 			return test{
 				name: "test context done",
 				fields: fields{
-					pubkeyd:  cm,
+					pubkeyd:  pdm,
 					policyd:  pm,
 					jwkd:     jd,
 					cache:    gache.New(),
@@ -319,7 +445,7 @@ func Test_authorizer_Start(t *testing.T) {
 		}(),
 		func() test {
 			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
-			cm := &ConfdMock{
+			pdm := &ConfdMock{
 				confdExp: time.Millisecond * 10,
 			}
 			pm := &PolicydMock{
@@ -329,7 +455,7 @@ func Test_authorizer_Start(t *testing.T) {
 			return test{
 				name: "test context pubkey updater returns error",
 				fields: fields{
-					pubkeyd:  cm,
+					pubkeyd:  pdm,
 					policyd:  pm,
 					jwkd:     jd,
 					cache:    gache.New(),
@@ -351,7 +477,7 @@ func Test_authorizer_Start(t *testing.T) {
 		}(),
 		func() test {
 			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Second))
-			cm := &ConfdMock{
+			pdm := &ConfdMock{
 				confdExp: time.Second,
 			}
 			pm := &PolicydMock{
@@ -361,7 +487,7 @@ func Test_authorizer_Start(t *testing.T) {
 			return test{
 				name: "test policyd returns error",
 				fields: fields{
-					pubkeyd:  cm,
+					pubkeyd:  pdm,
 					policyd:  pm,
 					jwkd:     jd,
 					cache:    gache.New(),
@@ -383,7 +509,7 @@ func Test_authorizer_Start(t *testing.T) {
 		}(),
 		func() test {
 			ctx, cancel := context.WithDeadline(context.Background(), fastime.Now().Add(time.Millisecond*500))
-			cm := &ConfdMock{
+			pdm := &ConfdMock{
 				confdExp: time.Second,
 			}
 			pm := &PolicydMock{
@@ -402,7 +528,7 @@ func Test_authorizer_Start(t *testing.T) {
 			return test{
 				name: "test jwkd returns error",
 				fields: fields{
-					pubkeyd:  cm,
+					pubkeyd:  pdm,
 					policyd:  pm,
 					jwkd:     jd,
 					cache:    gache.New(),
@@ -465,11 +591,11 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 	tests := []test{
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test verify success",
 				args: args{
@@ -479,8 +605,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -497,11 +623,11 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test use cache success",
 				args: args{
@@ -511,8 +637,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -522,11 +648,11 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test empty action",
 				args: args{
@@ -536,8 +662,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -547,11 +673,11 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test empty res",
 				args: args{
@@ -561,8 +687,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -571,10 +697,10 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				wantErr: errors.New("cannot parse roletoken"),
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test parse roletoken error",
 				args: args{
@@ -584,8 +710,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -594,10 +720,10 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				rt: &role.Token{},
 			}
-			cm := &PolicydMock{
+			pdm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
 					return errors.New("deny")
 				},
@@ -611,8 +737,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:            cm,
-					roleTokenProcessor: rm,
+					policyd:            pdm,
+					roleTokenProcessor: pm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -684,11 +810,11 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 	tests := []test{
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
-				c:       &role.Claim{},
+			pm := &ProcessorMock{
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test verify success",
 				args: args{
@@ -698,8 +824,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -716,11 +842,11 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
-				c:       &role.Claim{},
+			pm := &ProcessorMock{
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test use cache success",
 				args: args{
@@ -730,8 +856,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -741,11 +867,11 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
-				c:       &role.Claim{},
+			pm := &ProcessorMock{
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test empty action",
 				args: args{
@@ -755,8 +881,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -766,11 +892,11 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			rm := &TokenMock{
-				c:       &role.Claim{},
+			pm := &ProcessorMock{
+				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test empty res",
 				args: args{
@@ -780,8 +906,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -790,10 +916,10 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
+			pm := &ProcessorMock{
 				wantErr: errors.New("cannot parse role jwt"),
 			}
-			cm := &PolicydMock{}
+			pdm := &PolicydMock{}
 			return test{
 				name: "test parse role jwt error",
 				args: args{
@@ -803,8 +929,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -813,10 +939,10 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			rm := &TokenMock{
-				c: &role.Claim{},
+			pm := &ProcessorMock{
+				rjc: &role.RoleJWTClaim{},
 			}
-			cm := &PolicydMock{
+			pdm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
 					return errors.New("deny")
 				},
@@ -830,8 +956,8 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					res: "dummyRes",
 				},
 				fields: fields{
-					policyd:       cm,
-					roleProcessor: rm,
+					policyd:       pdm,
+					roleProcessor: pm,
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
@@ -1199,6 +1325,336 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_authorizer_Verify(t *testing.T) {
+	type fields struct {
+		verifiers []verifier
+	}
+	type args struct {
+		r   *http.Request
+		act string
+		res string
+	}
+	type test struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}
+	tests := []test{
+		{
+			name: "Verify success, 1 verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Verify success, multiple verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+					func(r *http.Request, act, res string) error {
+						return nil
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Verify fail, 1 verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Verify fail, multiple verifier",
+			fields: fields{
+				verifiers: []verifier{
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 1")
+					},
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 2")
+					},
+					func(r *http.Request, act, res string) error {
+						return errors.Errorf("Testing verify error 3")
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				verifiers: tt.fields.verifiers,
+			}
+			if err := a.Verify(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+func Test_authorizer_VerifyAccessToken(t *testing.T) {
+	type fields struct {
+		policyd       policy.Daemon
+		roleProcessor role.Processor
+		cache         gache.Gache
+		cacheExp      time.Duration
+	}
+	type args struct {
+		ctx  context.Context
+		tok  string
+		act  string
+		res  string
+		cert *x509.Certificate
+	}
+	type test struct {
+		name      string
+		fields    fields
+		args      args
+		wantErr   string
+		checkFunc func(prov *authorizer) error
+	}
+	tests := []test{
+		func() test {
+			now := fastime.Now()
+			c := gache.New()
+			pm := &ProcessorMock{
+				zatc: &role.ZTSAccessTokenClaim{
+					Scope: []string{"role"},
+					BaseClaim: role.BaseClaim{
+						StandardClaims: jwtgo.StandardClaims{
+							Audience: "domain",
+						},
+					},
+				},
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
+			return test{
+				name: "test verify success",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "",
+				checkFunc: func(prov *authorizer) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			now := fastime.Now()
+			c := gache.New()
+			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
+			pm := &ProcessorMock{
+				zatc:    &role.ZTSAccessTokenClaim{},
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
+			return test{
+				name: "test use cache success",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "",
+				checkFunc: func(prov *authorizer) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.Set("dummyTokdummyActdummyRes", "dummy")
+			pm := &ProcessorMock{
+				zatc:    &role.ZTSAccessTokenClaim{},
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{}
+			return test{
+				name: "test empty action",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.Set("dummyTokdummyActdummyRes", "dummy")
+			pm := &ProcessorMock{
+				zatc:    &role.ZTSAccessTokenClaim{},
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{}
+			return test{
+				name: "test empty res",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "empty action / resource: Access denied due to invalid/empty action/resource values",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pm := &ProcessorMock{
+				wantErr: errors.New("cannot parse access token"),
+			}
+			pdm := &PolicydMock{}
+			return test{
+				name: "test parse access token error",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "error verify access token: cannot parse access token",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pm := &ProcessorMock{
+				zatc: &role.ZTSAccessTokenClaim{},
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
+					return errors.New("deny")
+				},
+			}
+			return test{
+				name: "test return deny",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:       pdm,
+					roleProcessor: pm,
+					cache:         c,
+					cacheExp:      time.Minute,
+				},
+				wantErr: "token unauthorized: deny",
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &authorizer{
+				policyd:       tt.fields.policyd,
+				roleProcessor: tt.fields.roleProcessor,
+				cache:         tt.fields.cache,
+				cacheExp:      tt.fields.cacheExp,
+			}
+			err := a.VerifyAccessToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("authorizer.VerifyAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
+					return
+				}
+			} else {
+				if tt.wantErr != "" {
+					t.Errorf("authorizer.VerifyAccessToken() return nil.  want %s", tt.wantErr)
+					return
+				}
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(a); err != nil {
+					t.Errorf("authorizer.VerifyAccessToken() error: %v", err)
+				}
 			}
 		})
 	}

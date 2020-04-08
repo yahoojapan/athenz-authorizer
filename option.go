@@ -25,7 +25,7 @@ import (
 
 var (
 	defaultOptions = []Option{
-		WithAthenzURL("www.athenz.com/zts/v1"),
+		WithAthenzURL("athenz.io/zts/v1"),
 		WithTransport(nil),
 		WithCacheExp(time.Minute),
 		WithRoleCertURIPrefix("athenz://role/"),
@@ -35,8 +35,17 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
+		WithATProcessorParams(NewATProcessorParam(true, "1h", "1h")),
+		WithRTVerifyRoleToken(true),
+		WithRCVerifyRoleCert(true),
 	}
 )
+
+type ATProcessorParam struct {
+	verifyCertThumbprint bool
+	certBackdateDur      string
+	certOffsetDur        string
+}
 
 // Option represents a functional option
 type Option func(*authorizer) error
@@ -230,6 +239,62 @@ func WithJwkRefreshDuration(t string) Option {
 func WithJwkErrRetryInterval(i string) Option {
 	return func(authz *authorizer) error {
 		authz.jwkErrRetryInterval = i
+		return nil
+	}
+}
+
+/*
+	access token parameters
+*/
+
+// NewATProcessorParam returns a new access token processor parameters
+func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetDur string) ATProcessorParam {
+	return ATProcessorParam{
+		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
+		verifyCertThumbprint: verifyCertThumbprint,
+		// If the time of issuance of the certificate is intentionally earlier, specify that time.
+		certBackdateDur: certBackdateDur,
+		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
+		certOffsetDur: certOffsetDur,
+	}
+}
+
+// WithATProcessorParams returns a functional option that new access token processor parameters slice
+func WithATProcessorParams(atpParams ...ATProcessorParam) Option {
+	return func(authz *authorizer) error {
+		authz.atpParams = atpParams
+		return nil
+	}
+}
+
+/*
+	role token parameters
+*/
+
+// WithRTVerifyRoleToken returns a VerifyRoleToken functional option
+func WithRTVerifyRoleToken(b bool) Option {
+	return func(authz *authorizer) error {
+		authz.verifyRoleToken = b
+		return nil
+	}
+}
+
+// WithRTHeader returns a RTHeader functional option
+func WithRTHeader(h string) Option {
+	return func(authz *authorizer) error {
+		authz.rtHeader = h
+		return nil
+	}
+}
+
+/*
+	role certificate parameters
+*/
+
+// WithRCVerifyRoleCert returns a VerifyRoleCert functional option
+func WithRCVerifyRoleCert(b bool) Option {
+	return func(authz *authorizer) error {
+		authz.verifyRoleCert = b
 		return nil
 	}
 }

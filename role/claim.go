@@ -23,22 +23,12 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// Claim represents role jwt claim data.
-type Claim struct {
-	Domain   string `json:"d"`
-	Email    string `json:"email"`
-	KeyID    string `json:"k"`
-	MFA      string `json:"mfa"`
-	Role     string `json:"r"`
-	Salt     string `json:"a"`
-	UserID   string `json:"u"`
-	UserName string `json:"n"`
-	Version  string `json:"v"`
+type BaseClaim struct {
 	jwt.StandardClaims
 }
 
 // Valid is copy from source code, and changed c.VerifyExpiresAt parameter.
-func (c *Claim) Valid() error {
+func (c *BaseClaim) Valid() error {
 	vErr := new(jwt.ValidationError)
 	now := jwt.TimeFunc().Unix()
 
@@ -63,4 +53,31 @@ func (c *Claim) Valid() error {
 	}
 
 	return vErr
+}
+
+// RoleJWTClaim represents role jwt claim data.
+type RoleJWTClaim struct {
+	Domain   string `json:"d"`
+	Email    string `json:"email"`
+	KeyID    string `json:"k"`
+	MFA      string `json:"mfa"`
+	Role     string `json:"r"`
+	Salt     string `json:"a"`
+	UserID   string `json:"u"`
+	UserName string `json:"n"`
+	Version  string `json:"v"`
+	BaseClaim
+}
+
+// ZTSAccessTokenClaim represents access token claim data.
+// based on https://github.com/yahoo/athenz/blob/0e7335dbfa9d41eef0b049c07e7f846bff0f3169/libs/java/auth_core/src/main/java/com/yahoo/athenz/auth/token/AccessToken.java#L382
+type ZTSAccessTokenClaim struct {
+	AuthTime       int64             `json:"auth_time"`
+	Version        int               `json:"ver"`
+	ClientID       string            `json:"client_id"`
+	UserID         string            `json:"uid"`
+	ProxyPrincipal string            `json:"proxy,omitempty"`
+	Scope          []string          `json:"scp"`
+	Confirm        map[string]string `json:"cnf"`
+	BaseClaim
 }

@@ -17,6 +17,9 @@ limitations under the License.
 package role
 
 import (
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -25,24 +28,36 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 )
 
+const (
+	CONFIRM_METHOD_MEMBER = "x5t#S256"
+)
+
 // Processor represents the role token parser interface.
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
-	ParseAndValidateRoleJWT(cred string) (*Claim, error)
+	ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error)
+	ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error)
 }
 
 type rtp struct {
-	pkp  pubkey.Provider
-	jwkp jwk.Provider
+	pkp                                   pubkey.Provider
+	jwkp                                  jwk.Provider
+	enableMTLSCertificateBoundAccessToken bool
+	// If you go back to the issue time, set that time. Subtract if necessary (for example, token issuance time).
+	clientCertificateGoBackSeconds int64
+	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
+	clientCertificateOffsetSeconds int64
 }
 
 // New returns the Role instance.
-func New(opts ...Option) Processor {
+func New(opts ...Option) (Processor, error) {
 	r := new(rtp)
 	for _, opt := range append(defaultOptions, opts...) {
-		opt(r)
+		if err := opt(r); err != nil {
+			return nil, err
+		}
 	}
-	return r
+	return r, nil
 }
 
 // ParseAndValidateRoleToken return the parsed and validated role token, and return any parsing and validate errors.
@@ -82,13 +97,13 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 	return rt, nil
 }
 
-func (r *rtp) ParseAndValidateRoleJWT(cred string) (*Claim, error) {
-	tok, err := jwt.ParseWithClaims(cred, &Claim{}, r.keyFunc)
+func (r *rtp) ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error) {
+	tok, err := jwt.ParseWithClaims(cred, &RoleJWTClaim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
 	}
 
-	if claims, ok := tok.Claims.(*Claim); ok && tok.Valid {
+	if claims, ok := tok.Claims.(*RoleJWTClaim); ok && tok.Valid {
 		return claims, nil
 	}
 
@@ -104,6 +119,85 @@ func (r *rtp) validate(rt *Token) error {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
+}
+
+func (r *rtp) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error) {
+
+	tok, err := jwt.ParseWithClaims(cred, &ZTSAccessTokenClaim{}, r.keyFunc)
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := tok.Claims.(*ZTSAccessTokenClaim)
+	if !ok || !tok.Valid {
+		return nil, errors.New("error invalid access token")
+	}
+
+	// certificate bound access token
+	if r.enableMTLSCertificateBoundAccessToken {
+		err := r.validateCertificateBoundAccessToken(cert, claims)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return claims, nil
+}
+
+func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+	if cert == nil {
+		return errors.New("error mTLS client certificate is nil")
+	}
+
+	certThumbprint, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]
+	if !ok {
+		return errors.New("error token is not certificate bound access token")
+	}
+
+	// cnf check
+	sum := sha256.Sum256(cert.Raw)
+	if base64.RawURLEncoding.EncodeToString(sum[:]) == certThumbprint {
+		return nil
+	}
+
+	// If cnf check fails, check to allow if the certificate has been refresh
+	if err := r.validateCertPrincipal(cert, claims); err != nil {
+		return err
+	}
+
+	// auth_core is validating the proxy principal here.(future work)
+
+	return nil
+}
+
+func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+	if r.clientCertificateOffsetSeconds == 0 {
+		return errors.New("error clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
+	}
+	// common name check
+	cn := cert.Subject.CommonName
+	if cn == "" {
+		return errors.New("error subject common name of client certificate is empty")
+	}
+	clientID := claims.ClientID
+	if clientID == "" {
+		return errors.New("error client_id of access token is empty")
+	}
+	if cn != clientID {
+		return errors.Errorf("error certificate and access token principal mismatch: %v vs %v", cn, clientID)
+	}
+
+	// usecase: new cert + old token, after certificate rotation
+	atIssueTime := claims.IssuedAt
+	certActualIssueTime := cert.NotBefore.Unix() + r.clientCertificateGoBackSeconds
+	// Issue time check. If the certificate had been updated, it would have been issued later than the token.
+	if certActualIssueTime < atIssueTime {
+		return errors.Errorf("error certificate: issued before access token: cert = %v, tok = %v", certActualIssueTime, atIssueTime)
+	}
+	// Issue time check. Determine if certificate's issue time is within an allowed range
+	if certActualIssueTime > atIssueTime+r.clientCertificateOffsetSeconds {
+		return errors.Errorf("error certificate: access token too old: cert = %v, offset = %v, tok = %v", certActualIssueTime, r.clientCertificateOffsetSeconds, atIssueTime)
+	}
+	return nil
 }
 
 // keyFunc extract the key id from the token, and return corresponding key

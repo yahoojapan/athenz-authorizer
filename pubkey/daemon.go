@@ -230,7 +230,7 @@ func (p *pubkeyd) GetProvider() Provider {
 
 func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAuthConfig, bool, error) {
 	glg.Info("Fetching public key entries")
-	// https://{www.athenz.com/zts/v1}/domain/sys.auth/service/zts
+	// https://{athenz.io/zts/v1}/domain/sys.auth/service/zts
 	url := fmt.Sprintf("https://%s/domain/%s/service/%s", p.athenzURL, p.sysAuthDomain, env)
 	glg.Debugf("Fetching public key from %s", url)
 
