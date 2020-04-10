@@ -35,14 +35,20 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParams(NewATProcessorParam(true, "1h", "1h")),
+		WithATProcessorParams(NewATProcessorParam(true, true, true, map[string][]string{
+			"common_name1": []string{"client_id1", "client_id2"},
+			"common_name2": []string{"client_id1", "client_id2"},
+		}, "1h", "1h")),
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
 )
 
 type ATProcessorParam struct {
+	enable               bool
 	verifyCertThumbprint bool
+	verifyTokenClientID  bool
+	authorizedPrincipals map[string][]string
 	certBackdateDur      string
 	certOffsetDur        string
 }
@@ -248,10 +254,16 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetDur string) ATProcessorParam {
+func NewATProcessorParam(enable bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedPrincipals map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
 	return ATProcessorParam{
+		// Access token valid / invalid flag.
+		enable: enable,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
+		// The client certificate common name and client_id verification.
+		verifyTokenClientID: verifyTokenClientID,
+		// The list of authorized client_id and common name.
+		authorizedPrincipals: authorizedPrincipals,
 		// If the time of issuance of the certificate is intentionally earlier, specify that time.
 		certBackdateDur: certBackdateDur,
 		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
@@ -260,9 +272,9 @@ func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetD
 }
 
 // WithATProcessorParams returns a functional option that new access token processor parameters slice
-func WithATProcessorParams(atpParams ...ATProcessorParam) Option {
+func WithATProcessorParams(atpParam ATProcessorParam) Option {
 	return func(authz *authorizer) error {
-		authz.atpParams = atpParams
+		authz.atpParam = atpParam
 		return nil
 	}
 }

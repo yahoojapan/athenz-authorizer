@@ -752,7 +752,10 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 
 func TestNewATProcessorParam(t *testing.T) {
 	type args struct {
+		enable               bool
 		verifyCertThumbprint bool
+		verifyTokenClientID  bool
+		authorizedPrincipals map[string][]string
 		certBackdateDur      string
 		certOffsetDur        string
 	}
@@ -777,7 +780,7 @@ func TestNewATProcessorParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewATProcessorParam(tt.args.verifyCertThumbprint, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
+			if got := NewATProcessorParam(tt.args.enable, tt.args.verifyCertThumbprint, tt.args.verifyTokenClientID, tt.args.authorizedPrincipals, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewATProcessorParam() = %v, want %v", got, tt.want)
 			}
 		})
@@ -786,7 +789,7 @@ func TestNewATProcessorParam(t *testing.T) {
 
 func TestWithATProcessorParams(t *testing.T) {
 	type args struct {
-		atpParams []ATProcessorParam
+		atpParam ATProcessorParam
 	}
 	type test struct {
 		name      string
@@ -795,20 +798,23 @@ func TestWithATProcessorParams(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			atpParams := []ATProcessorParam{
-				NewATProcessorParam(true, "2h", "2h"),
-			}
+			atpParam :=
+				NewATProcessorParam(true, true, true, map[string][]string{
+					"common_name1": []string{"client_id1", "client_id2"},
+					"common_name2": []string{"client_id1", "client_id2"},
+				}, "1h", "1h")
+
 			return test{
 				name: "set success",
 				args: args{
-					atpParams: atpParams,
+					atpParam: atpParam,
 				},
 				checkFunc: func(opt Option) error {
 					authz := &authorizer{}
 					if err := opt(authz); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(authz.atpParams, atpParams) {
+					if !reflect.DeepEqual(authz.atpParam, atpParam) {
 						return fmt.Errorf("invalid param was set")
 					}
 					return nil
@@ -818,7 +824,7 @@ func TestWithATProcessorParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorParams(tt.args.atpParams...)
+			got := WithATProcessorParams(tt.args.atpParam)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
 			}

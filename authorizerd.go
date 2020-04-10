@@ -89,7 +89,7 @@ type authorizer struct {
 	jwkErrRetryInterval string
 
 	// accessTokenProcessor parameters
-	atpParams []ATProcessorParam
+	atpParam ATProcessorParam
 
 	// roleTokenProcessor parameters
 	verifyRoleToken bool
@@ -171,9 +171,9 @@ func New(opts ...Option) (Authorizerd, error) {
 	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
-		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParams[0].verifyCertThumbprint),
-		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].certBackdateDur),
-		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].certOffsetDur),
+		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
+		role.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
+		role.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create role processor")
 	}
@@ -201,7 +201,7 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, rcVerifier)
 	}
 
-	if len(a.atpParams) > 0 {
+	if a.atpParam.enable {
 		atVerifier := func(r *http.Request, act, res string) error {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {
@@ -212,7 +212,7 @@ func (a *authorizer) initVerifiers() error {
 			}
 			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
 		}
-		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams)
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParam)
 		verifiers = append(verifiers, atVerifier)
 	}
 
