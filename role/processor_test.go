@@ -22,6 +22,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -885,9 +886,119 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		wantErr bool
+		wantErr error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "verify token client_id success",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: map[string][]string{
+					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
+					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
+				},
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "dummy cn2",
+					},
+				},
+				claims: &OAuth2AccessTokenClaim{
+					ClientID: "dummy client_id2",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "verify token client_id fail, cert is nil",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: map[string][]string{
+				},
+			},
+			args: args{
+				cert: nil,
+				claims: &OAuth2AccessTokenClaim{
+					ClientID: "dummy client_id1",
+				},
+			},
+			wantErr: errors.New("error mTLS client certificate is nil"),
+		},
+		{
+			name: "verify token client_id fail, claim is nil",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: map[string][]string{
+				},
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "dummy cn2",
+					},
+				},
+				claims: nil,
+			},
+			wantErr: errors.New("error claim of access token is nil"),
+		},
+		{
+			name: "verify token client_id fail, authorizedPrincipals is empty",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: map[string][]string{
+				},
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "dummy cn1",
+					},
+				},
+				claims: &OAuth2AccessTokenClaim{
+					ClientID: "dummy client_id1",
+				},
+			},
+			wantErr: errors.Errorf("error %v is not authorized %v", "dummy client_id1", "dummy cn1"),
+		},
+		{
+			name: "verify token client_id fail, authorizedPrincipals is nil",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: nil,
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "dummy cn1",
+					},
+				},
+				claims: &OAuth2AccessTokenClaim{
+					ClientID: "dummy client_id1",
+				},
+			},
+			wantErr: errors.Errorf("error %v is not authorized %v", "dummy client_id1", "dummy cn1"),
+		},
+		{
+			name: "verify token client_id fail, not match",
+			fields: fields{
+				enableVerifyTokenClientID: true,
+				authorizedPrincipals: map[string][]string{
+					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
+					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
+				},
+			},
+			args: args{
+				cert: &x509.Certificate{
+					Subject: pkix.Name{
+						CommonName: "dummy cn3",
+					},
+				},
+				claims: &OAuth2AccessTokenClaim{
+					ClientID: "dummy client_id3",
+				},
+			},
+			wantErr: errors.Errorf("error %v is not authorized %v", "dummy client_id3", "dummy cn3"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -900,7 +1011,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
 				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
 			}
-			if err := r.validateTokenClientID(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
+			if err := r.validateTokenClientID(tt.args.cert, tt.args.claims); (err != nil) != (err != tt.wantErr) {
 				t.Errorf("rtp.validateTokenClientID() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -942,7 +1053,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "verify certificate bound accecss token success",
+			name: "verify certificate bound access token success",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 			},
@@ -971,7 +1082,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "verify certificate bound accecss token success, refreshed certificate",
+			name: "verify certificate bound access token success, refreshed certificate",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 				clientCertificateOffsetSeconds:        3600,
@@ -1006,7 +1117,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "verify certificate bound accecss token fail, cert is nil",
+			name: "verify certificate bound access token fail, cert is nil",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 			},
@@ -1033,7 +1144,18 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "verify certificate bound accecss token fail, invalid confirmation claim",
+			name: "verify certificate bound access token fail, claim is nil",
+			fields: fields{
+				enableMTLSCertificateBoundAccessToken: true,
+			},
+			args: args{
+				cert: &x509.Certificate{},
+				claims: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "verify certificate bound access token fail, invalid confirmation claim",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 			},
@@ -1062,7 +1184,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "verify certificate bound accecss token fail, no confirmation claim",
+			name: "verify certificate bound access token fail, no confirmation claim",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 			},
@@ -1090,7 +1212,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "verify certificate bound accecss token fail, cnf check fail and no client_id",
+			name: "verify certificate bound access token fail, cnf check fail and no client_id",
 			fields: fields{
 				enableMTLSCertificateBoundAccessToken: true,
 			},

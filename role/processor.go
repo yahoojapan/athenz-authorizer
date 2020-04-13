@@ -154,6 +154,13 @@ func (r *rtp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 }
 
 func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+	if cert == nil {
+		return errors.New("error mTLS client certificate is nil")
+	}
+	if claims == nil {
+		return errors.New("error claim of access token is nil")
+	}
+
 	cn := cert.Subject.CommonName
 	clientID := claims.ClientID
 	clientIDs := r.authorizedPrincipals[cn]
@@ -169,6 +176,9 @@ func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2Access
 func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
+	}
+	if claims == nil {
+		return errors.New("error claim of access token is nil")
 	}
 
 	certThumbprint, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]
