@@ -153,6 +153,19 @@ func (r *rtp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 	return claims, nil
 }
 
+func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+	cn := cert.Subject.CommonName
+	clientID := claims.ClientID
+	clientIDs := r.authorizedPrincipals[cn]
+
+	for _, v := range clientIDs {
+		if v == clientID {
+			return nil
+		}
+	}
+	return errors.Errorf("error %v is not authorized %v", clientID, cn)
+}
+
 func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
@@ -177,19 +190,6 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	// auth_core is validating the proxy principal here.(future work)
 
 	return nil
-}
-
-func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
-	cn := cert.Subject.CommonName
-	clientID := claims.ClientID
-	clientIDs := r.authorizedPrincipals[cn]
-
-	for _, v := range clientIDs {
-		if v == clientID {
-			return nil
-		}
-	}
-	return errors.Errorf("error %v is not authorized %v", clientID, cn)
 }
 
 func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
