@@ -867,6 +867,46 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 	}
 }
 
+func Test_rtp_validateTokenClientID(t *testing.T) {
+	type fields struct {
+		pkp                                   pubkey.Provider
+		jwkp                                  jwk.Provider
+		enableMTLSCertificateBoundAccessToken bool
+		enableVerifyTokenClientID             bool
+		authorizedPrincipals                  map[string][]string
+		clientCertificateGoBackSeconds        int64
+		clientCertificateOffsetSeconds        int64
+	}
+	type args struct {
+		cert   *x509.Certificate
+		claims *OAuth2AccessTokenClaim
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &rtp{
+				pkp:                                   tt.fields.pkp,
+				jwkp:                                  tt.fields.jwkp,
+				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
+				enableVerifyTokenClientID:             tt.fields.enableVerifyTokenClientID,
+				authorizedPrincipals:                  tt.fields.authorizedPrincipals,
+				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
+				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
+			}
+			if err := r.validateTokenClientID(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
+				t.Errorf("rtp.validateTokenClientID() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 	type fields struct {
 		pkp                                   pubkey.Provider
