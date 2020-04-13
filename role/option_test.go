@@ -150,7 +150,6 @@ func TestWithEnableMTLSCertificateBoundAccessToken(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      args
-		want      Option
 		checkFunc func(Option) error
 	}{
 		{
@@ -175,6 +174,117 @@ func TestWithEnableMTLSCertificateBoundAccessToken(t *testing.T) {
 			got := WithEnableMTLSCertificateBoundAccessToken(tt.args.b)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithEnableMTLSCertificateBoundAccessToken() error: %v", err)
+			}
+		})
+	}
+}
+
+func TestWithEnableVerifyTokenClientID(t *testing.T) {
+	type args struct {
+		b bool
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				b: true,
+			},
+			checkFunc: func(opt Option) error {
+				r := &rtp{}
+				if err := opt(r); err != nil {
+					return err
+				}
+				if !r.enableVerifyTokenClientID {
+					return fmt.Errorf("Error")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithEnableVerifyTokenClientID(tt.args.b)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithEnableVerifyTokenClientID() error: %v", err)
+			}
+		})
+	}
+}
+
+func TestWithAuthorizedPrincipals(t *testing.T) {
+	type args struct {
+		m map[string][]string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+		wantParam map[string][]string
+	}{
+		{
+			name: "set success",
+			args: args{
+				m: map[string][]string{
+					"cn1": {"cid1a", "cid2b"},
+				},
+			},
+			checkFunc: func(opt Option) error {
+				r := &rtp{}
+				if err := opt(r); err != nil {
+					return err
+				}
+				correctAuthorizedPrincipals := map[string][]string{
+					"cn1": {"cid1a", "cid2b"},
+				}
+				if !reflect.DeepEqual(r.authorizedPrincipals, correctAuthorizedPrincipals) {
+					return fmt.Errorf("Error")
+				}
+				return nil
+			},
+		},
+		{
+			name: "empty value",
+			args: args{
+				m: nil,
+			},
+			checkFunc: func(opt Option) error {
+				r := &rtp{}
+				if err := opt(r); err != nil {
+					return err
+				}
+				if r.authorizedPrincipals != nil {
+					return fmt.Errorf("Error")
+				}
+				return nil
+			},
+		},
+		{
+			name: "empty value",
+			args: args{
+				m: map[string][]string{},
+			},
+			checkFunc: func(opt Option) error {
+				r := &rtp{}
+				if err := opt(r); err != nil {
+					return err
+				}
+				correctAuthorizedPrincipals := map[string][]string{}
+				if !reflect.DeepEqual(r.authorizedPrincipals, correctAuthorizedPrincipals) {
+					return fmt.Errorf("Error")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithAuthorizedPrincipals(tt.args.m)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithAuthorizedPrincipals() error: %v", err)
 			}
 		})
 	}
