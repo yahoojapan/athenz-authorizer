@@ -140,7 +140,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		{
 			name: "initVerifier sucess, no role flags",
 			fields: fields{
-				atpParam:        ATProcessorParam{enable: true, verifyCertThumbprint: true},
+				atpParam:        ATProcessorParam{verifyOAuth2AccessToken: true, verifyCertThumbprint: true},
 				verifyRoleCert:  false,
 				verifyRoleToken: false,
 			},
@@ -1487,7 +1487,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
 			pm := &ProcessorMock{
-				act:    &role.OAuth2AccessTokenClaim{},
+				act:     &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1530,7 +1530,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			pm := &ProcessorMock{
-				act:    &role.OAuth2AccessTokenClaim{},
+				act:     &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1555,7 +1555,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			pm := &ProcessorMock{
-				act:    &role.OAuth2AccessTokenClaim{},
+				act:     &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
