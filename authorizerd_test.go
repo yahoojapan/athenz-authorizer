@@ -1436,7 +1436,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			now := fastime.Now()
 			c := gache.New()
 			pm := &ProcessorMock{
-				zatc: &role.ZTSAccessTokenClaim{
+				act: &role.OAuth2AccessTokenClaim{
 					Scope: []string{"role"},
 					BaseClaim: role.BaseClaim{
 						StandardClaims: jwtgo.StandardClaims{
@@ -1487,7 +1487,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
 			pm := &ProcessorMock{
-				zatc:    &role.ZTSAccessTokenClaim{},
+				act:    &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1530,7 +1530,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			pm := &ProcessorMock{
-				zatc:    &role.ZTSAccessTokenClaim{},
+				act:    &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1555,7 +1555,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			pm := &ProcessorMock{
-				zatc:    &role.ZTSAccessTokenClaim{},
+				act:    &role.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1602,7 +1602,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			pm := &ProcessorMock{
-				zatc: &role.ZTSAccessTokenClaim{},
+				act: &role.OAuth2AccessTokenClaim{},
 			}
 			pdm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {

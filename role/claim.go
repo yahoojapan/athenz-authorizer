@@ -69,9 +69,9 @@ type RoleJWTClaim struct {
 	BaseClaim
 }
 
-// ZTSAccessTokenClaim represents access token claim data.
+// OAuth2AccessTokenClaim represents access token claim data.
 // based on https://github.com/yahoo/athenz/blob/0e7335dbfa9d41eef0b049c07e7f846bff0f3169/libs/java/auth_core/src/main/java/com/yahoo/athenz/auth/token/AccessToken.java#L382
-type ZTSAccessTokenClaim struct {
+type OAuth2AccessTokenClaim struct {
 	AuthTime       int64             `json:"auth_time"`
 	Version        int               `json:"ver"`
 	ClientID       string            `json:"client_id"`

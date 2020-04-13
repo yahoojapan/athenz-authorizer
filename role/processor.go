@@ -36,7 +36,7 @@ const (
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
 	ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error)
-	ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error)
+	ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*OAuth2AccessTokenClaim, error)
 }
 
 type rtp struct {
@@ -123,13 +123,13 @@ func (r *rtp) validate(rt *Token) error {
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
 }
 
-func (r *rtp) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*ZTSAccessTokenClaim, error) {
+func (r *rtp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*OAuth2AccessTokenClaim, error) {
 
-	tok, err := jwt.ParseWithClaims(cred, &ZTSAccessTokenClaim{}, r.keyFunc)
+	tok, err := jwt.ParseWithClaims(cred, &OAuth2AccessTokenClaim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
 	}
-	claims, ok := tok.Claims.(*ZTSAccessTokenClaim)
+	claims, ok := tok.Claims.(*OAuth2AccessTokenClaim)
 	if !ok || !tok.Valid {
 		return nil, errors.New("error invalid access token")
 	}
@@ -153,7 +153,7 @@ func (r *rtp) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate
 	return claims, nil
 }
 
-func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
 	}
@@ -179,7 +179,7 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	return nil
 }
 
-func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	cn := cert.Subject.CommonName
 	clientID := claims.ClientID
 	clientIDs := r.authorizedPrincipals[cn]
@@ -192,7 +192,7 @@ func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *ZTSAccessTok
 	return errors.Errorf("error %v is not authorized %v", clientID, cn)
 }
 
-func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if r.clientCertificateOffsetSeconds == 0 {
 		return errors.New("error clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
 	}

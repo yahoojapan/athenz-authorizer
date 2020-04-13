@@ -107,7 +107,7 @@ type ProcessorMock struct {
 	wantErr error
 	rt      *role.Token
 	rjc     *role.RoleJWTClaim
-	zatc    *role.ZTSAccessTokenClaim
+	act    *role.OAuth2AccessTokenClaim
 }
 
 func (pm *ProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
@@ -118,8 +118,8 @@ func (pm *ProcessorMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClai
 	return pm.rjc, pm.wantErr
 }
 
-func (pm *ProcessorMock) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate) (*role.ZTSAccessTokenClaim, error) {
-	return pm.zatc, pm.wantErr
+func (pm *ProcessorMock) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*role.OAuth2AccessTokenClaim, error) {
+	return pm.act, pm.wantErr
 }
 
 type JwkdMock struct {
