@@ -35,10 +35,7 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParams(NewATProcessorParam(true, true, true, map[string][]string{
-			"common_name1": []string{"client_id1", "client_id2"},
-			"common_name2": []string{"client_id1", "client_id2"},
-		}, "1h", "1h")),
+		WithATProcessorParams(NewATProcessorParam(true, true, false, nil, "1h", "1h")),
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
