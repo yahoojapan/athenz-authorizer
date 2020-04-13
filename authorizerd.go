@@ -172,6 +172,8 @@ func New(opts ...Option) (Authorizerd, error) {
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
 		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
+		role.WithEnableVerifyTokenClientID(prov.atpParam.verifyTokenClientID),
+		role.WithAuthorizedPrincipals(prov.atpParam.authorizedPrincipals),
 		role.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
 		role.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
 	); err != nil {

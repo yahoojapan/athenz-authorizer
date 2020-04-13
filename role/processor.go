@@ -43,6 +43,8 @@ type rtp struct {
 	pkp                                   pubkey.Provider
 	jwkp                                  jwk.Provider
 	enableMTLSCertificateBoundAccessToken bool
+	enableVerifyTokenClientID             bool
+	authorizedPrincipals                  map[string][]string
 	// If you go back to the issue time, set that time. Subtract if necessary (for example, token issuance time).
 	clientCertificateGoBackSeconds int64
 	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
@@ -132,6 +134,14 @@ func (r *rtp) ParseAndValidateZTSAccessToken(cred string, cert *x509.Certificate
 		return nil, errors.New("error invalid access token")
 	}
 
+	// validate client_id of AccessToken
+	if r.enableVerifyTokenClientID {
+		err := r.validateTokenClientID(cert, claims)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// certificate bound access token
 	if r.enableMTLSCertificateBoundAccessToken {
 		err := r.validateCertificateBoundAccessToken(cert, claims)
@@ -167,6 +177,19 @@ func (r *rtp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	// auth_core is validating the proxy principal here.(future work)
 
 	return nil
+}
+
+func (r *rtp) validateTokenClientID(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {
+	cn := cert.Subject.CommonName
+	clientID := claims.ClientID
+	clientIDs := r.authorizedPrincipals[cn]
+
+	for _, v := range clientIDs {
+		if v == clientID {
+			return nil
+		}
+	}
+	return errors.Errorf("error %v is not authorized %v", clientID, cn)
 }
 
 func (r *rtp) validateCertPrincipal(cert *x509.Certificate, claims *ZTSAccessTokenClaim) error {

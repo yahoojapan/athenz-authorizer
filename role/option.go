@@ -55,6 +55,22 @@ func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
 	}
 }
 
+// WithEnableVerifyTokenClientID represents set enableVerifyTokenClientID functional option
+func WithEnableVerifyTokenClientID(b bool) Option {
+	return func(r *rtp) error {
+		r.enableVerifyTokenClientID = b
+		return nil
+	}
+}
+
+// WithAuthorizedPrincipals represents set authorizedPrincipals functional option
+func WithAuthorizedPrincipals(m map[string][]string) Option {
+	return func(r *rtp) error {
+		r.authorizedPrincipals = m
+		return nil
+	}
+}
+
 // WithClientCertificateGoBackSeconds represents set clientCertificateGoBackSeconds functional option
 func WithClientCertificateGoBackSeconds(t string) Option {
 	return func(r *rtp) error {
