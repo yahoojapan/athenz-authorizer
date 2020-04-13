@@ -219,33 +219,53 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 	type args struct {
 		m map[string][]string
 	}
-	tests := []struct {
+	type test struct {
 		name      string
 		args      args
 		checkFunc func(Option) error
 		wantParam map[string][]string
-	}{
-		{
-			name: "set success",
-			args: args{
-				m: map[string][]string{
-					"cn1": {"cid1a", "cid2b"},
+	}
+	tests := []test{
+		func() test {
+			normalAuthorizedPrincipals := map[string][]string{
+				"cn1": {"cid1a", "cid2b"},
+			}
+			return test{
+				name: "set success",
+				args: args{
+					m: normalAuthorizedPrincipals,
 				},
-			},
-			checkFunc: func(opt Option) error {
-				r := &rtp{}
-				if err := opt(r); err != nil {
-					return err
-				}
-				correctAuthorizedPrincipals := map[string][]string{
-					"cn1": {"cid1a", "cid2b"},
-				}
-				if !reflect.DeepEqual(r.authorizedPrincipals, correctAuthorizedPrincipals) {
-					return fmt.Errorf("Error")
-				}
-				return nil
-			},
-		},
+				checkFunc: func(opt Option) error {
+					r := &rtp{}
+					if err := opt(r); err != nil {
+						return err
+					}
+					if !reflect.DeepEqual(r.authorizedPrincipals, normalAuthorizedPrincipals) {
+						return fmt.Errorf("Error")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			emptyAuthorizedPrincipals := map[string][]string{}
+			return test{
+				name: "empty value",
+				args: args{
+					m: emptyAuthorizedPrincipals,
+				},
+				checkFunc: func(opt Option) error {
+					r := &rtp{}
+					if err := opt(r); err != nil {
+						return err
+					}
+					if !reflect.DeepEqual(r.authorizedPrincipals, emptyAuthorizedPrincipals) {
+						return fmt.Errorf("Error")
+					}
+					return nil
+				},
+			}
+		}(),
 		{
 			name: "empty value",
 			args: args{
@@ -257,23 +277,6 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 					return err
 				}
 				if r.authorizedPrincipals != nil {
-					return fmt.Errorf("Error")
-				}
-				return nil
-			},
-		},
-		{
-			name: "empty value",
-			args: args{
-				m: map[string][]string{},
-			},
-			checkFunc: func(opt Option) error {
-				r := &rtp{}
-				if err := opt(r); err != nil {
-					return err
-				}
-				correctAuthorizedPrincipals := map[string][]string{}
-				if !reflect.DeepEqual(r.authorizedPrincipals, correctAuthorizedPrincipals) {
 					return fmt.Errorf("Error")
 				}
 				return nil
