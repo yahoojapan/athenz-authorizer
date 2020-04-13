@@ -22,11 +22,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kpango/fastime"
@@ -609,6 +610,8 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		pkp                                   pubkey.Provider
 		jwkp                                  jwk.Provider
 		enableMTLSCertificateBoundAccessToken bool
+		enableVerifyTokenClientID             bool
+		authorizedPrincipals                  map[string][]string
 	}
 	type args struct {
 		cred string
@@ -686,6 +689,48 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		}(),
 		func() test {
 			return test{
+				name: "verify access token success, verify token client_id",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableVerifyTokenClientID: true,
+					authorizedPrincipals: map[string][]string{
+						"domain.tenant.service": []string{
+							"domain.tenant.service",
+						},
+					},
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIn0.Fu3hMaFRHteJEkn9bhz0Qlxl1Mwga-xkXDPoke_amo1I-J0sw9CMrVLpW1WFXsWD2dehev-vawxsl3mO_xoz0Z1Wom6rSJJOqTFDiIzcbYNVuD2CcobdoddPH2npSoKYNT3MypVF9Wjt9KMnxBEuy-zOv9Lf6xjvbqcKF6RCmlWjQlzWGwqjWM7JcNEtLaWB8n1yQ31RvL4o1ZpKlbha5F1jjvCu-ifzhmQ64p9Sl3NBnenik6J0i9V-f_I9lK5ycQjcMaD0gBb3XCFVamUW_iP-YY2JJMWGW6LJNC_3ywH40fQt8Om9a-kFjpPCaztPI0poobSMTe1ISMXV-lROMw`,
+					cert: func() *x509.Certificate {
+						return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+					}(),
+				},
+				want: func() *OAuth2AccessTokenClaim {
+					c := OAuth2AccessTokenClaim{
+						BaseClaim: BaseClaim{
+							StandardClaims: jwt.StandardClaims{
+								Subject:   "domain.tenant.service",
+								IssuedAt:  1585122381,
+								ExpiresAt: 9999999999,
+								Issuer:    "https://zts.athenz.io",
+								Audience:  "domain.provider",
+							},
+						},
+						AuthTime: 1585122381,
+						Version:  1,
+						ClientID: "domain.tenant.service",
+						UserID:   "domain.tenant.service",
+						Scope:    []string{"admin", "user"},
+					}
+					return &c
+				}(),
+				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
 				name: "verify certificate bound access token success",
 				fields: fields{
 					jwkp: jwk.Provider(func(kid string) interface{} {
@@ -720,6 +765,26 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 					return &c
 				}(),
 				wantErr: false,
+			}
+		}(),
+		func() test {
+			return test{
+				name: "verify access token fail, unauthorized principal",
+				fields: fields{
+					jwkp: jwk.Provider(func(kid string) interface{} {
+						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+					}),
+					enableVerifyTokenClientID: true,
+					authorizedPrincipals: map[string][]string{
+						"unauthorizedPrincipal": {
+							"unauthorizedClientID",
+						},
+					},
+				},
+				args: args{
+					cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIn0.Fu3hMaFRHteJEkn9bhz0Qlxl1Mwga-xkXDPoke_amo1I-J0sw9CMrVLpW1WFXsWD2dehev-vawxsl3mO_xoz0Z1Wom6rSJJOqTFDiIzcbYNVuD2CcobdoddPH2npSoKYNT3MypVF9Wjt9KMnxBEuy-zOv9Lf6xjvbqcKF6RCmlWjQlzWGwqjWM7JcNEtLaWB8n1yQ31RvL4o1ZpKlbha5F1jjvCu-ifzhmQ64p9Sl3NBnenik6J0i9V-f_I9lK5ycQjcMaD0gBb3XCFVamUW_iP-YY2JJMWGW6LJNC_3ywH40fQt8Om9a-kFjpPCaztPI0poobSMTe1ISMXV-lROMw`,
+				},
+				wantErr: true,
 			}
 		}(),
 		func() test {
@@ -855,6 +920,8 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 				pkp:                                   tt.fields.pkp,
 				jwkp:                                  tt.fields.jwkp,
 				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
+				enableVerifyTokenClientID:             tt.fields.enableVerifyTokenClientID,
+				authorizedPrincipals:                  tt.fields.authorizedPrincipals,
 			}
 			got, err := r.ParseAndValidateOAuth2AccessToken(tt.args.cred, tt.args.cert)
 			if (err != nil) != tt.wantErr {
@@ -913,8 +980,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, cert is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: map[string][]string{
-				},
+				authorizedPrincipals:      map[string][]string{},
 			},
 			args: args{
 				cert: nil,
@@ -928,8 +994,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, claim is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: map[string][]string{
-				},
+				authorizedPrincipals:      map[string][]string{},
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -945,8 +1010,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, authorizedPrincipals is empty",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: map[string][]string{
-				},
+				authorizedPrincipals:      map[string][]string{},
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -964,7 +1028,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, authorizedPrincipals is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: nil,
+				authorizedPrincipals:      nil,
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -1149,7 +1213,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 				enableMTLSCertificateBoundAccessToken: true,
 			},
 			args: args{
-				cert: &x509.Certificate{},
+				cert:   &x509.Certificate{},
 				claims: nil,
 			},
 			wantErr: true,
