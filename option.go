@@ -251,10 +251,10 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(enable bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedPrincipals map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
+func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedPrincipals map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
 	return ATProcessorParam{
 		// Flag to enable verify of access token
-		verifyOAuth2AccessToken: enable,
+		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
 		// The client certificate common name and client_id verification.
