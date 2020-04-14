@@ -209,7 +209,7 @@ func (a *authorizer) initVerifiers() error {
 			if err != nil {
 				return err
 			}
-			if r.TLS != nil && r.TLS.PeerCertificates != nil {
+			if r.TLS != nil && len(r.TLS.PeerCertificates) != 0 {
 				return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 			}
 			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
