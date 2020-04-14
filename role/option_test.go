@@ -223,7 +223,6 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 		name      string
 		args      args
 		checkFunc func(Option) error
-		wantParam map[string][]string
 	}
 	tests := []test{
 		func() test {
