@@ -913,6 +913,48 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 				wantErr: true,
 			}
 		}(),
+		{
+			name: "verify certificate bound access token success, verify client_id fail, verify thumbprint success",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				enableVerifyTokenClientID:             true,
+				authorizedPrincipals: map[string][]string{
+					"fail.commmon-name": {"fail.client_id"},
+				},
+			},
+			args: args{
+				cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiMmp0ODJmMnVNOGpFMkxNY2I0ZXJoaFRjLXV5MXlCMWlFeXA1TW5JNXVGNCJ9fQ.OyotreYeMFDTpDaIoPVnEBY1RnVuzRortfRKnkOfZUEv1wSSmgSPxBE9IfgxD57kCQUJtO4GUBUWX_DrIb8BMMVUaDlws6UTncaCUdTt_lJXuIZilh7vIA5oiRTtpADJrZUS3kH2ln6qTXa1QTeevg5qdfORya7ILiHdJUmQXbb9vndYcS4-4E3Xr7rqj7cD67rvySM8YIOsaMn2UX237VUo2rcs40XuHH6WCFfix4xxmgTxS7zr_uowqxpXrgpc0g_eT4On9gnuTDcAzwVy7qbgWMcEO-UrhV_FiPzIRj5RZFZBeHjNeU2QAAT-LAw7S6YJtlPpijfTM9qx6xC0GA`,
+				cert: func() *x509.Certificate {
+					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+				}(),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "verify certificate bound access token success, verify client_id success, verify thumbprint fail",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string) interface{} {
+					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
+				}),
+				enableMTLSCertificateBoundAccessToken: true,
+				enableVerifyTokenClientID:             true,
+				authorizedPrincipals: map[string][]string{
+					"domain.tenant.service": {"domain.tenant.service"},
+				},
+			},
+			args: args{
+				cred: `eyJraWQiOiIwIiwidHlwIjoiYXQrand0IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkb21haW4udGVuYW50LnNlcnZpY2UiLCJpYXQiOjE1ODUxMjIzODEsImV4cCI6OTk5OTk5OTk5OSwiaXNzIjoiaHR0cHM6Ly96dHMuYXRoZW56LmlvIiwiYXVkIjoiZG9tYWluLnByb3ZpZGVyIiwiYXV0aF90aW1lIjoxNTg1MTIyMzgxLCJ2ZXIiOjEsInNjcCI6WyJhZG1pbiIsInVzZXIiXSwidWlkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY2xpZW50X2lkIjoiZG9tYWluLnRlbmFudC5zZXJ2aWNlIiwiY25mIjp7Ing1dCNTMjU2IjoiZmFpbC5jb25maXJtIn19.m7dfG-3YCMTADYzc641jAP-jAxWnfpsb0EOL6lew-yI2cdzfhhSyX7Htiru16hfZzTZ-O5vM4UWitP89_hVYa4ycA225WIFXJPyAe3aeVzJXCIzUCGvUs0pxsNVevhwjIzJFS6t7TT593-yX5TeG4eVZpIVXE1DK1tMllNx1dBNJ7ta1MEpsd8_V5cLY4uw8Fd-rxRE9RhnmLFVnycw2Q6wQ-OljH1To3wiVG69qQyHCzy3anL-TZ8IgYinixraXNfdBE4ePyJztqG_Ug_24pxIpczRSwBmkvwULfvk7baYIZ-1YHhhWpBofbyEGGd-jCAH7SBsZLqR2bdfzvxUsKQ`,
+				cert: func() *x509.Certificate {
+					return LoadX509CertFromDisk("./asserts/dummyClient.crt")
+				}(),
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
