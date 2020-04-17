@@ -138,7 +138,7 @@ func (r *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 
 func (r *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if r.clientCertificateOffsetSeconds == 0 {
-		return errors.New("error clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
+		return errors.New("error validate cert thumbprint failed. also, clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
 	}
 	// common name check
 	cn := cert.Subject.CommonName
