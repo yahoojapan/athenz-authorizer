@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/yahoojapan/athenz-authorizer/v2/access"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/v2/role"
@@ -102,24 +103,29 @@ func (pdm *PolicydMock) GetPolicyCache(ctx context.Context) map[string]interface
 	return pdm.policyCache
 }
 
-type ProcessorMock struct {
+type RoleProcessorMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
 	rjc     *role.RoleJWTClaim
-	act    *role.OAuth2AccessTokenClaim
 }
 
-func (pm *ProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
-	return pm.rt, pm.wantErr
+func (rpm *RoleProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
+	return rpm.rt, rpm.wantErr
 }
 
-func (pm *ProcessorMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
-	return pm.rjc, pm.wantErr
+func (rpm *RoleProcessorMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
+	return rpm.rjc, rpm.wantErr
 }
 
-func (pm *ProcessorMock) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*role.OAuth2AccessTokenClaim, error) {
-	return pm.act, pm.wantErr
+type AccessProcessorMock struct {
+	access.Processor
+	wantErr error
+	act     *access.OAuth2AccessTokenClaim
+}
+
+func (apm *AccessProcessorMock) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*access.OAuth2AccessTokenClaim, error) {
+	return apm.act, apm.wantErr
 }
 
 type JwkdMock struct {

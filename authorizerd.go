@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/yahoojapan/athenz-authorizer/v2/access"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/policy"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
@@ -51,11 +52,12 @@ type verifier func(r *http.Request, act, res string) error
 
 type authorizer struct {
 	//
-	pubkeyd       pubkey.Daemon
-	policyd       policy.Daemon
-	jwkd          jwk.Daemon
-	roleProcessor role.Processor
-	verifiers     []verifier
+	pubkeyd         pubkey.Daemon
+	policyd         policy.Daemon
+	jwkd            jwk.Daemon
+	roleProcessor   role.Processor
+	accessProcessor access.Processor
+	verifiers       []verifier
 
 	// common parameters
 	athenzURL string
@@ -171,13 +173,19 @@ func New(opts ...Option) (Authorizerd, error) {
 	if prov.roleProcessor, err = role.New(
 		role.WithPubkeyProvider(pubkeyProvider),
 		role.WithJWKProvider(jwkProvider),
-		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
-		role.WithEnableVerifyTokenClientID(prov.atpParam.verifyTokenClientID),
-		role.WithAuthorizedPrincipals(prov.atpParam.authorizedPrincipals),
-		role.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
-		role.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create role processor")
+	}
+
+	if prov.accessProcessor, err = access.New(
+		access.WithJWKProvider(jwkProvider),
+		access.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
+		access.WithEnableVerifyTokenClientID(prov.atpParam.verifyTokenClientID),
+		access.WithAuthorizedPrincipals(prov.atpParam.authorizedPrincipals),
+		access.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
+		access.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
+	); err != nil {
+		return nil, errors.Wrap(err, "error create access processor")
 	}
 
 	// create verifiers
@@ -398,7 +406,7 @@ func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string
 
 	// TODO: execute per roleProcessors
 	// TODO: switch to change verify function by roleProcessor.type
-	ac, err := a.roleProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
+	ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 	if err != nil {
 		glg.Debugf("error parse and validate access token, err: %v", err)
 		return errors.Wrap(err, "error verify access token")
