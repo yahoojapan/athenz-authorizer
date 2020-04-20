@@ -57,9 +57,9 @@ func New(opts ...Option) (Processor, error) {
 	return r, nil
 }
 
-func (a *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*OAuth2AccessTokenClaim, error) {
+func (r *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*OAuth2AccessTokenClaim, error) {
 
-	tok, err := jwt.ParseWithClaims(cred, &OAuth2AccessTokenClaim{}, a.keyFunc)
+	tok, err := jwt.ParseWithClaims(cred, &OAuth2AccessTokenClaim{}, r.keyFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -69,16 +69,16 @@ func (a *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 	}
 
 	// validate client_id of AccessToken
-	if a.enableVerifyTokenClientID {
-		err := a.validateTokenClientID(cert, claims)
+	if r.enableVerifyTokenClientID {
+		err := r.validateTokenClientID(cert, claims)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// certificate bound access token
-	if a.enableMTLSCertificateBoundAccessToken {
-		err := a.validateCertificateBoundAccessToken(cert, claims)
+	if r.enableMTLSCertificateBoundAccessToken {
+		err := r.validateCertificateBoundAccessToken(cert, claims)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,7 @@ func (a *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 	return claims, nil
 }
 
-func (a *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+func (r *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
 	}
@@ -97,7 +97,7 @@ func (a *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2Access
 
 	cn := cert.Subject.CommonName
 	clientID := claims.ClientID
-	clientIDs := a.authorizedPrincipals[cn]
+	clientIDs := r.authorizedPrincipals[cn]
 
 	for _, v := range clientIDs {
 		if v == clientID {
@@ -107,7 +107,7 @@ func (a *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2Access
 	return errors.Errorf("error %v is not authorized %v", clientID, cn)
 }
 
-func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+func (r *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
 	}
@@ -127,7 +127,7 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	}
 
 	// If cnf check fails, check to allow if the certificate has been refresh
-	if err := a.validateCertPrincipal(cert, claims); err != nil {
+	if err := r.validateCertPrincipal(cert, claims); err != nil {
 		return err
 	}
 
@@ -136,8 +136,8 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	return nil
 }
 
-func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
-	if a.clientCertificateOffsetSeconds == 0 {
+func (r *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+	if r.clientCertificateOffsetSeconds == 0 {
 		return errors.New("error validate cert thumbprint failed. also, clientCertificateOffsetSeconds is 0. cert refresh check is disabled")
 	}
 	// common name check
@@ -155,26 +155,26 @@ func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2Access
 
 	// usecase: new cert + old token, after certificate rotation
 	atIssueTime := claims.IssuedAt
-	certActualIssueTime := cert.NotBefore.Unix() + a.clientCertificateGoBackSeconds
+	certActualIssueTime := cert.NotBefore.Unix() + r.clientCertificateGoBackSeconds
 	// Issue time check. If the certificate had been updated, it would have been issued later than the token.
 	if certActualIssueTime < atIssueTime {
 		return errors.Errorf("error certificate: issued before access token: cert = %v, tok = %v", certActualIssueTime, atIssueTime)
 	}
 	// Issue time check. Determine if certificate's issue time is within an allowed range
-	if certActualIssueTime > atIssueTime+a.clientCertificateOffsetSeconds {
-		return errors.Errorf("error certificate: access token too old: cert = %v, offset = %v, tok = %v", certActualIssueTime, a.clientCertificateOffsetSeconds, atIssueTime)
+	if certActualIssueTime > atIssueTime+r.clientCertificateOffsetSeconds {
+		return errors.Errorf("error certificate: access token too old: cert = %v, offset = %v, tok = %v", certActualIssueTime, r.clientCertificateOffsetSeconds, atIssueTime)
 	}
 	return nil
 }
 
 // keyFunc extract the key id from the token, and return corresponding key
-func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
+func (r *atp) keyFunc(token *jwt.Token) (interface{}, error) {
 	keyID, ok := token.Header["kid"]
 	if !ok {
 		return nil, errors.New("kid not written in header")
 	}
 
-	key := a.jwkp(keyID.(string))
+	key := r.jwkp(keyID.(string))
 	if key == nil {
 		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
 	}
