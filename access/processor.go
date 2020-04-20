@@ -38,12 +38,12 @@ type Processor interface {
 type atp struct {
 	jwkp                                  jwk.Provider
 	enableMTLSCertificateBoundAccessToken bool
-	enableVerifyTokenClientID             bool
-	authorizedPrincipals                  map[string][]string
 	// If you go back to the issue time, set that time. Subtract if necessary (for example, token issuance time).
 	clientCertificateGoBackSeconds int64
 	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
 	clientCertificateOffsetSeconds int64
+	enableVerifyTokenClientID      bool
+	authorizedPrincipals           map[string][]string
 }
 
 // New returns the Processor instance.
