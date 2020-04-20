@@ -54,10 +54,10 @@ func WithEnableVerifyTokenClientID(b bool) Option {
 	}
 }
 
-// WithAuthorizedPrincipals represents set authorizedPrincipals functional option
-func WithAuthorizedPrincipals(m map[string][]string) Option {
+// WithAuthorizedClientIDs represents set authorizedClientIDs functional option
+func WithAuthorizedClientIDs(m map[string][]string) Option {
 	return func(r *atp) error {
-		r.authorizedPrincipals = m
+		r.authorizedClientIDs = m
 		return nil
 	}
 }

@@ -181,7 +181,7 @@ func New(opts ...Option) (Authorizerd, error) {
 		access.WithJWKProvider(jwkProvider),
 		access.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
 		access.WithEnableVerifyTokenClientID(prov.atpParam.verifyTokenClientID),
-		access.WithAuthorizedPrincipals(prov.atpParam.authorizedPrincipals),
+		access.WithAuthorizedClientIDs(prov.atpParam.authorizedClientIDs),
 		access.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
 		access.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
 	); err != nil {

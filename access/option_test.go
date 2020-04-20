@@ -154,7 +154,7 @@ func TestWithEnableVerifyTokenClientID(t *testing.T) {
 	}
 }
 
-func TestWithAuthorizedPrincipals(t *testing.T) {
+func TestWithAuthorizedClientIDs(t *testing.T) {
 	type args struct {
 		m map[string][]string
 	}
@@ -165,20 +165,20 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			normalAuthorizedPrincipals := map[string][]string{
+			normalAuthorizedClientIDs := map[string][]string{
 				"cn1": {"cid1a", "cid2b"},
 			}
 			return test{
 				name: "set success",
 				args: args{
-					m: normalAuthorizedPrincipals,
+					m: normalAuthorizedClientIDs,
 				},
 				checkFunc: func(opt Option) error {
 					r := &atp{}
 					if err := opt(r); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(r.authorizedPrincipals, normalAuthorizedPrincipals) {
+					if !reflect.DeepEqual(r.authorizedClientIDs, normalAuthorizedClientIDs) {
 						return fmt.Errorf("Error")
 					}
 					return nil
@@ -186,18 +186,18 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 			}
 		}(),
 		func() test {
-			emptyAuthorizedPrincipals := map[string][]string{}
+			emptyAuthorizedClientIDs := map[string][]string{}
 			return test{
 				name: "empty value",
 				args: args{
-					m: emptyAuthorizedPrincipals,
+					m: emptyAuthorizedClientIDs,
 				},
 				checkFunc: func(opt Option) error {
 					r := &atp{}
 					if err := opt(r); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(r.authorizedPrincipals, emptyAuthorizedPrincipals) {
+					if !reflect.DeepEqual(r.authorizedClientIDs, emptyAuthorizedClientIDs) {
 						return fmt.Errorf("Error")
 					}
 					return nil
@@ -214,7 +214,7 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 				if err := opt(r); err != nil {
 					return err
 				}
-				if r.authorizedPrincipals != nil {
+				if r.authorizedClientIDs != nil {
 					return fmt.Errorf("Error")
 				}
 				return nil
@@ -223,9 +223,9 @@ func TestWithAuthorizedPrincipals(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithAuthorizedPrincipals(tt.args.m)
+			got := WithAuthorizedClientIDs(tt.args.m)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithAuthorizedPrincipals() error: %v", err)
+				t.Errorf("WithAuthorizedClientIDs() error: %v", err)
 			}
 		})
 	}

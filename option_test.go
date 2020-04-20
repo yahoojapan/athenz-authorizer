@@ -755,7 +755,7 @@ func TestNewATProcessorParam(t *testing.T) {
 		verifyOAuth2AccessToken bool
 		verifyCertThumbprint    bool
 		verifyTokenClientID     bool
-		authorizedPrincipals    map[string][]string
+		authorizedClientIDs     map[string][]string
 		certBackdateDur         string
 		certOffsetDur           string
 	}
@@ -781,7 +781,7 @@ func TestNewATProcessorParam(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewATProcessorParam(
-				tt.args.verifyOAuth2AccessToken, tt.args.verifyCertThumbprint, tt.args.verifyTokenClientID, tt.args.authorizedPrincipals, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
+				tt.args.verifyOAuth2AccessToken, tt.args.verifyCertThumbprint, tt.args.verifyTokenClientID, tt.args.authorizedClientIDs, tt.args.certBackdateDur, tt.args.certOffsetDur); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewATProcessorParam() = %v, want %v", got, tt.want)
 			}
 		})

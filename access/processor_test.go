@@ -195,7 +195,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		jwkp                                  jwk.Provider
 		enableMTLSCertificateBoundAccessToken bool
 		enableVerifyTokenClientID             bool
-		authorizedPrincipals                  map[string][]string
+		authorizedClientIDs                   map[string][]string
 	}
 	type args struct {
 		cred string
@@ -279,7 +279,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyTokenClientID: true,
-					authorizedPrincipals: map[string][]string{
+					authorizedClientIDs: map[string][]string{
 						"domain.tenant.service": []string{
 							"domain.tenant.service",
 						},
@@ -353,13 +353,13 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		}(),
 		func() test {
 			return test{
-				name: "verify access token fail, unauthorized principal",
+				name: "verify access token fail, unauthorized client_id",
 				fields: fields{
 					jwkp: jwk.Provider(func(kid string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyTokenClientID: true,
-					authorizedPrincipals: map[string][]string{
+					authorizedClientIDs: map[string][]string{
 						"unauthorizedPrincipal": {
 							"unauthorizedClientID",
 						},
@@ -505,7 +505,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				enableVerifyTokenClientID:             true,
-				authorizedPrincipals: map[string][]string{
+				authorizedClientIDs: map[string][]string{
 					"fail.commmon-name": {"fail.client_id"},
 				},
 			},
@@ -526,7 +526,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
 				enableVerifyTokenClientID:             true,
-				authorizedPrincipals: map[string][]string{
+				authorizedClientIDs: map[string][]string{
 					"domain.tenant.service": {"domain.tenant.service"},
 				},
 			},
@@ -546,7 +546,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 				jwkp:                                  tt.fields.jwkp,
 				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
 				enableVerifyTokenClientID:             tt.fields.enableVerifyTokenClientID,
-				authorizedPrincipals:                  tt.fields.authorizedPrincipals,
+				authorizedClientIDs:                   tt.fields.authorizedClientIDs,
 			}
 			got, err := r.ParseAndValidateOAuth2AccessToken(tt.args.cred, tt.args.cert)
 			if (err != nil) != tt.wantErr {
@@ -565,7 +565,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 		jwkp                                  jwk.Provider
 		enableMTLSCertificateBoundAccessToken bool
 		enableVerifyTokenClientID             bool
-		authorizedPrincipals                  map[string][]string
+		authorizedClientIDs                   map[string][]string
 		clientCertificateGoBackSeconds        int64
 		clientCertificateOffsetSeconds        int64
 	}
@@ -583,7 +583,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id success",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: map[string][]string{
+				authorizedClientIDs: map[string][]string{
 					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
 					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
 				},
@@ -604,7 +604,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, cert is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals:      map[string][]string{},
+				authorizedClientIDs:       map[string][]string{},
 			},
 			args: args{
 				cert: nil,
@@ -618,7 +618,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, claim is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals:      map[string][]string{},
+				authorizedClientIDs:       map[string][]string{},
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -631,10 +631,10 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			wantErr: errors.New("error claim of access token is nil"),
 		},
 		{
-			name: "verify token client_id fail, authorizedPrincipals is empty",
+			name: "verify token client_id fail, authorizedClientIDs is empty",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals:      map[string][]string{},
+				authorizedClientIDs:       map[string][]string{},
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -649,10 +649,10 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			wantErr: errors.Errorf("error %v is not authorized %v", "dummy client_id1", "dummy cn1"),
 		},
 		{
-			name: "verify token client_id fail, authorizedPrincipals is nil",
+			name: "verify token client_id fail, authorizedClientIDs is nil",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals:      nil,
+				authorizedClientIDs:       nil,
 			},
 			args: args{
 				cert: &x509.Certificate{
@@ -670,7 +670,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 			name: "verify token client_id fail, not match",
 			fields: fields{
 				enableVerifyTokenClientID: true,
-				authorizedPrincipals: map[string][]string{
+				authorizedClientIDs: map[string][]string{
 					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
 					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
 				},
@@ -694,7 +694,7 @@ func Test_rtp_validateTokenClientID(t *testing.T) {
 				jwkp:                                  tt.fields.jwkp,
 				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
 				enableVerifyTokenClientID:             tt.fields.enableVerifyTokenClientID,
-				authorizedPrincipals:                  tt.fields.authorizedPrincipals,
+				authorizedClientIDs:                   tt.fields.authorizedClientIDs,
 				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
 				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
 			}

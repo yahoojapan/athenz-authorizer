@@ -43,7 +43,7 @@ type atp struct {
 	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
 	clientCertificateOffsetSeconds int64
 	enableVerifyTokenClientID      bool
-	authorizedPrincipals           map[string][]string
+	authorizedClientIDs            map[string][]string
 }
 
 // New returns the Processor instance.
@@ -97,7 +97,7 @@ func (r *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2Access
 
 	cn := cert.Subject.CommonName
 	clientID := claims.ClientID
-	clientIDs := r.authorizedPrincipals[cn]
+	clientIDs := r.authorizedClientIDs[cn]
 
 	for _, v := range clientIDs {
 		if v == clientID {

@@ -45,7 +45,7 @@ type ATProcessorParam struct {
 	verifyOAuth2AccessToken bool
 	verifyCertThumbprint    bool
 	verifyTokenClientID     bool
-	authorizedPrincipals    map[string][]string
+	authorizedClientIDs     map[string][]string
 	certBackdateDur         string
 	certOffsetDur           string
 }
@@ -251,7 +251,7 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedPrincipals map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
+func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedClientIDs map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
 	return ATProcessorParam{
 		// Flag to enable verify of access token
 		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
@@ -260,7 +260,7 @@ func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool
 		// The client certificate common name and client_id verification.
 		verifyTokenClientID: verifyTokenClientID,
 		// The list of authorized client_id and common name.
-		authorizedPrincipals: authorizedPrincipals,
+		authorizedClientIDs: authorizedClientIDs,
 		// If the time of issuance of the certificate is intentionally earlier, specify that time.
 		certBackdateDur: certBackdateDur,
 		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
