@@ -35,7 +35,7 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParam(NewATProcessorParam(true, true, false, nil, "1h", "1h")),
+		WithATProcessorParam(NewATProcessorParam(true, true, "1h", "1h", false, nil)),
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
@@ -44,10 +44,10 @@ var (
 type ATProcessorParam struct {
 	verifyOAuth2AccessToken bool
 	verifyCertThumbprint    bool
-	verifyTokenClientID     bool
-	authorizedClientIDs     map[string][]string
 	certBackdateDur         string
 	certOffsetDur           string
+	verifyTokenClientID     bool
+	authorizedClientIDs     map[string][]string
 }
 
 // Option represents a functional option
@@ -251,20 +251,20 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, verifyTokenClientID bool, authorizedClientIDs map[string][]string, certBackdateDur, certOffsetDur string) ATProcessorParam {
+func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) ATProcessorParam {
 	return ATProcessorParam{
 		// Flag to enable verify of access token
 		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
-		// The client certificate common name and client_id verification.
-		verifyTokenClientID: verifyTokenClientID,
-		// The list of authorized client_id and common name.
-		authorizedClientIDs: authorizedClientIDs,
 		// If the time of issuance of the certificate is intentionally earlier, specify that time.
 		certBackdateDur: certBackdateDur,
 		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
 		certOffsetDur: certOffsetDur,
+		// The client certificate common name and client_id verification.
+		verifyTokenClientID: verifyTokenClientID,
+		// The list of authorized client_id and common name.
+		authorizedClientIDs: authorizedClientIDs,
 	}
 }
 
