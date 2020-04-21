@@ -588,7 +588,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 	tests := []test{
 		func() test {
 			c := gache.New()
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
@@ -603,7 +603,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -620,7 +620,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
@@ -635,7 +635,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -645,7 +645,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
@@ -660,7 +660,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -670,7 +670,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
 			}
@@ -685,7 +685,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -694,7 +694,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				wantErr: errors.New("cannot parse roletoken"),
 			}
 			pdm := &PolicydMock{}
@@ -708,7 +708,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -717,7 +717,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pm := &RoleProcessorMock{
+			rpm := &RoleProcessorMock{
 				rt: &role.Token{},
 			}
 			pdm := &PolicydMock{
@@ -735,7 +735,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:            pdm,
-					roleTokenProcessor: pm,
+					roleTokenProcessor: rpm,
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
@@ -1436,7 +1436,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				act: &access.OAuth2AccessTokenClaim{
 					Scope: []string{"role"},
 					BaseClaim: access.BaseClaim{
@@ -1465,7 +1465,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -1487,7 +1487,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			now := fastime.Now()
 			c := gache.New()
 			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
@@ -1509,7 +1509,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -1530,7 +1530,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
@@ -1545,7 +1545,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -1555,7 +1555,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
@@ -1570,7 +1570,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -1579,7 +1579,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				wantErr: errors.New("cannot parse access token"),
 			}
 			pdm := &PolicydMock{}
@@ -1593,7 +1593,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
@@ -1602,7 +1602,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pm := &AccessProcessorMock{
+			apm := &AccessProcessorMock{
 				act: &access.OAuth2AccessTokenClaim{},
 			}
 			pdm := &PolicydMock{
@@ -1620,7 +1620,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				},
 				fields: fields{
 					policyd:         pdm,
-					accessProcessor: pm,
+					accessProcessor: apm,
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
