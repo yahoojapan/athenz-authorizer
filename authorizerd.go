@@ -91,7 +91,7 @@ type authorizer struct {
 	jwkErrRetryInterval string
 
 	// accessTokenProcessor parameters
-	atpParam ATProcessorParam
+	accessTokenParam AccessTokenParam
 
 	// roleTokenProcessor parameters
 	verifyRoleToken bool
@@ -179,11 +179,11 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	if prov.accessProcessor, err = access.New(
 		access.WithJWKProvider(jwkProvider),
-		access.WithEnableMTLSCertificateBoundAccessToken(prov.atpParam.verifyCertThumbprint),
-		access.WithEnableVerifyTokenClientID(prov.atpParam.verifyTokenClientID),
-		access.WithAuthorizedClientIDs(prov.atpParam.authorizedClientIDs),
-		access.WithClientCertificateGoBackSeconds(prov.atpParam.certBackdateDur),
-		access.WithClientCertificateOffsetSeconds(prov.atpParam.certOffsetDur),
+		access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
+		access.WithEnableVerifyTokenClientID(prov.accessTokenParam.verifyTokenClientID),
+		access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
+		access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
+		access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),
 	); err != nil {
 		return nil, errors.Wrap(err, "error create access processor")
 	}
@@ -211,7 +211,7 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, rcVerifier)
 	}
 
-	if a.atpParam.verifyOAuth2AccessToken {
+	if a.accessTokenParam.verifyOAuth2AccessToken {
 		atVerifier := func(r *http.Request, act, res string) error {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {
@@ -222,7 +222,7 @@ func (a *authorizer) initVerifiers() error {
 			}
 			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
 		}
-		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParam)
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.accessTokenParam)
 		verifiers = append(verifiers, atVerifier)
 	}
 

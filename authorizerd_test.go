@@ -127,7 +127,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		disableJwkd            bool
 		jwkRefreshDuration     string
 		jwkErrRetryInterval    string
-		atpParam               ATProcessorParam
+		accessTokenParam       AccessTokenParam
 		verifyRoleToken        bool
 		rtHeader               string
 		verifyRoleCert         bool
@@ -141,9 +141,9 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		{
 			name: "initVerifier sucess, no role flags",
 			fields: fields{
-				atpParam:        ATProcessorParam{verifyOAuth2AccessToken: true, verifyCertThumbprint: true},
-				verifyRoleCert:  false,
-				verifyRoleToken: false,
+				accessTokenParam: AccessTokenParam{verifyOAuth2AccessToken: true, verifyCertThumbprint: true},
+				verifyRoleCert:   false,
+				verifyRoleToken:  false,
 			},
 			wantErr: false,
 			checkFunc: func(a authorizer) error {
@@ -209,7 +209,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				disableJwkd:            tt.fields.disableJwkd,
 				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
 				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
-				atpParam:               tt.fields.atpParam,
+				accessTokenParam:       tt.fields.accessTokenParam,
 				verifyRoleToken:        tt.fields.verifyRoleToken,
 				rtHeader:               tt.fields.rtHeader,
 				verifyRoleCert:         tt.fields.verifyRoleCert,

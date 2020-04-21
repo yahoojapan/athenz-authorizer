@@ -41,7 +41,7 @@ var (
 	}
 )
 
-type ATProcessorParam struct {
+type AccessTokenParam struct {
 	verifyOAuth2AccessToken bool
 	verifyCertThumbprint    bool
 	certBackdateDur         string
@@ -251,8 +251,8 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) ATProcessorParam {
-	return ATProcessorParam{
+func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
+	return AccessTokenParam{
 		// Flag to enable verify of access token
 		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
@@ -269,9 +269,9 @@ func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool
 }
 
 // WithATProcessorParam returns a functional option that new access token processor parameters slice
-func WithATProcessorParam(atpParam ATProcessorParam) Option {
+func WithATProcessorParam(accessTokenParam AccessTokenParam) Option {
 	return func(authz *authorizer) error {
-		authz.atpParam = atpParam
+		authz.accessTokenParam = accessTokenParam
 		return nil
 	}
 }

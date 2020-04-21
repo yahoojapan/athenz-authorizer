@@ -762,7 +762,7 @@ func TestNewATProcessorParam(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want ATProcessorParam
+		want AccessTokenParam
 	}{
 		{
 			name: "create success",
@@ -771,7 +771,7 @@ func TestNewATProcessorParam(t *testing.T) {
 				certBackdateDur:      "2h",
 				certOffsetDur:        "2h",
 			},
-			want: ATProcessorParam{
+			want: AccessTokenParam{
 				verifyCertThumbprint: true,
 				certBackdateDur:      "2h",
 				certOffsetDur:        "2h",
@@ -796,7 +796,7 @@ func TestNewATProcessorParam(t *testing.T) {
 
 func TestWithATProcessorParams(t *testing.T) {
 	type args struct {
-		atpParam ATProcessorParam
+		accessTokenParam AccessTokenParam
 	}
 	type test struct {
 		name      string
@@ -805,7 +805,7 @@ func TestWithATProcessorParams(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			atpParam :=
+			accessTokenParam :=
 				NewATProcessorParam(true, true, "1h", "1h", true, map[string][]string{
 					"common_name1": []string{"client_id1", "client_id2"},
 					"common_name2": []string{"client_id1", "client_id2"},
@@ -814,14 +814,14 @@ func TestWithATProcessorParams(t *testing.T) {
 			return test{
 				name: "set success",
 				args: args{
-					atpParam: atpParam,
+					accessTokenParam: accessTokenParam,
 				},
 				checkFunc: func(opt Option) error {
 					authz := &authorizer{}
 					if err := opt(authz); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(authz.atpParam, atpParam) {
+					if !reflect.DeepEqual(authz.accessTokenParam, accessTokenParam) {
 						return fmt.Errorf("invalid param was set")
 					}
 					return nil
@@ -831,7 +831,7 @@ func TestWithATProcessorParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorParam(tt.args.atpParam)
+			got := WithATProcessorParam(tt.args.accessTokenParam)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
 			}
