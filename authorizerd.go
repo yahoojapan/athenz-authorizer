@@ -404,8 +404,6 @@ func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string
 		return nil
 	}
 
-	// TODO: execute per roleProcessors
-	// TODO: switch to change verify function by roleProcessor.type
 	ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 	if err != nil {
 		glg.Debugf("error parse and validate access token, err: %v", err)
