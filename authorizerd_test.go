@@ -210,7 +210,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
 				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
 				accessTokenParam:       tt.fields.accessTokenParam,
-				verifyRoleToken:        tt.fields.verifyRoleToken,
+				enableRoleToken:        tt.fields.verifyRoleToken,
 				rtHeader:               tt.fields.rtHeader,
 				verifyRoleCert:         tt.fields.verifyRoleCert,
 			}

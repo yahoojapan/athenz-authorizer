@@ -94,7 +94,7 @@ type authorizer struct {
 	accessTokenParam AccessTokenParam
 
 	// roleTokenProcessor parameters
-	verifyRoleToken bool
+	enableRoleToken bool
 	rtHeader        string
 
 	// roleCertificateProcessor parameters
@@ -226,7 +226,7 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, atVerifier)
 	}
 
-	if a.verifyRoleToken {
+	if a.enableRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
 			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), act, res)
 		}

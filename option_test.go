@@ -839,29 +839,21 @@ func TestWithAccessTokenParams(t *testing.T) {
 	}
 }
 
-func TestWithRTVerifyRoleToken(t *testing.T) {
-	type args struct {
-		b bool
-	}
+func TestWithEnableRoleToken(t *testing.T) {
 	type test struct {
 		name      string
-		args      args
 		checkFunc func(Option) error
 	}
 	tests := []test{
 		func() test {
-			isEnable := true
 			return test{
 				name: "set success",
-				args: args{
-					b: isEnable,
-				},
 				checkFunc: func(opt Option) error {
 					authz := &authorizer{}
 					if err := opt(authz); err != nil {
 						return err
 					}
-					if authz.verifyRoleToken != isEnable {
+					if authz.enableRoleToken != true {
 						return fmt.Errorf("invalid param was set")
 					}
 					return nil
@@ -871,9 +863,41 @@ func TestWithRTVerifyRoleToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRTVerifyRoleToken(tt.args.b)
+			got := WithEnableRoleToken()
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRTVerifyRoleToken() = %v error: %v", got, err)
+				t.Errorf("WithEnableRoleToken() = %v error: %v", got, err)
+			}
+		})
+	}
+}
+
+func TestWithDisableRoleToken(t *testing.T) {
+	type test struct {
+		name      string
+		checkFunc func(Option) error
+	}
+	tests := []test{
+		func() test {
+			return test{
+				name: "set success",
+				checkFunc: func(opt Option) error {
+					authz := &authorizer{}
+					if err := opt(authz); err != nil {
+						return err
+					}
+					if authz.enableRoleToken != false {
+						return fmt.Errorf("invalid param was set")
+					}
+					return nil
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithDisableRoleToken()
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithDisableRoleToken() = %v error: %v", got, err)
 			}
 		})
 	}
