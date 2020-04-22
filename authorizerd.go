@@ -335,8 +335,14 @@ func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) 
 	return a.verify(ctx, token, tok, act, res, nil)
 }
 
+// VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
 	return a.verify(ctx, jwt, tok, act, res, nil)
+}
+
+// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
+func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
+	return a.verify(ctx, accessToken, tok, act, res, cert)
 }
 
 func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) error {
@@ -404,11 +410,6 @@ func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	}
 
 	return ErrInvalidCredentials
-}
-
-// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
-func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
-	return a.verify(ctx, accessToken, tok, act, res, cert)
 }
 
 func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
