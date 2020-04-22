@@ -104,8 +104,8 @@ type authorizer struct {
 type mode uint8
 
 const (
-	token mode = iota
-	jwt
+	roleToken mode = iota
+	roleJWT
 	accessToken
 )
 
@@ -332,12 +332,12 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, token, tok, act, res, nil)
+	return a.verify(ctx, roleToken, tok, act, res, nil)
 }
 
 // VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, jwt, tok, act, res, nil)
+	return a.verify(ctx, roleJWT, tok, act, res, nil)
 }
 
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
@@ -363,7 +363,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 	)
 
 	switch m {
-	case token:
+	case roleToken:
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
@@ -371,7 +371,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		}
 		domain = rt.Domain
 		roles = rt.Roles
-	case jwt:
+	case roleJWT:
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
