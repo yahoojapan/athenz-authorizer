@@ -170,22 +170,27 @@ func New(opts ...Option) (Authorizerd, error) {
 		jwkProvider = prov.jwkd.GetProvider()
 	}
 
-	if prov.roleProcessor, err = role.New(
-		role.WithPubkeyProvider(pubkeyProvider),
-		role.WithJWKProvider(jwkProvider),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create role processor")
+	if prov.enableRoleToken {
+		if prov.roleProcessor, err = role.New(
+			role.WithPubkeyProvider(pubkeyProvider),
+			role.WithJWKProvider(jwkProvider),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create role processor")
+		}
+
 	}
 
-	if prov.accessProcessor, err = access.New(
-		access.WithJWKProvider(jwkProvider),
-		access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
-		access.WithEnableVerifyTokenClientID(prov.accessTokenParam.verifyTokenClientID),
-		access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
-		access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
-		access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create access processor")
+	if prov.accessTokenParam.enable {
+		if prov.accessProcessor, err = access.New(
+			access.WithJWKProvider(jwkProvider),
+			access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
+			access.WithEnableVerifyTokenClientID(prov.accessTokenParam.verifyTokenClientID),
+			access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
+			access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
+			access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create access processor")
+		}
 	}
 
 	// create verifiers
