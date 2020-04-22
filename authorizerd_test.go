@@ -1023,11 +1023,12 @@ func Test_authorizer_verify(t *testing.T) {
 		policyRefreshDuration string
 	}
 	type args struct {
-		ctx context.Context
-		m   mode
-		tok string
-		act string
-		res string
+		ctx  context.Context
+		m    mode
+		tok  string
+		act  string
+		res  string
+		cert *x509.Certificate
 	}
 	tests := []struct {
 		name    string
@@ -1057,7 +1058,7 @@ func Test_authorizer_verify(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshDuration: tt.fields.policyRefreshDuration,
 			}
-			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
