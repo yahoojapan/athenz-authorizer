@@ -128,9 +128,9 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		jwkRefreshDuration     string
 		jwkErrRetryInterval    string
 		accessTokenParam       AccessTokenParam
-		verifyRoleToken        bool
+		enableRoleToken        bool
 		rtHeader               string
-		verifyRoleCert         bool
+		enableRoleCert         bool
 	}
 	tests := []struct {
 		name      string
@@ -142,8 +142,8 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 			name: "initVerifier sucess, no role flags",
 			fields: fields{
 				accessTokenParam: AccessTokenParam{enable: true, verifyCertThumbprint: true},
-				verifyRoleCert:   false,
-				verifyRoleToken:  false,
+				enableRoleCert:   false,
+				enableRoleToken:  false,
 			},
 			wantErr: false,
 			checkFunc: func(a authorizer) error {
@@ -156,7 +156,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		{
 			name: "initVerifier sucess, no access token flags",
 			fields: fields{
-				verifyRoleCert: true,
+				enableRoleCert: true,
 			},
 			wantErr: false,
 			checkFunc: func(a authorizer) error {
@@ -169,8 +169,8 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		{
 			name: "initVerifier sucess, no access token flags",
 			fields: fields{
-				verifyRoleCert:  true,
-				verifyRoleToken: true,
+				enableRoleCert:  true,
+				enableRoleToken: true,
 			},
 			wantErr: false,
 			checkFunc: func(a authorizer) error {
@@ -210,9 +210,9 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
 				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
 				accessTokenParam:       tt.fields.accessTokenParam,
-				enableRoleToken:        tt.fields.verifyRoleToken,
+				enableRoleToken:        tt.fields.enableRoleToken,
 				rtHeader:               tt.fields.rtHeader,
-				enableRoleCert:         tt.fields.verifyRoleCert,
+				enableRoleCert:         tt.fields.enableRoleCert,
 			}
 			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
