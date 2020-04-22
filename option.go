@@ -35,7 +35,7 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParam(NewATProcessorParam(true, true, "1h", "1h", false, nil)),
+		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithRTVerifyRoleToken(true),
 		WithRCVerifyRoleCert(true),
 	}
@@ -250,8 +250,8 @@ func WithJwkErrRetryInterval(i string) Option {
 	access token parameters
 */
 
-// NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
+// NewAccessTokenParam returns a new access token parameter
+func NewAccessTokenParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
 	return AccessTokenParam{
 		// Flag to enable verify of access token
 		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
@@ -268,8 +268,8 @@ func NewATProcessorParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool
 	}
 }
 
-// WithATProcessorParam returns a functional option that new access token processor parameters slice
-func WithATProcessorParam(accessTokenParam AccessTokenParam) Option {
+// WithAccessTokenParam returns a functional option that new access token parameter
+func WithAccessTokenParam(accessTokenParam AccessTokenParam) Option {
 	return func(authz *authorizer) error {
 		authz.accessTokenParam = accessTokenParam
 		return nil

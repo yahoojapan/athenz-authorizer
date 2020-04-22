@@ -750,7 +750,7 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 	}
 }
 
-func TestNewATProcessorParam(t *testing.T) {
+func TestNewAccessTokenParam(t *testing.T) {
 	type args struct {
 		verifyOAuth2AccessToken bool
 		verifyCertThumbprint    bool
@@ -780,7 +780,7 @@ func TestNewATProcessorParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewATProcessorParam(
+			if got := NewAccessTokenParam(
 				tt.args.verifyOAuth2AccessToken,
 				tt.args.verifyCertThumbprint,
 				tt.args.certBackdateDur,
@@ -788,13 +788,13 @@ func TestNewATProcessorParam(t *testing.T) {
 				tt.args.verifyTokenClientID,
 				tt.args.authorizedClientIDs,
 			); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewATProcessorParam() = %v, want %v", got, tt.want)
+				t.Errorf("NewAccessTokenParam() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestWithATProcessorParams(t *testing.T) {
+func TestWithAccessTokenParams(t *testing.T) {
 	type args struct {
 		accessTokenParam AccessTokenParam
 	}
@@ -806,7 +806,7 @@ func TestWithATProcessorParams(t *testing.T) {
 	tests := []test{
 		func() test {
 			accessTokenParam :=
-				NewATProcessorParam(true, true, "1h", "1h", true, map[string][]string{
+				NewAccessTokenParam(true, true, "1h", "1h", true, map[string][]string{
 					"common_name1": []string{"client_id1", "client_id2"},
 					"common_name2": []string{"client_id1", "client_id2"},
 				})
@@ -831,9 +831,9 @@ func TestWithATProcessorParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithATProcessorParam(tt.args.accessTokenParam)
+			got := WithAccessTokenParam(tt.args.accessTokenParam)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithATProcessorParam() = %v error: %v", got, err)
+				t.Errorf("WithAccessTokenParam() = %v error: %v", got, err)
 			}
 		})
 	}
