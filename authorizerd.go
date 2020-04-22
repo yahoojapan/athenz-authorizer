@@ -184,7 +184,7 @@ func New(opts ...Option) (Authorizerd, error) {
 		if prov.accessProcessor, err = access.New(
 			access.WithJWKProvider(jwkProvider),
 			access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
-			access.WithEnableVerifyTokenClientID(prov.accessTokenParam.verifyTokenClientID),
+			access.WithEnableVerifyClientID(prov.accessTokenParam.verifyClientID),
 			access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
 			access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
 			access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),

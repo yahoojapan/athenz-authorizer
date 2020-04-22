@@ -42,7 +42,7 @@ type atp struct {
 	clientCertificateGoBackSeconds int64
 	// The number of seconds to allow for a failed CNF check due to a client certificate being updated.
 	clientCertificateOffsetSeconds int64
-	enableVerifyTokenClientID      bool
+	enableVerifyClientID           bool
 	authorizedClientIDs            map[string][]string
 }
 
@@ -69,8 +69,8 @@ func (r *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 	}
 
 	// validate client_id of AccessToken
-	if r.enableVerifyTokenClientID {
-		err := r.validateTokenClientID(cert, claims)
+	if r.enableVerifyClientID {
+		err := r.validateClientID(cert, claims)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,7 @@ func (r *atp) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certific
 	return claims, nil
 }
 
-func (r *atp) validateTokenClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
+func (r *atp) validateClientID(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
 	if cert == nil {
 		return errors.New("error mTLS client certificate is nil")
 	}

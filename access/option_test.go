@@ -118,7 +118,7 @@ func TestWithEnableMTLSCertificateBoundAccessToken(t *testing.T) {
 	}
 }
 
-func TestWithEnableVerifyTokenClientID(t *testing.T) {
+func TestWithEnableVerifyClientID(t *testing.T) {
 	type args struct {
 		b bool
 	}
@@ -137,7 +137,7 @@ func TestWithEnableVerifyTokenClientID(t *testing.T) {
 				if err := opt(r); err != nil {
 					return err
 				}
-				if !r.enableVerifyTokenClientID {
+				if !r.enableVerifyClientID {
 					return fmt.Errorf("Error")
 				}
 				return nil
@@ -146,9 +146,9 @@ func TestWithEnableVerifyTokenClientID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithEnableVerifyTokenClientID(tt.args.b)
+			got := WithEnableVerifyClientID(tt.args.b)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithEnableVerifyTokenClientID() error: %v", err)
+				t.Errorf("WithEnableVerifyClientID() error: %v", err)
 			}
 		})
 	}

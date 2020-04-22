@@ -754,7 +754,7 @@ func TestNewAccessTokenParam(t *testing.T) {
 	type args struct {
 		enable               bool
 		verifyCertThumbprint bool
-		verifyTokenClientID  bool
+		verifyClientID       bool
 		authorizedClientIDs  map[string][]string
 		certBackdateDur      string
 		certOffsetDur        string
@@ -785,7 +785,7 @@ func TestNewAccessTokenParam(t *testing.T) {
 				tt.args.verifyCertThumbprint,
 				tt.args.certBackdateDur,
 				tt.args.certOffsetDur,
-				tt.args.verifyTokenClientID,
+				tt.args.verifyClientID,
 				tt.args.authorizedClientIDs,
 			); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewAccessTokenParam() = %v, want %v", got, tt.want)

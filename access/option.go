@@ -46,10 +46,10 @@ func WithEnableMTLSCertificateBoundAccessToken(b bool) Option {
 	}
 }
 
-// WithEnableVerifyTokenClientID represents set enableVerifyTokenClientID functional option
-func WithEnableVerifyTokenClientID(b bool) Option {
+// WithEnableVerifyClientID represents set enableVerifyClientID functional option
+func WithEnableVerifyClientID(b bool) Option {
 	return func(r *atp) error {
-		r.enableVerifyTokenClientID = b
+		r.enableVerifyClientID = b
 		return nil
 	}
 }
