@@ -98,7 +98,7 @@ type authorizer struct {
 	rtHeader        string
 
 	// roleCertificateProcessor parameters
-	verifyRoleCert bool
+	enableRoleCert bool
 }
 
 type mode uint8
@@ -200,7 +200,7 @@ func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
 	verifiers := make([]verifier, 0, 3) // rolecert, acess token, roletoken
 
-	if a.verifyRoleCert {
+	if a.enableRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
 			if r.TLS != nil {
 				return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)

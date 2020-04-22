@@ -37,7 +37,7 @@ var (
 		WithJwkErrRetryInterval("1m"),
 		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithEnableRoleToken(),
-		WithRCVerifyRoleCert(true),
+		WithEnableRoleCert(),
 	}
 )
 
@@ -308,10 +308,18 @@ func WithRTHeader(h string) Option {
 	role certificate parameters
 */
 
-// WithRCVerifyRoleCert returns a VerifyRoleCert functional option
-func WithRCVerifyRoleCert(b bool) Option {
+// WithEnableRoleCert returns a enable rolecert functional option
+func WithEnableRoleCert() Option {
 	return func(authz *authorizer) error {
-		authz.verifyRoleCert = b
+		authz.enableRoleCert = true
+		return nil
+	}
+}
+
+// WithDisableRoleCert returns a disable rolecert functional option
+func WithDisableRoleCert() Option {
+	return func(authz *authorizer) error {
+		authz.enableRoleCert = false
 		return nil
 	}
 }

@@ -212,7 +212,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				accessTokenParam:       tt.fields.accessTokenParam,
 				enableRoleToken:        tt.fields.verifyRoleToken,
 				rtHeader:               tt.fields.rtHeader,
-				verifyRoleCert:         tt.fields.verifyRoleCert,
+				enableRoleCert:         tt.fields.verifyRoleCert,
 			}
 			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
