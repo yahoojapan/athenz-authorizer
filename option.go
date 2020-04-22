@@ -42,12 +42,12 @@ var (
 )
 
 type AccessTokenParam struct {
-	verifyOAuth2AccessToken bool
-	verifyCertThumbprint    bool
-	certBackdateDur         string
-	certOffsetDur           string
-	verifyTokenClientID     bool
-	authorizedClientIDs     map[string][]string
+	enable               bool
+	verifyCertThumbprint bool
+	certBackdateDur      string
+	certOffsetDur        string
+	verifyTokenClientID  bool
+	authorizedClientIDs  map[string][]string
 }
 
 // Option represents a functional option
@@ -251,10 +251,10 @@ func WithJwkErrRetryInterval(i string) Option {
 */
 
 // NewAccessTokenParam returns a new access token parameter
-func NewAccessTokenParam(verifyOAuth2AccessToken bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
+func NewAccessTokenParam(enable bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyTokenClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
 	return AccessTokenParam{
 		// Flag to enable verify of access token
-		verifyOAuth2AccessToken: verifyOAuth2AccessToken,
+		enable: enable,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
 		// If the time of issuance of the certificate is intentionally earlier, specify that time.

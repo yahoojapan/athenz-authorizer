@@ -752,12 +752,12 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 
 func TestNewAccessTokenParam(t *testing.T) {
 	type args struct {
-		verifyOAuth2AccessToken bool
-		verifyCertThumbprint    bool
-		verifyTokenClientID     bool
-		authorizedClientIDs     map[string][]string
-		certBackdateDur         string
-		certOffsetDur           string
+		enable               bool
+		verifyCertThumbprint bool
+		verifyTokenClientID  bool
+		authorizedClientIDs  map[string][]string
+		certBackdateDur      string
+		certOffsetDur        string
 	}
 	tests := []struct {
 		name string
@@ -781,7 +781,7 @@ func TestNewAccessTokenParam(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewAccessTokenParam(
-				tt.args.verifyOAuth2AccessToken,
+				tt.args.enable,
 				tt.args.verifyCertThumbprint,
 				tt.args.certBackdateDur,
 				tt.args.certOffsetDur,

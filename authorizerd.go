@@ -211,7 +211,7 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, rcVerifier)
 	}
 
-	if a.accessTokenParam.verifyOAuth2AccessToken {
+	if a.accessTokenParam.enable {
 		atVerifier := func(r *http.Request, act, res string) error {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {

@@ -141,7 +141,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		{
 			name: "initVerifier sucess, no role flags",
 			fields: fields{
-				accessTokenParam: AccessTokenParam{verifyOAuth2AccessToken: true, verifyCertThumbprint: true},
+				accessTokenParam: AccessTokenParam{enable: true, verifyCertThumbprint: true},
 				verifyRoleCert:   false,
 				verifyRoleToken:  false,
 			},
