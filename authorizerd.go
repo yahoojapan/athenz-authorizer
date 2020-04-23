@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/yahoojapan/athenz-authorizer/v2/access"
 	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v2/policy"
 	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
@@ -51,11 +52,12 @@ type verifier func(r *http.Request, act, res string) error
 
 type authorizer struct {
 	//
-	pubkeyd       pubkey.Daemon
-	policyd       policy.Daemon
-	jwkd          jwk.Daemon
-	roleProcessor role.Processor
-	verifiers     []verifier
+	pubkeyd         pubkey.Daemon
+	policyd         policy.Daemon
+	jwkd            jwk.Daemon
+	roleProcessor   role.Processor
+	accessProcessor access.Processor
+	verifiers       []verifier
 
 	// common parameters
 	athenzURL string
@@ -89,21 +91,22 @@ type authorizer struct {
 	jwkErrRetryInterval string
 
 	// accessTokenProcessor parameters
-	atpParams []ATProcessorParam
+	accessTokenParam AccessTokenParam
 
 	// roleTokenProcessor parameters
-	verifyRoleToken bool
+	enableRoleToken bool
 	rtHeader        string
 
 	// roleCertificateProcessor parameters
-	verifyRoleCert bool
+	enableRoleCert bool
 }
 
 type mode uint8
 
 const (
-	token mode = iota
-	jwt
+	roleToken mode = iota
+	roleJWT
+	accessToken
 )
 
 // New return Authorizerd
@@ -168,14 +171,27 @@ func New(opts ...Option) (Authorizerd, error) {
 		jwkProvider = prov.jwkd.GetProvider()
 	}
 
-	if prov.roleProcessor, err = role.New(
-		role.WithPubkeyProvider(pubkeyProvider),
-		role.WithJWKProvider(jwkProvider),
-		role.WithEnableMTLSCertificateBoundAccessToken(prov.atpParams[0].verifyCertThumbprint),
-		role.WithClientCertificateGoBackSeconds(prov.atpParams[0].certBackdateDur),
-		role.WithClientCertificateOffsetSeconds(prov.atpParams[0].certOffsetDur),
-	); err != nil {
-		return nil, errors.Wrap(err, "error create role processor")
+	if prov.enableRoleToken {
+		if prov.roleProcessor, err = role.New(
+			role.WithPubkeyProvider(pubkeyProvider),
+			role.WithJWKProvider(jwkProvider),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create role processor")
+		}
+
+	}
+
+	if prov.accessTokenParam.enable {
+		if prov.accessProcessor, err = access.New(
+			access.WithJWKProvider(jwkProvider),
+			access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
+			access.WithEnableVerifyClientID(prov.accessTokenParam.verifyClientID),
+			access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
+			access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
+			access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),
+		); err != nil {
+			return nil, errors.Wrap(err, "error create access processor")
+		}
 	}
 
 	// create verifiers
@@ -190,7 +206,7 @@ func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
 	verifiers := make([]verifier, 0, 3) // rolecert, acess token, roletoken
 
-	if a.verifyRoleCert {
+	if a.enableRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
 			if r.TLS != nil {
 				return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
@@ -201,22 +217,22 @@ func (a *authorizer) initVerifiers() error {
 		verifiers = append(verifiers, rcVerifier)
 	}
 
-	if len(a.atpParams) > 0 {
+	if a.accessTokenParam.enable {
 		atVerifier := func(r *http.Request, act, res string) error {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {
 				return err
 			}
-			if r.TLS != nil {
+			if r.TLS != nil && len(r.TLS.PeerCertificates) != 0 {
 				return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 			}
 			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
 		}
-		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.atpParams)
+		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.accessTokenParam)
 		verifiers = append(verifiers, atVerifier)
 	}
 
-	if a.verifyRoleToken {
+	if a.enableRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
 			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), act, res)
 		}
@@ -316,14 +332,20 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, token, tok, act, res)
+	return a.verify(ctx, roleToken, tok, act, res, nil)
 }
 
+// VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, jwt, tok, act, res)
+	return a.verify(ctx, roleJWT, tok, act, res, nil)
 }
 
-func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) error {
+// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
+func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
+	return a.verify(ctx, accessToken, tok, act, res, cert)
+}
+
+func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) error {
 	if act == "" || res == "" {
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
 	}
@@ -341,7 +363,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 	)
 
 	switch m {
-	case token:
+	case roleToken:
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
@@ -349,7 +371,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		}
 		domain = rt.Domain
 		roles = rt.Roles
-	case jwt:
+	case roleJWT:
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
@@ -357,6 +379,14 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string) e
 		}
 		domain = rc.Domain
 		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
+	case accessToken:
+		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
+		if err != nil {
+			glg.Debugf("error parse and validate access token, err: %v", err)
+			return errors.Wrap(err, "error verify access token")
+		}
+		domain = ac.Audience
+		roles = ac.Scope
 	}
 
 	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
@@ -380,37 +410,6 @@ func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	}
 
 	return ErrInvalidCredentials
-}
-
-// VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
-func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
-	if act == "" || res == "" {
-		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
-	}
-	// check if exists in verification success cache
-	_, ok := a.cache.Get(tok + act + res)
-	if ok {
-		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-		return nil
-	}
-
-	// TODO: execute per roleProcessors
-	// TODO: switch to change verify function by roleProcessor.type
-	ac, err := a.roleProcessor.ParseAndValidateZTSAccessToken(tok, cert)
-	if err != nil {
-		glg.Debugf("error parse and validate access token, err: %v", err)
-		return errors.Wrap(err, "error verify access token")
-	}
-	domain := ac.Audience
-	roles := ac.Scope
-
-	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
-		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "token unauthorized")
-	}
-	glg.Debugf("set access token result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
-	return nil
 }
 
 func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {

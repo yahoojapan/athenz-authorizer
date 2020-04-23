@@ -14,22 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package role
-
-import (
-	"github.com/yahoojapan/athenz-authorizer/v2/access"
-)
-
-// RoleJWTClaim represents role jwt claim data.
-type RoleJWTClaim struct {
-	Domain   string `json:"d"`
-	Email    string `json:"email"`
-	KeyID    string `json:"k"`
-	MFA      string `json:"mfa"`
-	Role     string `json:"r"`
-	Salt     string `json:"a"`
-	UserID   string `json:"u"`
-	UserName string `json:"n"`
-	Version  string `json:"v"`
-	access.BaseClaim
-}
+// Package access represents the processing logic of access token.
+package access

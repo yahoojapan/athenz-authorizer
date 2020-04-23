@@ -35,16 +35,19 @@ var (
 		WithPolicyErrRetryInterval("1m"),
 		WithPubkeyErrRetryInterval("1m"),
 		WithJwkErrRetryInterval("1m"),
-		WithATProcessorParams(NewATProcessorParam(true, "1h", "1h")),
-		WithRTVerifyRoleToken(true),
-		WithRCVerifyRoleCert(true),
+		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
+		WithEnableRoleToken(),
+		WithEnableRoleCert(),
 	}
 )
 
-type ATProcessorParam struct {
+type AccessTokenParam struct {
+	enable               bool
 	verifyCertThumbprint bool
 	certBackdateDur      string
 	certOffsetDur        string
+	verifyClientID       bool
+	authorizedClientIDs  map[string][]string
 }
 
 // Option represents a functional option
@@ -247,22 +250,28 @@ func WithJwkErrRetryInterval(i string) Option {
 	access token parameters
 */
 
-// NewATProcessorParam returns a new access token processor parameters
-func NewATProcessorParam(verifyCertThumbprint bool, certBackdateDur, certOffsetDur string) ATProcessorParam {
-	return ATProcessorParam{
+// NewAccessTokenParam returns a new access token parameter
+func NewAccessTokenParam(enable bool, verifyCertThumbprint bool, certBackdateDur, certOffsetDur string, verifyClientID bool, authorizedClientIDs map[string][]string) AccessTokenParam {
+	return AccessTokenParam{
+		// Flag to enable verify of access token
+		enable: enable,
 		// The client certificate Thumbprint hash and access token cnf checks are enabled. (Certificate-Bound Access Tokens)
 		verifyCertThumbprint: verifyCertThumbprint,
 		// If the time of issuance of the certificate is intentionally earlier, specify that time.
 		certBackdateDur: certBackdateDur,
 		// If the certificate and token have not been bound, specify the time to determine that the certificate has been updated.
 		certOffsetDur: certOffsetDur,
+		// The client certificate common name and client_id verification.
+		verifyClientID: verifyClientID,
+		// The list of authorized client_id and common name.
+		authorizedClientIDs: authorizedClientIDs,
 	}
 }
 
-// WithATProcessorParams returns a functional option that new access token processor parameters slice
-func WithATProcessorParams(atpParams ...ATProcessorParam) Option {
+// WithAccessTokenParam returns a functional option that new access token parameter
+func WithAccessTokenParam(accessTokenParam AccessTokenParam) Option {
 	return func(authz *authorizer) error {
-		authz.atpParams = atpParams
+		authz.accessTokenParam = accessTokenParam
 		return nil
 	}
 }
@@ -271,10 +280,18 @@ func WithATProcessorParams(atpParams ...ATProcessorParam) Option {
 	role token parameters
 */
 
-// WithRTVerifyRoleToken returns a VerifyRoleToken functional option
-func WithRTVerifyRoleToken(b bool) Option {
+// WithEnableRoleToken returns a enable roletoken functional option
+func WithEnableRoleToken() Option {
 	return func(authz *authorizer) error {
-		authz.verifyRoleToken = b
+		authz.enableRoleToken = true
+		return nil
+	}
+}
+
+// WithDisableRoleToken returns a disable roletoken functional option
+func WithDisableRoleToken() Option {
+	return func(authz *authorizer) error {
+		authz.enableRoleToken = false
 		return nil
 	}
 }
@@ -291,10 +308,18 @@ func WithRTHeader(h string) Option {
 	role certificate parameters
 */
 
-// WithRCVerifyRoleCert returns a VerifyRoleCert functional option
-func WithRCVerifyRoleCert(b bool) Option {
+// WithEnableRoleCert returns a enable rolecert functional option
+func WithEnableRoleCert() Option {
 	return func(authz *authorizer) error {
-		authz.verifyRoleCert = b
+		authz.enableRoleCert = true
+		return nil
+	}
+}
+
+// WithDisableRoleCert returns a disable rolecert functional option
+func WithDisableRoleCert() Option {
+	return func(authz *authorizer) error {
+		authz.enableRoleCert = false
 		return nil
 	}
 }
