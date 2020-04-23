@@ -29,11 +29,11 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/yahoojapan/athenz-authorizer/v2/access"
-	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
-	"github.com/yahoojapan/athenz-authorizer/v2/policy"
-	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
-	"github.com/yahoojapan/athenz-authorizer/v2/role"
+	"github.com/yahoojapan/athenz-authorizer/v3/access"
+	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v3/policy"
+	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v3/role"
 )
 
 // Authorizerd represents a daemon for user to verify the role token
