@@ -23,7 +23,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
 )
 
 const (

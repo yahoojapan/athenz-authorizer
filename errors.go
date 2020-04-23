@@ -19,8 +19,8 @@ package authorizerd
 import (
 	"errors"
 
-	"github.com/yahoojapan/athenz-authorizer/v2/policy"
-	"github.com/yahoojapan/athenz-authorizer/v2/role"
+	"github.com/yahoojapan/athenz-authorizer/v3/policy"
+	"github.com/yahoojapan/athenz-authorizer/v3/role"
 )
 
 var (

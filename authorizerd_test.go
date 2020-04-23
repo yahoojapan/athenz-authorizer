@@ -29,11 +29,11 @@ import (
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v2/access"
-	"github.com/yahoojapan/athenz-authorizer/v2/jwk"
-	"github.com/yahoojapan/athenz-authorizer/v2/policy"
-	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
-	"github.com/yahoojapan/athenz-authorizer/v2/role"
+	"github.com/yahoojapan/athenz-authorizer/v3/access"
+	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v3/policy"
+	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v3/role"
 )
 
 func TestNew(t *testing.T) {

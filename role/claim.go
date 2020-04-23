@@ -17,7 +17,7 @@ limitations under the License.
 package role
 
 import (
-	"github.com/yahoojapan/athenz-authorizer/v2/access"
+	"github.com/yahoojapan/athenz-authorizer/v3/access"
 )
 
 // RoleJWTClaim represents role jwt claim data.

@@ -33,7 +33,7 @@ import (
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-authorizer/v2/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 )
 
 func TestNew(t *testing.T) {
