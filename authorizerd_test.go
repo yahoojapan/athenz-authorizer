@@ -1438,7 +1438,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			now := fastime.Now()
 			c := gache.New()
 			apm := &AccessProcessorMock{
-				act: &access.OAuth2AccessTokenClaim{
+				atc: &access.OAuth2AccessTokenClaim{
 					Scope: []string{"role"},
 					BaseClaim: access.BaseClaim{
 						StandardClaims: jwtgo.StandardClaims{
@@ -1489,7 +1489,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1532,7 +1532,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1557,7 +1557,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			c := gache.New()
 			c.Set("dummyTokdummyActdummyRes", "dummy")
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1604,7 +1604,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			apm := &AccessProcessorMock{
-				act: &access.OAuth2AccessTokenClaim{},
+				atc: &access.OAuth2AccessTokenClaim{},
 			}
 			pdm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
@@ -1626,6 +1626,31 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 					cacheExp:        time.Minute,
 				},
 				wantErr: "token unauthorized: deny",
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
+			apm := &AccessProcessorMock{
+				atc:     &access.OAuth2AccessTokenClaim{},
+				wantErr: errors.New("some error"),
+			}
+			pdm := &PolicydMock{}
+			return test{
+				name: "test use cache, validate fail, so unauthorize",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				fields: fields{
+					policyd:         pdm,
+					accessProcessor: apm,
+					cache:           c,
+					cacheExp:        time.Minute,
+				},
+				wantErr: "error verify access token: some error",
 			}
 		}(),
 	}

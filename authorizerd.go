@@ -351,11 +351,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 	}
 
 	// check if exists in verification success cache
-	_, ok := a.cache.Get(tok + act + res)
-	if ok {
-		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-		return nil
-	}
+	_, isCacheHit := a.cache.Get(tok + act + res)
 
 	var (
 		domain string
@@ -364,6 +360,10 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 
 	switch m {
 	case roleToken:
+		if isCacheHit {
+			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+			return nil
+		}
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
@@ -372,6 +372,10 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		domain = rt.Domain
 		roles = rt.Roles
 	case roleJWT:
+		if isCacheHit {
+			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+			return nil
+		}
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
@@ -385,6 +389,12 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 			glg.Debugf("error parse and validate access token, err: %v", err)
 			return errors.Wrap(err, "error verify access token")
 		}
+		// access token has additional validation.
+		// so even if the cache is hit, it will be judged after the validation is successful.
+		if isCacheHit {
+			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+			return nil
+		}
 		domain = ac.Audience
 		roles = ac.Scope
 	}
@@ -393,7 +403,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		glg.Debugf("error check, err: %v", err)
 		return errors.Wrap(err, "token unauthorized")
 	}
-	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
+	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
 	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
 	return nil
 }
