@@ -18,7 +18,9 @@ package authorizerd
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -350,8 +352,21 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
 	}
 
+	var certThumbprint string
 	// check if exists in verification success cache
-	_, isCacheHit := a.cache.Get(tok + act + res)
+	if cert != nil {
+		ct := sha256.Sum256(cert.Raw)
+		certThumbprint = hex.EncodeToString(ct[:])
+		if _, ok := a.cache.Get(tok + act + res + certThumbprint); ok {
+			glg.Debugf("use cached result. tok: %s, act: %s, res: %s, cert: %s", tok, act, res, certThumbprint)
+			return nil
+		}
+	} else {
+		if _, ok := a.cache.Get(tok + act + res); ok {
+			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+			return nil
+		}
+	}
 
 	var (
 		domain string
@@ -360,10 +375,6 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 
 	switch m {
 	case roleToken:
-		if isCacheHit {
-			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-			return nil
-		}
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
@@ -372,10 +383,6 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		domain = rt.Domain
 		roles = rt.Roles
 	case roleJWT:
-		if isCacheHit {
-			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-			return nil
-		}
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
@@ -389,12 +396,6 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 			glg.Debugf("error parse and validate access token, err: %v", err)
 			return errors.Wrap(err, "error verify access token")
 		}
-		// access token has additional validation.
-		// so even if the cache is hit, it will be judged after the validation is successful.
-		if isCacheHit {
-			glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-			return nil
-		}
 		domain = ac.Audience
 		roles = ac.Scope
 	}
@@ -403,8 +404,14 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		glg.Debugf("error check, err: %v", err)
 		return errors.Wrap(err, "token unauthorized")
 	}
-	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
+
+	if cert != nil {
+		glg.Debugf("set token result. tok: %s, act: %s, res: %s, cert: %s", tok, act, res, certThumbprint)
+		a.cache.SetWithExpire(tok+act+res+certThumbprint, struct{}{}, a.cacheExp)
+	} else {
+		glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
+		a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
+	}
 	return nil
 }
 
