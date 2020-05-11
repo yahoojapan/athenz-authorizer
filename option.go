@@ -37,6 +37,7 @@ var (
 		WithJwkErrRetryInterval("1m"),
 		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithEnableRoleToken(),
+		WithRTHeader("Athenz-Role-Auth"),
 		WithEnableRoleCert(),
 	}
 )
