@@ -18,12 +18,15 @@ package jwk
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"fmt"
 	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/kpango/glg"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 )
@@ -134,11 +137,31 @@ func (j *jwkd) getKey(keyID string) interface{} {
 		return nil
 	}
 
-	for _, keys := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
-		raw, err := keys.Materialize()
+	// TODO: increase coverage
+	for _, key := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
+		var raw interface{}
+		var err error
+
+		switch key.KeyType() {
+		case jwa.EC:
+			var pk ecdsa.PrivateKey
+			err = key.Raw(&pk)
+			raw = &pk
+		case jwa.RSA:
+			var pk rsa.PrivateKey
+			err = key.Raw(&pk)
+			raw = &pk
+		case jwa.OctetSeq:
+			var pk []byte
+			err = key.Raw(&pk)
+			raw = &pk
+		case jwa.InvalidKeyType:
+			err = errors.New("jwa.InvalidKeyType")
+		}
 		if err == nil {
 			return raw
 		}
+		glg.Warnf("jwkd.getKey: %s", err.Error())
 	}
 	return nil
 }

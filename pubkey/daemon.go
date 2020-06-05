@@ -257,7 +257,7 @@ func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	// if server return NotModified, return policy from cache
 	if r.StatusCode == http.StatusNotModified {
 		cache := t.(*confCache)
-		glg.Debugf("Server return not modified, etag: ", cache.eTag)
+		glg.Debugf("Server return not modified, etag: %s", cache.eTag)
 		return cache.sac, false, nil
 	}
 
