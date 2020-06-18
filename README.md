@@ -6,7 +6,7 @@
 
 Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authentication and authorization check of user request.
 
-![Overview](./doc/policy_updater_overview.png)
+![Overview](./docs/assets/policy_updater_overview.png)
 
 ## Usage
 
