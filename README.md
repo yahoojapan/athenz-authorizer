@@ -1,12 +1,36 @@
 # Athenz authorizer
 
-[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![release](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://github.com/yahoojapan/athenz-authorizer/releases/latest) [![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer) [![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer) [![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer) [![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&utm_medium=referral&utm_content=yahoojapan/athenz-authorizer&utm_campaign=Badge_Grade) [![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
+[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-authorizer/releases/latest)
+[![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer)
+[![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer)
+[![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&utm_medium=referral&utm_content=yahoojapan/athenz-authorizer&utm_campaign=Badge_Grade)
+[![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](code_of_conduct.md)
+
+<!-- TOC insertAnchor:false -->
+
+- [Athenz authorizer](#athenz-authorizer)
+    - [What is Athenz authorizer](#what-is-athenz-authorizer)
+    - [Usage](#usage)
+    - [How it works](#how-it-works)
+        - [Athenz public key daemon](#athenz-public-key-daemon)
+        - [Athenz policy daemon](#athenz-policy-daemon)
+    - [Configuration](#configuration)
+    - [License](#license)
+    - [Contributor License Agreement](#contributor-license-agreement)
+    - [About releases](#about-releases)
+    - [Authors](#authors)
+
+<!-- /TOC -->
 
 ## What is Athenz authorizer
 
 Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authentication and authorization check of user request.
 
-![Overview](./doc/policy_updater_overview.png)
+![Overview](./docs/assets/policy_updater_overview.png)
 
 ## Usage
 
@@ -43,11 +67,11 @@ if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
 
 To do the authentication and authorization check, the user needs to specify which [domain data](https://github.com/yahoo/athenz/blob/master/docs/data_model.md#data-model) to be cache. The authorizer will periodically refresh the policies and Athenz public key data to [verify and decode](https://github.com/yahoo/athenz/blob/master/docs/zpu_policy_file.md#zts-signature-validation) the domain data. The verified domain data will cache into the memory, and use for authentication and authorization check.
 
-The authorizer contains two sub-module, Athenz pubkey daemon (pubkeyd) and Athenz policy daemon (policyd).
+The authorizer contains two sub-module, Athenz public key daemon (pubkeyd) and Athenz policy daemon (policyd).
 
-### Athenz pubkey daemon
+### Athenz public key daemon
 
-Athenz pubkey daemon (pubkeyd) is responsible for periodically update the Athenz public key data from Athenz server to verify the policy data received from Athenz policy daemon and verify the role token.
+Athenz public key daemon (pubkeyd) is responsible for periodically update the Athenz public key data from Athenz server to verify the policy data received from Athenz policy daemon and verify the role token.
 
 ### Athenz policy daemon
 
@@ -95,7 +119,12 @@ limitations under the License.
 
 This project requires contributors to agree to a [Contributor License Agreement (CLA)](https://gist.github.com/ydnjp/3095832f100d5c3d2592).
 
-Note that only for contributions to the garm repository on the [GitHub](https://github.com/yahoojapan/garm), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
+Note that only for contributions to the `athenz-authorizer` repository on the [GitHub](https://github.com/yahoojapan/athenz-authorizer), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
+
+## About releases
+
+- Releases
+    - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-authorizer/releases/latest)
 
 ## Authors
 

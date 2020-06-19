@@ -17,6 +17,8 @@ package jwk
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -28,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 )
@@ -338,9 +341,9 @@ func Test_jwkd_Update(t *testing.T) {
 						return errors.New("keys is empty")
 					}
 
-					s := val.(*jwk.Set)
-					if _, ok := s.Keys[0].(*jwk.RSAPublicKey); !ok {
-						return errors.Errorf("Unexpected type: %v", reflect.TypeOf(s.Keys[0]))
+					got := val.(*jwk.Set).Keys[0].KeyType()
+					if got != jwa.RSA {
+						return errors.Errorf("Unexpected key type: %v", got)
 					}
 					return nil
 				},
@@ -456,6 +459,7 @@ func Test_jwkd_getKey(t *testing.T) {
 	}
 	genKey := func() *rsa.PrivateKey {
 		k, _ := rsa.GenerateKey(rand.Reader, 2048)
+		k.Precomputed.CRTValues = nil
 		return k
 	}
 	newKey := func(k interface{}, keyID string) jwk.Key {
@@ -561,6 +565,80 @@ func Test_jwkd_getKey(t *testing.T) {
 				want: rsaKey2,
 			}
 		}(),
+		func() test {
+			ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			if err != nil {
+				t.Errorf("ecdsa.GenerateKey: %s", err.Error())
+			}
+			k := newKey(ecKey, "ecKeyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get EC private key success",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "ecKeyID",
+				},
+				want: ecKey,
+			}
+		}(),
+
+		func() test {
+			ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			ecPubKey := ecKey.Public()
+			if err != nil {
+				t.Errorf("ecdsa.GenerateKey: %s", err.Error())
+			}
+			k := newKey(ecPubKey, "ecPubKeyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get EC public key success",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "ecPubKeyID",
+				},
+				want: ecPubKey,
+			}
+		}(),
+		func() test {
+			rsaPubKey := genKey().Public()
+			k := newKey(rsaPubKey, "rsaPubKeyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := atomic.Value{}
+			key.Store(set)
+
+			return test{
+				name: "get RSA public key success",
+				fields: fields{
+					keys: key,
+				},
+				args: args{
+					keyID: "rsaPubKeyID",
+				},
+				want: rsaPubKey,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -572,7 +650,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				keys:             tt.fields.keys,
 			}
 			if got := j.getKey(tt.args.keyID); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("jwkd.getKey() = %v, want %v", got, tt.want)
+				t.Errorf("jwkd.getKey() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

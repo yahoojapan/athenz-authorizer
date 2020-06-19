@@ -134,9 +134,11 @@ func (j *jwkd) getKey(keyID string) interface{} {
 		return nil
 	}
 
-	for _, keys := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
-		raw, err := keys.Materialize()
-		if err == nil {
+	for _, key := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
+		var raw interface{}
+		if err := key.Raw(&raw); err != nil {
+			glg.Warnf("jwkd.getKey: %s", err.Error())
+		} else {
 			return raw
 		}
 	}
