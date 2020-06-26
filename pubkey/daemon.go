@@ -93,7 +93,7 @@ func New(opts ...Option) (Daemon, error) {
 
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(c); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error create pubkeyd")
 		}
 	}
 

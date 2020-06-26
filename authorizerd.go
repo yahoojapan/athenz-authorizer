@@ -148,7 +148,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			pubkey.WithRetryDelay(prov.pubkeyRetryDelay),
 			pubkey.WithHTTPClient(prov.client),
 		); err != nil {
-			return nil, errors.Wrap(err, "error create pubkeyd")
+			return nil, err
 		}
 	}
 
@@ -163,7 +163,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithHTTPClient(prov.client),
 			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
 		); err != nil {
-			return nil, errors.Wrap(err, "error create policyd")
+			return nil, err
 		}
 	}
 
@@ -174,7 +174,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			jwk.WithRetryDelay(prov.jwkRetryDelay),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
-			return nil, errors.Wrap(err, "error create jwkd")
+			return nil, err
 		}
 	}
 
@@ -183,7 +183,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			role.WithPubkeyProvider(prov.pubkeyd.GetProvider()),
 			role.WithJWKProvider(prov.jwkd.GetProvider()),
 		); err != nil {
-			return nil, errors.Wrap(err, "error create role processor")
+			return nil, err
 		}
 	}
 
@@ -196,7 +196,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			access.WithClientCertificateGoBackSeconds(prov.accessTokenParam.certBackdateDur),
 			access.WithClientCertificateOffsetSeconds(prov.accessTokenParam.certOffsetDur),
 		); err != nil {
-			return nil, errors.Wrap(err, "error create access processor")
+			return nil, err
 		}
 	}
 

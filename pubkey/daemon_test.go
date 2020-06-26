@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 			name: "new athenz pubkeyd success with options",
 			args: args{
 				opts: []Option{
-					WithSysAuthDomain("dummyd"),
+					WithSysAuthDomain("dummySysDomain"),
 					WithAthenzURL("dummyURL"),
 				},
 			},
@@ -69,17 +69,17 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				if got.(*pubkeyd).sysAuthDomain != "dummyd" || got.(*pubkeyd).athenzURL != "dummyURL" {
+				if got.(*pubkeyd).sysAuthDomain != "dummySysDomain" || got.(*pubkeyd).athenzURL != "dummyURL" {
 					return errors.New("cannot set optional params")
 				}
 				return nil
 			},
 		},
 		{
-			name: "new athenz pubkeyd success with invalid options",
+			name: "new athenz pubkeyd error with invalid options",
 			args: args{
 				opts: []Option{
-					WithSysAuthDomain("dummyd"),
+					WithSysAuthDomain("dummySysDomain"),
 					WithAthenzURL("dummyURL"),
 					WithETagExpiry("invalid"),
 				},
@@ -88,7 +88,7 @@ func TestNew(t *testing.T) {
 				if got != nil {
 					return errors.New("get invalid Daemon")
 				}
-				if err.Error() != "invalid etag expiry time: time: invalid duration invalid" {
+				if err.Error() != "error create pubkeyd: invalid etag expiry time: time: invalid duration invalid" {
 					return errors.Wrap(err, "unexpected error")
 				}
 				return nil

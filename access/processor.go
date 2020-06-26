@@ -51,7 +51,7 @@ func New(opts ...Option) (Processor, error) {
 	a := new(atp)
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(a); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error create access token processor")
 		}
 	}
 	return a, nil

@@ -17,6 +17,7 @@ package authorizerd
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -34,6 +35,7 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v3/policy"
 	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/v3/role"
+	"github.com/yahoojapan/athenz-authorizer/v3/service"
 )
 
 func TestNew(t *testing.T) {
@@ -46,7 +48,7 @@ func TestNew(t *testing.T) {
 		checkFunc func(Authorizerd, error) error
 	}{
 		{
-			name: "test new success",
+			name: "test New success",
 			args: args{
 				[]Option{},
 			},
@@ -67,7 +69,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "test new success with options",
+			name: "test New success with options",
 			args: args{
 				[]Option{WithAthenzURL("www.dummy.com")},
 			},
@@ -82,14 +84,98 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "test New returns error",
+			name: "test New error, options",
 			args: args{
-				[]Option{WithPubkeyETagExpiry("dummy")},
+				[]Option{WithAthenzTimeout("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				want := "error create pubkeyd: invalid etag expiry time: time: invalid duration dummy"
-				if err.Error() != want {
-					return errors.Errorf("Unexpected error: %s, expected: %s", err, want)
+				wantErr := "error creating authorizerd: invalid Athenz timeout: time: invalid duration dummy"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, http client",
+			args: args{
+				[]Option{WithAthenzCAPath("./test/data/non_existing_CA.pem")},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create HTTP client: stat ./test/data/non_existing_CA.pem: no such file or directory"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, public key",
+			args: args{
+				[]Option{WithPubkeyRefreshPeriod("dummy")},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create pubkeyd: invalid refresh period: time: invalid duration dummy"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, policy",
+			args: args{
+				[]Option{WithPolicyRefreshPeriod("dummy")},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create policyd: invalid refresh period: time: invalid duration dummy"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, jwk",
+			args: args{
+				[]Option{WithJwkRefreshPeriod("dummy")},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create jwkd: invalid refresh period: time: invalid duration dummy"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, access token",
+			args: args{
+				[]Option{
+					WithAccessTokenParam(NewAccessTokenParam(true, false, "dummy", "dummy", false, nil)),
+				},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create access token processor: invalid refresh period: time: invalid duration dummy"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New error, verifier",
+			args: args{
+				[]Option{
+					WithDisableRoleToken(),
+					WithDisableRoleCert(),
+					WithAccessTokenParam(NewAccessTokenParam(false, false, "", "", false, nil)),
+				},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				wantErr := "error create verifiers: error no verifiers"
+				if err.Error() != wantErr {
+					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
 				return nil
 			},
@@ -97,9 +183,80 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, goter := New(tt.args.opts...)
-			if err := tt.checkFunc(got, goter); err != nil {
+			got, gotErr := New(tt.args.opts...)
+			if err := tt.checkFunc(got, gotErr); err != nil {
 				t.Errorf("New() error = %v", err)
+			}
+		})
+	}
+}
+
+func Test_createHTTPClient(t *testing.T) {
+	type args struct {
+		timeout time.Duration
+		caPath  string
+	}
+	tests := []struct {
+		name       string
+		args       args
+		want       *http.Client
+		wantErrStr string
+	}{
+		{
+			name: "HTTP client with CA",
+			args: args{
+				timeout: 30 * time.Second,
+				caPath:  "./test/data/dummy_CA.pem",
+			},
+			want: &http.Client{
+				Timeout: 30 * time.Second,
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs: func() *x509.CertPool {
+							cp, err := service.NewX509CertPool("./test/data/dummy_CA.pem")
+							if err == nil {
+								return cp
+							}
+							return nil
+						}(),
+					},
+				},
+			},
+		},
+		{
+			name: "HTTP client without CA",
+			args: args{
+				timeout: time.Second,
+				caPath:  "",
+			},
+			want: &http.Client{
+				Timeout: time.Second,
+			},
+		},
+		{
+			name: "invalid CA path",
+			args: args{
+				caPath: "./test/data/non_existing_CA.pem",
+			},
+			wantErrStr: "stat ./test/data/non_existing_CA.pem: no such file or directory",
+		},
+		{
+			name: "invalid CA file",
+			args: args{
+				caPath: "./test/data/invalid_dummy_CA.pem",
+			},
+			wantErrStr: "Certification Failed",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := createHTTPClient(tt.args.timeout, tt.args.caPath)
+			if (err == nil && tt.wantErrStr != "") || (err != nil && err.Error() != tt.wantErrStr) {
+				t.Errorf("createHTTPClient() error = %v, wantErr %v", err, tt.wantErrStr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("createHTTPClient() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -140,7 +297,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		checkFunc func(a authorizer) error
 	}{
 		{
-			name: "initVerifier sucess, no role flags",
+			name: "initVerifier success, no role flags",
 			fields: fields{
 				accessTokenParam: AccessTokenParam{enable: true, verifyCertThumbprint: true},
 				enableRoleCert:   false,
@@ -155,7 +312,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 			},
 		},
 		{
-			name: "initVerifier sucess, no access token flags",
+			name: "initVerifier success, no access token flags",
 			fields: fields{
 				enableRoleCert: true,
 			},
@@ -168,7 +325,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 			},
 		},
 		{
-			name: "initVerifier sucess, no access token flags",
+			name: "initVerifier success, no access token flags",
 			fields: fields{
 				enableRoleCert:  true,
 				enableRoleToken: true,
@@ -558,8 +715,8 @@ func Test_authorizer_Start(t *testing.T) {
 				cacheExp: tt.fields.cacheExp,
 			}
 			ch := prov.Start(tt.args.ctx)
-			goter := <-ch
-			if err := tt.checkFunc(prov, goter); err != nil {
+			gotErr := <-ch
+			if err := tt.checkFunc(prov, gotErr); err != nil {
 				t.Errorf("Start() error = %v", err)
 			}
 			tt.afterFunc()

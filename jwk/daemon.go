@@ -55,7 +55,7 @@ func New(opts ...Option) (Daemon, error) {
 	for _, opt := range append(defaultOptions, opts...) {
 		err := opt(j)
 		if err != nil {
-			return nil, errors.Wrap(err, "error create policyd")
+			return nil, errors.Wrap(err, "error create jwkd")
 		}
 	}
 

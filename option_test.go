@@ -328,6 +328,109 @@ func TestWithAthenzURL(t *testing.T) {
 	}
 }
 
+func TestWithAthenzTimeout(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				"30s",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.athenzTimeout != 30*time.Second {
+					return fmt.Errorf("Error")
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "invalid format",
+			args: args{
+				"dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err == nil {
+					return fmt.Errorf("expected error, but not return")
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "empty value",
+			args: args{
+				"",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(authz, &authorizer{}) {
+					return fmt.Errorf("expected no changes, but got %v", authz)
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithAthenzTimeout(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithAthenzTimeout() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithAthenzCAPath(t *testing.T) {
+	type args struct {
+		p string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				p: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.athenzCAPath != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithAthenzCAPath(tt.args.p)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithAthenzCAPath() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestWithAthenzDomains(t *testing.T) {
 	type args struct {
 		t []string
@@ -435,6 +538,7 @@ func TestWithPubkeyETagExpiry(t *testing.T) {
 		})
 	}
 }
+
 func TestWithPubkeyETagPurgePeriod(t *testing.T) {
 	type args struct {
 		t string
@@ -602,6 +706,43 @@ func TestWithCacheExp(t *testing.T) {
 		})
 	}
 }
+
+func TestWithRoleCertURIPrefix(t *testing.T) {
+	type args struct {
+		p string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				p: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.roleCertURIPrefix != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRoleCertURIPrefix(tt.args.p)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRoleCertURIPrefix() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestWithTransport(t *testing.T) {
 	type args struct {
 		t *http.Transport

@@ -45,7 +45,7 @@ func New(opts ...Option) (Processor, error) {
 	r := new(rtp)
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(r); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error create role token processor")
 		}
 	}
 	return r, nil

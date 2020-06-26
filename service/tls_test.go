@@ -41,7 +41,7 @@ func TestNewX509CertPool(t *testing.T) {
 		{
 			name: "Missing CA file",
 			args: args{
-				path: "/tmp/non_existing_CA_file.pem",
+				path: "../test/data/non_existing_CA_file.pem",
 			},
 			wantErr: fmt.Errorf("no such file or directory"),
 		},
