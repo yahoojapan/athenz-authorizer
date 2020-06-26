@@ -18,8 +18,10 @@ package authorizerd
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -34,6 +36,7 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v3/policy"
 	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/v3/role"
+	"github.com/yahoojapan/athenz-authorizer/v3/service"
 )
 
 // Authorizerd represents a daemon for user to verify the role token
@@ -59,9 +62,11 @@ type authorizer struct {
 	accessProcessor access.Processor
 	verifiers       []verifier
 
-	// common parameters
-	athenzURL string
-	client    *http.Client
+	// athenz connection parameters
+	athenzURL     string
+	athenzTimeout time.Duration
+	athenzCAPath  string
+	client        *http.Client
 
 	// successful result cache
 	cache    gache.Gache
@@ -71,25 +76,25 @@ type authorizer struct {
 	roleCertURIPrefix string
 
 	// pubkeyd parameters
-	disablePubkeyd         bool
-	pubkeyRefreshDuration  string
-	pubkeyErrRetryInterval string
-	pubkeySysAuthDomain    string
-	pubkeyEtagExpTime      string
-	pubkeyEtagFlushDur     string
+	disablePubkeyd        bool
+	pubkeyRefreshPeriod   string
+	pubkeyRetryDelay      string
+	pubkeySysAuthDomain   string
+	pubkeyETagExpiry      string
+	pubkeyETagPurgePeriod string
 
 	// policyd parameters
-	disablePolicyd         bool
-	policyExpireMargin     string
-	athenzDomains          []string
-	policyRefreshDuration  string
-	policyErrRetryInterval string
-	policyRetryAttempts    int
+	disablePolicyd      bool
+	policyExpiryMargin  string
+	athenzDomains       []string
+	policyRefreshPeriod string
+	policyRetryDelay    string
+	policyRetryAttempts int
 
 	// jwkd parameters
-	disableJwkd         bool
-	jwkRefreshDuration  string
-	jwkErrRetryInterval string
+	disableJwkd      bool
+	jwkRefreshPeriod string
+	jwkRetryDelay    string
 
 	// accessTokenProcessor parameters
 	accessTokenParam AccessTokenParam
@@ -110,17 +115,13 @@ const (
 	accessToken
 )
 
-// New return Authorizerd
-// This function will initialize the Authorizerd object with the options
+// New creates the Authorizerd object with the options
 func New(opts ...Option) (Authorizerd, error) {
 	var (
 		prov = &authorizer{
 			cache: gache.New(),
 		}
 		err error
-
-		pubkeyProvider pubkey.Provider
-		jwkProvider    jwk.Provider
 	)
 
 	for _, opt := range append(defaultOptions, opts...) {
@@ -129,32 +130,38 @@ func New(opts ...Option) (Authorizerd, error) {
 		}
 	}
 
+	// HTTP client to Athenz server
+	if prov.client, err = createHTTPClient(
+		prov.athenzTimeout,
+		prov.athenzCAPath,
+	); err != nil {
+		return nil, errors.Wrap(err, "error create HTTP client")
+	}
+
 	if !prov.disablePubkeyd {
 		if prov.pubkeyd, err = pubkey.New(
 			pubkey.WithAthenzURL(prov.athenzURL),
 			pubkey.WithSysAuthDomain(prov.pubkeySysAuthDomain),
-			pubkey.WithEtagExpTime(prov.pubkeyEtagExpTime),
-			pubkey.WithEtagFlushDuration(prov.pubkeyEtagFlushDur),
-			pubkey.WithRefreshDuration(prov.pubkeyRefreshDuration),
-			pubkey.WithErrRetryInterval(prov.pubkeyErrRetryInterval),
+			pubkey.WithETagExpiry(prov.pubkeyETagExpiry),
+			pubkey.WithETagPurgePeriod(prov.pubkeyETagPurgePeriod),
+			pubkey.WithRefreshPeriod(prov.pubkeyRefreshPeriod),
+			pubkey.WithRetryDelay(prov.pubkeyRetryDelay),
 			pubkey.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create pubkeyd")
 		}
-
-		pubkeyProvider = prov.pubkeyd.GetProvider()
 	}
 
 	if !prov.disablePolicyd {
 		if prov.policyd, err = policy.New(
-			policy.WithExpireMargin(prov.policyExpireMargin),
+			policy.WithExpiryMargin(prov.policyExpiryMargin),
 			policy.WithAthenzURL(prov.athenzURL),
 			policy.WithAthenzDomains(prov.athenzDomains...),
-			policy.WithRefreshDuration(prov.policyRefreshDuration),
-			policy.WithErrRetryInterval(prov.policyErrRetryInterval),
+			policy.WithRefreshPeriod(prov.policyRefreshPeriod),
+			policy.WithRetryDelay(prov.policyRetryDelay),
 			policy.WithRetryAttempts(prov.policyRetryAttempts),
 			policy.WithHTTPClient(prov.client),
-			policy.WithPubKeyProvider(pubkeyProvider),
+			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create policyd")
 		}
@@ -163,29 +170,26 @@ func New(opts ...Option) (Authorizerd, error) {
 	if !prov.disableJwkd {
 		if prov.jwkd, err = jwk.New(
 			jwk.WithAthenzURL(prov.athenzURL),
-			jwk.WithRefreshDuration(prov.jwkRefreshDuration),
-			jwk.WithErrRetryInterval(prov.jwkErrRetryInterval),
+			jwk.WithRefreshPeriod(prov.jwkRefreshPeriod),
+			jwk.WithRetryDelay(prov.jwkRetryDelay),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create jwkd")
 		}
-
-		jwkProvider = prov.jwkd.GetProvider()
 	}
 
 	if prov.enableRoleToken {
 		if prov.roleProcessor, err = role.New(
-			role.WithPubkeyProvider(pubkeyProvider),
-			role.WithJWKProvider(jwkProvider),
+			role.WithPubkeyProvider(prov.pubkeyd.GetProvider()),
+			role.WithJWKProvider(prov.jwkd.GetProvider()),
 		); err != nil {
 			return nil, errors.Wrap(err, "error create role processor")
 		}
-
 	}
 
 	if prov.accessTokenParam.enable {
 		if prov.accessProcessor, err = access.New(
-			access.WithJWKProvider(jwkProvider),
+			access.WithJWKProvider(prov.jwkd.GetProvider()),
 			access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
 			access.WithEnableVerifyClientID(prov.accessTokenParam.verifyClientID),
 			access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
@@ -204,9 +208,34 @@ func New(opts ...Option) (Authorizerd, error) {
 	return prov, nil
 }
 
+func createHTTPClient(timeout time.Duration, caPath string) (*http.Client, error) {
+	if len(caPath) == 0 {
+		client := http.DefaultClient
+		client.Timeout = timeout
+		return client, nil
+	}
+
+	_, err := os.Stat(caPath)
+	if err != nil {
+		return nil, err
+	}
+	cp, err := service.NewX509CertPool(caPath)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: cp,
+			},
+		},
+		Timeout: timeout,
+	}, nil
+}
+
 func (a *authorizer) initVerifiers() error {
 	// TODO: check empty credentials to speed up the checking
-	verifiers := make([]verifier, 0, 3) // rolecert, acess token, roletoken
+	verifiers := make([]verifier, 0, 3) // rolecert, access token, roletoken
 
 	if a.enableRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) error {
@@ -400,8 +429,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 	return nil
 }
 
-// Verify returns error of verification.
-// Verifes each verifier and if one of them succeeds, the error will be nil(OR logic).
+// Verify returns error of verification. Returns nil if ANY verifier succeeds (OR logic).
 func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	for _, verifier := range a.verifiers {
 		// OR logic on multiple credentials
@@ -414,6 +442,7 @@ func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	return ErrInvalidCredentials
 }
 
+// VerifyRoleCert verifies the role certificate for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
 	var dr []string
 	drcheck := make(map[string]struct{})
@@ -450,7 +479,7 @@ func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	return errors.Wrap(err, "role certificates unauthorized")
 }
 
+// GetPolicyCache returns the cached policy data
 func (a *authorizer) GetPolicyCache(ctx context.Context) map[string]interface{} {
 	return a.policyd.GetPolicyCache(ctx)
-
 }

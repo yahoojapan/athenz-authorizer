@@ -43,18 +43,18 @@ type Daemon interface {
 }
 
 type policyd struct {
-	expireMargin time.Duration // expire margin force update policy when the policy expire time hit the margin
 
 	// The rolePolicies map has the format of  map[<domain>:role.<role>][]*Assertion
 	// The []*Assertion contains deny policies first, and following the allow policies
 	// When CheckPolicy function called, the []*Assertion is check by order, in current implementation the deny policy is prioritize,
 	// so we need to put the deny policies in lower index.
-	rolePolicies          gache.Gache
-	policyExpiredDuration time.Duration
+	rolePolicies gache.Gache
 
-	refreshDuration  time.Duration
-	errRetryInterval time.Duration
-	retryAttempts    int
+	expiryMargin  time.Duration // force update policy before actual expiry by margin duration
+	refreshPeriod time.Duration
+	purgePeriod   time.Duration
+	retryDelay    time.Duration
+	retryAttempts int
 
 	athenzURL     string
 	athenzDomains []string
@@ -83,6 +83,8 @@ func New(opts ...Option) (Daemon, error) {
 			domain:        domain,
 			expireMargin:  p.expireMargin,
 			retryInterval: p.errRetryInterval,
+			expiryMargin:  p.expiryMargin,
+			retryInterval: p.retryDelay,
 			retryAttempts: p.retryAttempts,
 			athenzURL:     p.athenzURL,
 			spVerifier: func(sp *SignedPolicy) error {
@@ -106,7 +108,7 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		ticker := time.NewTicker(p.refreshDuration)
+		ticker := time.NewTicker(p.refreshPeriod)
 		for {
 			select {
 			case <-ctx.Done():
@@ -118,7 +120,7 @@ func (p *policyd) Start(ctx context.Context) <-chan error {
 				if err := p.Update(ctx); err != nil {
 					ech <- errors.Wrap(err, "error update policy")
 
-					time.Sleep(p.errRetryInterval)
+					time.Sleep(p.retryDelay)
 
 					select {
 					case fch <- struct{}{}:
@@ -174,7 +176,7 @@ func (p *policyd) Update(ctx context.Context) error {
 		return err
 	}
 
-	rp.StartExpired(ctx, p.policyExpiredDuration).
+	rp.StartExpired(ctx, p.purgePeriod).
 		EnableExpiredHook().
 		SetExpiredHook(func(ctx context.Context, key string) {
 			// key = <domain>:role.<role>

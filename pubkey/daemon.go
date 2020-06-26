@@ -41,16 +41,16 @@ type Daemon interface {
 }
 
 type pubkeyd struct {
-	athenzURL        string
-	sysAuthDomain    string
-	refreshDuration  time.Duration
-	errRetryInterval time.Duration
+	athenzURL     string
+	sysAuthDomain string
+	refreshPeriod time.Duration
+	retryDelay    time.Duration
 
 	client *http.Client
 
-	etagCache    gache.Gache
-	etagExpTime  time.Duration
-	etagFlushDur time.Duration
+	eTagCache       gache.Gache
+	eTagExpiry      time.Duration
+	eTagPurgePeriod time.Duration
 
 	// cache
 	confCache *AthenzConfig
@@ -88,7 +88,7 @@ func New(opts ...Option) (Daemon, error) {
 			ZMSPubKeys: new(sync.Map),
 			ZTSPubKeys: new(sync.Map),
 		},
-		etagCache: gache.New(),
+		eTagCache: gache.New(),
 	}
 
 	for _, opt := range append(defaultOptions, opts...) {
@@ -111,8 +111,8 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 		defer close(fch)
 		defer close(ech)
 
-		p.etagCache.StartExpired(ctx, p.etagFlushDur)
-		ticker := time.NewTicker(p.refreshDuration)
+		p.eTagCache.StartExpired(ctx, p.eTagPurgePeriod)
+		ticker := time.NewTicker(p.refreshPeriod)
 		for {
 			select {
 			case <-ctx.Done():
@@ -124,7 +124,7 @@ func (p *pubkeyd) Start(ctx context.Context) <-chan error {
 				if err := p.Update(ctx); err != nil {
 					ech <- errors.Wrap(err, "error update pubkey")
 
-					time.Sleep(p.errRetryInterval)
+					time.Sleep(p.retryDelay)
 
 					select {
 					case fch <- struct{}{}:
@@ -241,7 +241,7 @@ func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	}
 
 	// etag header
-	t, ok := p.etagCache.Get(string(env))
+	t, ok := p.eTagCache.Get(string(env))
 	if ok {
 		eTag := t.(*confCache).eTag
 		glg.Debugf("ETag %v found in the cache", eTag)
@@ -284,7 +284,7 @@ func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	eTag := r.Header.Get("ETag")
 	if eTag != "" {
 		glg.Debugf("Setting ETag %v", eTag)
-		p.etagCache.SetWithExpire(string(env), &confCache{eTag, sac}, p.etagExpTime)
+		p.eTagCache.SetWithExpire(string(env), &confCache{eTag, sac}, p.eTagExpiry)
 	}
 
 	glg.Info("Fetch public key entries success")

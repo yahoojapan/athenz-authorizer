@@ -45,7 +45,7 @@ type Fetcher interface {
 type fetcher struct {
 
 	// etag related
-	expireMargin time.Duration
+	expiryMargin time.Duration
 
 	// retry related
 	retryInterval time.Duration
@@ -137,7 +137,7 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 
 	// set policy cache
 	etag := res.Header.Get("ETag")
-	etagExpiry := sp.SignedPolicyData.Expires.Time.Add(-f.expireMargin)
+	etagExpiry := sp.SignedPolicyData.Expires.Time.Add(-f.expiryMargin)
 	newTp := &taggedPolicy{
 		etag:       etag,
 		etagExpiry: etagExpiry,

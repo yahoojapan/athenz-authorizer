@@ -81,14 +81,14 @@ func TestNew(t *testing.T) {
 				opts: []Option{
 					WithSysAuthDomain("dummyd"),
 					WithAthenzURL("dummyURL"),
-					WithEtagExpTime("invalid"),
+					WithETagExpiry("invalid"),
 				},
 			},
 			checkFunc: func(got Daemon, err error) error {
 				if got != nil {
 					return errors.New("get invalid Daemon")
 				}
-				if err.Error() != "invalid etag expire time: time: invalid duration invalid" {
+				if err.Error() != "invalid etag expiry time: time: invalid duration invalid" {
 					return errors.Wrap(err, "unexpected error")
 				}
 				return nil
@@ -172,15 +172,15 @@ func Test_pubkeyd_getPubKey(t *testing.T) {
 
 func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 	type fields struct {
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		sysAuthDomain    string
-		client           *http.Client
-		confCache        *AthenzConfig
+		refreshPeriod   time.Duration
+		retryDelay      time.Duration
+		eTagCache       gache.Gache
+		eTagPurgePeriod time.Duration
+		eTagExpiry      time.Duration
+		athenzURL       string
+		sysAuthDomain   string
+		client          *http.Client
+		confCache       *AthenzConfig
 	}
 	type args struct {
 		ctx context.Context
@@ -206,8 +206,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -223,7 +223,7 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 						return err
 					}
 
-					_, ok := c.etagCache.Get("dummyDomain")
+					_, ok := c.eTagCache.Get("dummyDomain")
 					if ok {
 						return errors.New("invalid etag was set")
 					}
@@ -282,8 +282,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     ec,
-					etagExpTime:   time.Minute,
+					eTagCache:     ec,
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -299,12 +299,12 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 						return err
 					}
 
-					etag, ok := c.etagCache.Get("dummyEnv")
+					eTag, ok := c.eTagCache.Get("dummyEnv")
 					if !ok {
 						return errors.New("cannot use etag cache")
 					}
 
-					want := etag.(*confCache).sac
+					want := eTag.(*confCache).sac
 					if !cmp.Equal(sac, want) {
 						return errors.Errorf("not match, got: %v, want: %v", sac, want)
 					}
@@ -340,8 +340,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     ec,
-					etagExpTime:   time.Minute,
+					eTagCache:     ec,
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -357,7 +357,7 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 						return err
 					}
 
-					_, ok := c.etagCache.Get("dummyEnv")
+					_, ok := c.eTagCache.Get("dummyEnv")
 					if !ok {
 						return errors.New("cannot use etag cache")
 					}
@@ -394,8 +394,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -429,8 +429,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     " ",
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -464,8 +464,8 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -493,15 +493,15 @@ func Test_pubkeyd_fetchPubKeyEntries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &pubkeyd{
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				sysAuthDomain:    tt.fields.sysAuthDomain,
-				client:           tt.fields.client,
-				confCache:        tt.fields.confCache,
+				refreshPeriod:   tt.fields.refreshPeriod,
+				retryDelay:      tt.fields.retryDelay,
+				eTagCache:       tt.fields.eTagCache,
+				eTagPurgePeriod: tt.fields.eTagPurgePeriod,
+				eTagExpiry:      tt.fields.eTagExpiry,
+				athenzURL:       tt.fields.athenzURL,
+				sysAuthDomain:   tt.fields.sysAuthDomain,
+				client:          tt.fields.client,
+				confCache:       tt.fields.confCache,
 			}
 			got, got1, err := c.fetchPubKeyEntries(tt.args.ctx, tt.args.env)
 
@@ -538,15 +538,15 @@ func Test_pubkeyd_GetProvider(t *testing.T) {
 
 func Test_pubkeyd_Update(t *testing.T) {
 	type fields struct {
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		sysAuthDomain    string
-		client           *http.Client
-		confCache        *AthenzConfig
+		refreshPeriod   time.Duration
+		retryDelay      time.Duration
+		eTagCache       gache.Gache
+		eTagPurgePeriod time.Duration
+		eTagExpiry      time.Duration
+		athenzURL       string
+		sysAuthDomain   string
+		client          *http.Client
+		confCache       *AthenzConfig
 	}
 	type args struct {
 		ctx context.Context
@@ -579,8 +579,8 @@ func Test_pubkeyd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -674,8 +674,8 @@ func Test_pubkeyd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     ec,
-					etagExpTime:   time.Minute,
+					eTagCache:     ec,
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: zmsVM,
@@ -743,8 +743,8 @@ func Test_pubkeyd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -784,8 +784,8 @@ func Test_pubkeyd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -825,8 +825,8 @@ func Test_pubkeyd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
 					sysAuthDomain: "dummyDom",
-					etagCache:     gache.New(),
-					etagExpTime:   time.Minute,
+					eTagCache:     gache.New(),
+					eTagExpiry:    time.Minute,
 					client:        srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
@@ -850,15 +850,15 @@ func Test_pubkeyd_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &pubkeyd{
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				sysAuthDomain:    tt.fields.sysAuthDomain,
-				client:           tt.fields.client,
-				confCache:        tt.fields.confCache,
+				refreshPeriod:   tt.fields.refreshPeriod,
+				retryDelay:      tt.fields.retryDelay,
+				eTagCache:       tt.fields.eTagCache,
+				eTagPurgePeriod: tt.fields.eTagPurgePeriod,
+				eTagExpiry:      tt.fields.eTagExpiry,
+				athenzURL:       tt.fields.athenzURL,
+				sysAuthDomain:   tt.fields.sysAuthDomain,
+				client:          tt.fields.client,
+				confCache:       tt.fields.confCache,
 			}
 			err := c.Update(tt.args.ctx)
 			if err = tt.checkFunc(c, err); err != nil {
@@ -870,15 +870,15 @@ func Test_pubkeyd_Update(t *testing.T) {
 
 func Test_pubkeyd_Start(t *testing.T) {
 	type fields struct {
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		etagCache        gache.Gache
-		etagFlushDur     time.Duration
-		etagExpTime      time.Duration
-		athenzURL        string
-		sysAuthDomain    string
-		client           *http.Client
-		confCache        *AthenzConfig
+		refreshPeriod   time.Duration
+		retryDelay      time.Duration
+		eTagCache       gache.Gache
+		eTagPurgePeriod time.Duration
+		eTagExpiry      time.Duration
+		athenzURL       string
+		sysAuthDomain   string
+		client          *http.Client
+		confCache       *AthenzConfig
 	}
 	type args struct {
 		ctx context.Context
@@ -910,14 +910,14 @@ func Test_pubkeyd_Start(t *testing.T) {
 			return test{
 				name: "test start pubkey updater and ctx.done",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					sysAuthDomain:    "dummyDom",
-					refreshDuration:  time.Minute,
-					errRetryInterval: time.Minute,
-					etagCache:        gache.New(),
-					etagExpTime:      time.Minute,
-					etagFlushDur:     time.Minute,
-					client:           srv.Client(),
+					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain:   "dummyDom",
+					refreshPeriod:   time.Minute,
+					retryDelay:      time.Minute,
+					eTagCache:       gache.New(),
+					eTagExpiry:      time.Minute,
+					eTagPurgePeriod: time.Minute,
+					client:          srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
 						ZTSPubKeys: new(sync.Map),
@@ -975,12 +975,12 @@ func Test_pubkeyd_Start(t *testing.T) {
 					}
 
 					// check etag cache
-					ecLen := len(c.etagCache.ToRawMap(context.Background()))
+					ecLen := len(c.eTagCache.ToRawMap(context.Background()))
 					wantEcLen := 0
 					if ecLen != wantEcLen {
 						return errors.Errorf("invalid length ZMSPubKeys. got: %d, want: %d", ecLen, wantEcLen)
 					}
-					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
+					c.eTagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
 						if key != "zms" && key != "zts" {
 							err = errors.Errorf("unexpected key %s", key)
 							return false
@@ -1019,14 +1019,14 @@ func Test_pubkeyd_Start(t *testing.T) {
 			return test{
 				name: "test Update failed",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					sysAuthDomain:    "dummyDom",
-					refreshDuration:  10 * time.Millisecond,
-					errRetryInterval: time.Minute,
-					etagCache:        gache.New(),
-					etagExpTime:      time.Minute,
-					etagFlushDur:     time.Minute,
-					client:           srv.Client(),
+					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain:   "dummyDom",
+					refreshPeriod:   10 * time.Millisecond,
+					retryDelay:      time.Minute,
+					eTagCache:       gache.New(),
+					eTagExpiry:      time.Minute,
+					eTagPurgePeriod: time.Minute,
+					client:          srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
 						ZTSPubKeys: new(sync.Map),
@@ -1079,14 +1079,14 @@ func Test_pubkeyd_Start(t *testing.T) {
 			return test{
 				name: "test refresh pubkey",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					sysAuthDomain:    "dummyDom",
-					refreshDuration:  time.Millisecond * 3,
-					errRetryInterval: time.Millisecond,
-					etagCache:        gache.New(),
-					etagExpTime:      time.Minute,
-					etagFlushDur:     time.Minute,
-					client:           srv.Client(),
+					athenzURL:       strings.Replace(srv.URL, "https://", "", 1),
+					sysAuthDomain:   "dummyDom",
+					refreshPeriod:   time.Millisecond * 3,
+					retryDelay:      time.Millisecond,
+					eTagCache:       gache.New(),
+					eTagExpiry:      time.Minute,
+					eTagPurgePeriod: time.Minute,
+					client:          srv.Client(),
 					confCache: &AthenzConfig{
 						ZMSPubKeys: new(sync.Map),
 						ZTSPubKeys: new(sync.Map),
@@ -1107,7 +1107,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 					ind := 0
 					var err error
 
-					c.etagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
+					c.eTagCache.Foreach(context.Background(), func(key string, val interface{}, _ int64) bool {
 						if key != "zms" && key != "zts" {
 							err = errors.Errorf("unexpected key %s", key)
 							return false
@@ -1160,15 +1160,15 @@ func Test_pubkeyd_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &pubkeyd{
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				etagCache:        tt.fields.etagCache,
-				etagFlushDur:     tt.fields.etagFlushDur,
-				etagExpTime:      tt.fields.etagExpTime,
-				athenzURL:        tt.fields.athenzURL,
-				sysAuthDomain:    tt.fields.sysAuthDomain,
-				client:           tt.fields.client,
-				confCache:        tt.fields.confCache,
+				refreshPeriod:   tt.fields.refreshPeriod,
+				retryDelay:      tt.fields.retryDelay,
+				eTagCache:       tt.fields.eTagCache,
+				eTagPurgePeriod: tt.fields.eTagPurgePeriod,
+				eTagExpiry:      tt.fields.eTagExpiry,
+				athenzURL:       tt.fields.athenzURL,
+				sysAuthDomain:   tt.fields.sysAuthDomain,
+				client:          tt.fields.client,
+				confCache:       tt.fields.confCache,
 			}
 			ch := c.Start(tt.args.ctx)
 			if err := tt.checkFunc(c, ch); err != nil {

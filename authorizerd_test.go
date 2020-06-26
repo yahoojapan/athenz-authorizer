@@ -84,10 +84,10 @@ func TestNew(t *testing.T) {
 		{
 			name: "test New returns error",
 			args: args{
-				[]Option{WithPubkeyEtagExpTime("dummy")},
+				[]Option{WithPubkeyETagExpiry("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				want := "error create pubkeyd: invalid etag expire time: time: invalid duration dummy"
+				want := "error create pubkeyd: invalid etag expiry time: time: invalid duration dummy"
 				if err.Error() != want {
 					return errors.Errorf("Unexpected error: %s, expected: %s", err, want)
 				}
@@ -107,30 +107,31 @@ func TestNew(t *testing.T) {
 
 func Test_authorizer_initVerifiers(t *testing.T) {
 	type fields struct {
-		verifiers              []verifier
-		athenzURL              string
-		client                 *http.Client
-		cache                  gache.Gache
-		cacheExp               time.Duration
-		roleCertURIPrefix      string
-		disablePubkeyd         bool
-		pubkeyRefreshDuration  string
-		pubkeyErrRetryInterval string
-		pubkeySysAuthDomain    string
-		pubkeyEtagExpTime      string
-		pubkeyEtagFlushDur     string
-		disablePolicyd         bool
-		policyExpireMargin     string
-		athenzDomains          []string
-		policyRefreshDuration  string
-		policyErrRetryInterval string
-		disableJwkd            bool
-		jwkRefreshDuration     string
-		jwkErrRetryInterval    string
-		accessTokenParam       AccessTokenParam
-		enableRoleToken        bool
-		roleAuthHeader         string
-		enableRoleCert         bool
+		verifiers             []verifier
+		athenzURL             string
+		client                *http.Client
+		cache                 gache.Gache
+		cacheExp              time.Duration
+		roleCertURIPrefix     string
+		disablePubkeyd        bool
+		pubkeyRefreshPeriod   string
+		pubkeyRetryDelay      string
+		pubkeySysAuthDomain   string
+		pubkeyETagExpiry      string
+		pubkeyETagPurgePeriod string
+		disablePolicyd        bool
+		policyExpiryMargin    string
+		athenzDomains         []string
+		policyRefreshPeriod   string
+		policyRetryDelay      string
+		policyRetryAttempts   int
+		disableJwkd           bool
+		jwkRefreshPeriod      string
+		jwkRetryDelay         string
+		accessTokenParam      AccessTokenParam
+		enableRoleToken       bool
+		roleAuthHeader        string
+		enableRoleCert        bool
 	}
 	tests := []struct {
 		name      string
@@ -189,30 +190,31 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &authorizer{
-				verifiers:              tt.fields.verifiers,
-				athenzURL:              tt.fields.athenzURL,
-				client:                 tt.fields.client,
-				cache:                  tt.fields.cache,
-				cacheExp:               tt.fields.cacheExp,
-				roleCertURIPrefix:      tt.fields.roleCertURIPrefix,
-				disablePubkeyd:         tt.fields.disablePubkeyd,
-				pubkeyRefreshDuration:  tt.fields.pubkeyRefreshDuration,
-				pubkeyErrRetryInterval: tt.fields.pubkeyErrRetryInterval,
-				pubkeySysAuthDomain:    tt.fields.pubkeySysAuthDomain,
-				pubkeyEtagExpTime:      tt.fields.pubkeyEtagExpTime,
-				pubkeyEtagFlushDur:     tt.fields.pubkeyEtagFlushDur,
-				disablePolicyd:         tt.fields.disablePolicyd,
-				policyExpireMargin:     tt.fields.policyExpireMargin,
-				athenzDomains:          tt.fields.athenzDomains,
-				policyRefreshDuration:  tt.fields.policyRefreshDuration,
-				policyErrRetryInterval: tt.fields.policyErrRetryInterval,
-				disableJwkd:            tt.fields.disableJwkd,
-				jwkRefreshDuration:     tt.fields.jwkRefreshDuration,
-				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
-				accessTokenParam:       tt.fields.accessTokenParam,
-				enableRoleToken:        tt.fields.enableRoleToken,
-				roleAuthHeader:         tt.fields.roleAuthHeader,
-				enableRoleCert:         tt.fields.enableRoleCert,
+				verifiers:             tt.fields.verifiers,
+				athenzURL:             tt.fields.athenzURL,
+				client:                tt.fields.client,
+				cache:                 tt.fields.cache,
+				cacheExp:              tt.fields.cacheExp,
+				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
+				disablePubkeyd:        tt.fields.disablePubkeyd,
+				pubkeyRefreshPeriod:   tt.fields.pubkeyRefreshPeriod,
+				pubkeyRetryDelay:      tt.fields.pubkeyRetryDelay,
+				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
+				pubkeyETagExpiry:      tt.fields.pubkeyETagExpiry,
+				pubkeyETagPurgePeriod: tt.fields.pubkeyETagPurgePeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
+				policyExpiryMargin:    tt.fields.policyExpiryMargin,
+				athenzDomains:         tt.fields.athenzDomains,
+				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				policyRetryDelay:      tt.fields.policyRetryDelay,
+				policyRetryAttempts:   tt.fields.policyRetryAttempts,
+				disableJwkd:           tt.fields.disableJwkd,
+				jwkRefreshPeriod:      tt.fields.jwkRefreshPeriod,
+				jwkRetryDelay:         tt.fields.jwkRetryDelay,
+				accessTokenParam:      tt.fields.accessTokenParam,
+				enableRoleToken:       tt.fields.enableRoleToken,
+				roleAuthHeader:        tt.fields.roleAuthHeader,
+				enableRoleCert:        tt.fields.enableRoleCert,
 			}
 			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
@@ -783,13 +785,13 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		cache                 gache.Gache
 		cacheExp              time.Duration
 		roleCertURIPrefix     string
-		pubkeyRefreshDuration string
+		pubkeyRefreshPeriod   string
 		pubkeySysAuthDomain   string
-		pubkeyEtagExpTime     string
-		pubkeyEtagFlushDur    string
-		policyExpireMargin    string
+		pubkeyETagExpiry      string
+		pubkeyETagPurgePeriod string
+		policyExpiryMargin    string
 		athenzDomains         []string
-		policyRefreshDuration string
+		policyRefreshPeriod   string
 	}
 	type args struct {
 		ctx context.Context
@@ -974,13 +976,13 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 				cache:                 tt.fields.cache,
 				cacheExp:              tt.fields.cacheExp,
 				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
-				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeyRefreshPeriod:   tt.fields.pubkeyRefreshPeriod,
 				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
-				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
-				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
-				policyExpireMargin:    tt.fields.policyExpireMargin,
+				pubkeyETagExpiry:      tt.fields.pubkeyETagExpiry,
+				pubkeyETagPurgePeriod: tt.fields.pubkeyETagPurgePeriod,
+				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
-				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			err := p.VerifyRoleJWT(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
 			if err != nil {
@@ -1014,13 +1016,13 @@ func Test_authorizer_verify(t *testing.T) {
 		cache                 gache.Gache
 		cacheExp              time.Duration
 		roleCertURIPrefix     string
-		pubkeyRefreshDuration string
+		pubkeyRefreshPeriod   string
 		pubkeySysAuthDomain   string
-		pubkeyEtagExpTime     string
-		pubkeyEtagFlushDur    string
-		policyExpireMargin    string
+		pubkeyETagExpiry      string
+		pubkeyETagPurgePeriod string
+		policyExpiryMargin    string
 		athenzDomains         []string
-		policyRefreshDuration string
+		policyRefreshPeriod   string
 	}
 	type args struct {
 		ctx  context.Context
@@ -1050,13 +1052,13 @@ func Test_authorizer_verify(t *testing.T) {
 				cache:                 tt.fields.cache,
 				cacheExp:              tt.fields.cacheExp,
 				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
-				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeyRefreshPeriod:   tt.fields.pubkeyRefreshPeriod,
 				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
-				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
-				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
-				policyExpireMargin:    tt.fields.policyExpireMargin,
+				pubkeyETagExpiry:      tt.fields.pubkeyETagExpiry,
+				pubkeyETagPurgePeriod: tt.fields.pubkeyETagPurgePeriod,
+				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
-				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
@@ -1076,13 +1078,13 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		cache                 gache.Gache
 		cacheExp              time.Duration
 		roleCertURIPrefix     string
-		pubkeyRefreshDuration string
+		pubkeyRefreshPeriod   string
 		pubkeySysAuthDomain   string
-		pubkeyEtagExpTime     string
-		pubkeyEtagFlushDur    string
-		policyExpireMargin    string
+		pubkeyETagExpiry      string
+		pubkeyETagPurgePeriod string
+		policyExpiryMargin    string
 		athenzDomains         []string
-		policyRefreshDuration string
+		policyRefreshPeriod   string
 	}
 	type args struct {
 		ctx       context.Context
@@ -1247,13 +1249,13 @@ bu80CwTnWhmdBo36Ig==
 				cache:                 tt.fields.cache,
 				cacheExp:              tt.fields.cacheExp,
 				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
-				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeyRefreshPeriod:   tt.fields.pubkeyRefreshPeriod,
 				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
-				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
-				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
-				policyExpireMargin:    tt.fields.policyExpireMargin,
+				pubkeyETagExpiry:      tt.fields.pubkeyETagExpiry,
+				pubkeyETagPurgePeriod: tt.fields.pubkeyETagPurgePeriod,
+				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
-				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -1273,13 +1275,13 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		cache                 gache.Gache
 		cacheExp              time.Duration
 		roleCertURIPrefix     string
-		pubkeyRefreshDuration string
+		pubkeyRefreshPeriod   string
 		pubkeySysAuthDomain   string
-		pubkeyEtagExpTime     string
-		pubkeyEtagFlushDur    string
-		policyExpireMargin    string
+		pubkeyETagExpiry      string
+		pubkeyETagPurgePeriod string
+		policyExpiryMargin    string
 		athenzDomains         []string
-		policyRefreshDuration string
+		policyRefreshPeriod   string
 	}
 	type args struct {
 		ctx context.Context
@@ -1313,13 +1315,13 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				cache:                 tt.fields.cache,
 				cacheExp:              tt.fields.cacheExp,
 				roleCertURIPrefix:     tt.fields.roleCertURIPrefix,
-				pubkeyRefreshDuration: tt.fields.pubkeyRefreshDuration,
+				pubkeyRefreshPeriod:   tt.fields.pubkeyRefreshPeriod,
 				pubkeySysAuthDomain:   tt.fields.pubkeySysAuthDomain,
-				pubkeyEtagExpTime:     tt.fields.pubkeyEtagExpTime,
-				pubkeyEtagFlushDur:    tt.fields.pubkeyEtagFlushDur,
-				policyExpireMargin:    tt.fields.policyExpireMargin,
+				pubkeyETagExpiry:      tt.fields.pubkeyETagExpiry,
+				pubkeyETagPurgePeriod: tt.fields.pubkeyETagPurgePeriod,
+				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
-				policyRefreshDuration: tt.fields.policyRefreshDuration,
+				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)

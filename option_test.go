@@ -84,7 +84,7 @@ func TestWithDisablePubkeyd(t *testing.T) {
 	}
 }
 
-func TestWithPolicyErrRetryInterval(t *testing.T) {
+func TestWithPolicyRetryDelay(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -103,7 +103,7 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyErrRetryInterval != "dummy" {
+				if authz.policyRetryDelay != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -112,9 +112,9 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyErrRetryInterval(tt.args.t)
+			got := WithPolicyRetryDelay(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyErrRetryInterval() error = %v", err)
+				t.Errorf("WithPolicyRetryDelay() error = %v", err)
 			}
 		})
 	}
@@ -155,7 +155,8 @@ func TestWithPolicyRetryAttempts(t *testing.T) {
 		})
 	}
 }
-func TestWithPolicyRefreshDuration(t *testing.T) {
+
+func TestWithPolicyRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -174,7 +175,7 @@ func TestWithPolicyRefreshDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyRefreshDuration != "dummy" {
+				if authz.policyRefreshPeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -183,14 +184,14 @@ func TestWithPolicyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyRefreshDuration(tt.args.t)
+			got := WithPolicyRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyRefreshDuration() error = %v", err)
+				t.Errorf("WithPolicyRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithPubkeyRefreshDuration(t *testing.T) {
+func TestWithPubkeyRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -209,7 +210,7 @@ func TestWithPubkeyRefreshDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyRefreshDuration != "dummy" {
+				if authz.pubkeyRefreshPeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -218,14 +219,14 @@ func TestWithPubkeyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyRefreshDuration(tt.args.t)
+			got := WithPubkeyRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyRefreshDuration() error = %v", err)
+				t.Errorf("WithPubkeyRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithPubkeyErrRetryInterval(t *testing.T) {
+func TestWithPubkeyRetryDelay(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -244,7 +245,7 @@ func TestWithPubkeyErrRetryInterval(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyErrRetryInterval != "dummy" {
+				if authz.pubkeyRetryDelay != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -253,9 +254,9 @@ func TestWithPubkeyErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyErrRetryInterval(tt.args.t)
+			got := WithPubkeyRetryDelay(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyErrRetryInterval() error = %v", err)
+				t.Errorf("WithPubkeyRetryDelay() error = %v", err)
 			}
 		})
 	}
@@ -399,7 +400,7 @@ func TestWithPubkeySysAuthDomain(t *testing.T) {
 	}
 }
 
-func TestWithPubkeyEtagExpTime(t *testing.T) {
+func TestWithPubkeyETagExpiry(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -418,7 +419,7 @@ func TestWithPubkeyEtagExpTime(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyEtagExpTime != "dummy" {
+				if authz.pubkeyETagExpiry != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -427,14 +428,14 @@ func TestWithPubkeyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyEtagExpTime(tt.args.t)
+			got := WithPubkeyETagExpiry(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyEtagExpTime() error = %v", err)
+				t.Errorf("WithPubkeyETagExpiry() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithPubkeyEtagFlushDuration(t *testing.T) {
+func TestWithPubkeyETagPurgePeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -453,7 +454,7 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyEtagFlushDur != "dummy" {
+				if authz.pubkeyETagPurgePeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -462,9 +463,9 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyEtagFlushDuration(tt.args.t)
+			got := WithPubkeyETagPurgePeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyEtagFlushDuration() error = %v", err)
+				t.Errorf("WithPubkeyETagPurgePeriod() error = %v", err)
 			}
 		})
 	}
@@ -528,7 +529,7 @@ func TestWithDisablePolicyd(t *testing.T) {
 	}
 }
 
-func TestWithPolicyExpireMargin(t *testing.T) {
+func TestWithPolicyExpiryMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -547,7 +548,7 @@ func TestWithPolicyExpireMargin(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyExpireMargin != "dummy" {
+				if authz.policyExpiryMargin != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -556,9 +557,9 @@ func TestWithPolicyExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyExpireMargin(tt.args.t)
+			got := WithPolicyExpiryMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyExpireMargin() error = %v", err)
+				t.Errorf("WithPolicyExpiryMargin() error = %v", err)
 			}
 		})
 	}
@@ -714,7 +715,7 @@ func TestWithDisableJwkd(t *testing.T) {
 	}
 }
 
-func TestWithJwkRefreshDuration(t *testing.T) {
+func TestWithJwkRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -733,7 +734,7 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.jwkRefreshDuration != "dummy" {
+				if authz.jwkRefreshPeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -742,14 +743,14 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithJwkRefreshDuration(tt.args.t)
+			got := WithJwkRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithJwkRefreshDuration() error = %v", err)
+				t.Errorf("WithJwkRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithJwkErrRetryInterval(t *testing.T) {
+func TestWithJwkRetryDelay(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -768,7 +769,7 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.jwkErrRetryInterval != "dummy" {
+				if authz.jwkRetryDelay != "dummy" {
 
 					return fmt.Errorf("invalid param was set")
 				}
@@ -778,9 +779,9 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithJwkErrRetryInterval(tt.args.t)
+			got := WithJwkRetryDelay(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithJwkErrRetryInterval() error = %v", err)
+				t.Errorf("WithJwkRetryDelay() error = %v", err)
 			}
 		})
 	}

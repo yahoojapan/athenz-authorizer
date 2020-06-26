@@ -70,7 +70,7 @@ func WithClientCertificateGoBackSeconds(t string) Option {
 		}
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid refresh period")
 		}
 		r.clientCertificateGoBackSeconds = int64(rd.Seconds())
 		return nil

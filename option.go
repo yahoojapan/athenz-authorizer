@@ -20,21 +20,23 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	urlutil "github.com/yahoojapan/athenz-authorizer/v3/internal/url"
 )
 
 var (
 	defaultOptions = []Option{
 		WithAthenzURL("athenz.io/zts/v1"),
+		WithAthenzTimeout("30s"),
 		WithTransport(nil),
 		WithCacheExp(time.Minute),
 		WithRoleCertURIPrefix("athenz://role/"),
 		WithEnablePubkeyd(),
 		WithEnablePolicyd(),
 		WithEnableJwkd(),
-		WithPolicyErrRetryInterval("1m"),
-		WithPubkeyErrRetryInterval("1m"),
-		WithJwkErrRetryInterval("1m"),
+		WithPolicyRetryDelay("1m"),
+		WithPubkeyRetryDelay("1m"),
+		WithJwkRetryDelay("1m"),
 		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithEnableRoleToken(),
 		WithRoleAuthHeader("Athenz-Role-Auth"),
@@ -62,6 +64,29 @@ func WithAthenzURL(url string) Option {
 			return urlutil.ErrUnsupportedScheme
 		}
 		authz.athenzURL = u
+		return nil
+	}
+}
+
+// WithAthenzTimeout returns an AthenzTimeout functional option
+func WithAthenzTimeout(t string) Option {
+	return func(authz *authorizer) error {
+		if t == "" {
+			return nil
+		}
+		at, err := time.ParseDuration(t)
+		if err != nil {
+			return errors.Wrap(err, "invalid Athenz timeout")
+		}
+		authz.athenzTimeout = at
+		return nil
+	}
+}
+
+// WithAthenzCAPath returns an AthenzCAPath functional option
+func WithAthenzCAPath(p string) Option {
+	return func(authz *authorizer) error {
+		authz.athenzCAPath = p
 		return nil
 	}
 }
@@ -127,18 +152,18 @@ func WithDisablePubkeyd() Option {
 	}
 }
 
-// WithPubkeyRefreshDuration returns a PubkeyRefreshDuration functional option
-func WithPubkeyRefreshDuration(t string) Option {
+// WithPubkeyRefreshPeriod returns a PubkeyRefreshPeriod functional option
+func WithPubkeyRefreshPeriod(t string) Option {
 	return func(authz *authorizer) error {
-		authz.pubkeyRefreshDuration = t
+		authz.pubkeyRefreshPeriod = t
 		return nil
 	}
 }
 
-// WithPubkeyErrRetryInterval returns a PubkeyErrRetryInterval functional option
-func WithPubkeyErrRetryInterval(i string) Option {
+// WithPubkeyRetryDelay returns a PubkeyRetryDelay functional option
+func WithPubkeyRetryDelay(i string) Option {
 	return func(authz *authorizer) error {
-		authz.pubkeyErrRetryInterval = i
+		authz.pubkeyRetryDelay = i
 		return nil
 	}
 }
@@ -151,18 +176,18 @@ func WithPubkeySysAuthDomain(domain string) Option {
 	}
 }
 
-// WithPubkeyEtagExpTime returns a PubkeyEtagExpTime functional option
-func WithPubkeyEtagExpTime(t string) Option {
+// WithPubkeyETagExpiry returns a PubkeyETagExpiry functional option
+func WithPubkeyETagExpiry(t string) Option {
 	return func(authz *authorizer) error {
-		authz.pubkeyEtagExpTime = t
+		authz.pubkeyETagExpiry = t
 		return nil
 	}
 }
 
-// WithPubkeyEtagFlushDuration returns a PubkeyEtagFlushDur functional option
-func WithPubkeyEtagFlushDuration(t string) Option {
+// WithPubkeyETagPurgePeriod returns a PubkeyETagPurgePeriod functional option
+func WithPubkeyETagPurgePeriod(t string) Option {
 	return func(authz *authorizer) error {
-		authz.pubkeyEtagFlushDur = t
+		authz.pubkeyETagPurgePeriod = t
 		return nil
 	}
 }
@@ -187,18 +212,18 @@ func WithDisablePolicyd() Option {
 	}
 }
 
-// WithPolicyRefreshDuration returns a PolicyRefreshDuration functional option
-func WithPolicyRefreshDuration(t string) Option {
+// WithPolicyRefreshPeriod returns a PolicyRefreshPeriod functional option
+func WithPolicyRefreshPeriod(t string) Option {
 	return func(authz *authorizer) error {
-		authz.policyRefreshDuration = t
+		authz.policyRefreshPeriod = t
 		return nil
 	}
 }
 
-// WithPolicyErrRetryInterval returns a PolicyErrRetryInterval functional option
-func WithPolicyErrRetryInterval(i string) Option {
+// WithPolicyRetryDelay returns a PolicyRetryDelay functional option
+func WithPolicyRetryDelay(i string) Option {
 	return func(authz *authorizer) error {
-		authz.policyErrRetryInterval = i
+		authz.policyRetryDelay = i
 		return nil
 	}
 }
@@ -211,10 +236,10 @@ func WithPolicyRetryAttempts(c int) Option {
 	}
 }
 
-// WithPolicyExpireMargin returns a PolicyExpireMargin functional option
-func WithPolicyExpireMargin(t string) Option {
+// WithPolicyExpiryMargin returns a PolicyExpiryMargin functional option
+func WithPolicyExpiryMargin(t string) Option {
 	return func(authz *authorizer) error {
-		authz.policyExpireMargin = t
+		authz.policyExpiryMargin = t
 		return nil
 	}
 }
@@ -239,18 +264,18 @@ func WithDisableJwkd() Option {
 	}
 }
 
-// WithJwkRefreshDuration returns a JwkRefreshDuration functional option
-func WithJwkRefreshDuration(t string) Option {
+// WithJwkRefreshPeriod returns a JwkRefreshPeriod functional option
+func WithJwkRefreshPeriod(t string) Option {
 	return func(authz *authorizer) error {
-		authz.jwkRefreshDuration = t
+		authz.jwkRefreshPeriod = t
 		return nil
 	}
 }
 
-// WithJwkErrRetryInterval returns a JwkErrRetryInterval functional option
-func WithJwkErrRetryInterval(i string) Option {
+// WithJwkRetryDelay returns a JwkRetryDelay functional option
+func WithJwkRetryDelay(i string) Option {
 	return func(authz *authorizer) error {
-		authz.jwkErrRetryInterval = i
+		authz.jwkRetryDelay = i
 		return nil
 	}
 }
