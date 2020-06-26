@@ -129,7 +129,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		jwkErrRetryInterval    string
 		accessTokenParam       AccessTokenParam
 		enableRoleToken        bool
-		rtHeader               string
+		roleAuthHeader         string
 		enableRoleCert         bool
 	}
 	tests := []struct {
@@ -211,7 +211,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				jwkErrRetryInterval:    tt.fields.jwkErrRetryInterval,
 				accessTokenParam:       tt.fields.accessTokenParam,
 				enableRoleToken:        tt.fields.enableRoleToken,
-				rtHeader:               tt.fields.rtHeader,
+				roleAuthHeader:         tt.fields.roleAuthHeader,
 				enableRoleCert:         tt.fields.enableRoleCert,
 			}
 			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
