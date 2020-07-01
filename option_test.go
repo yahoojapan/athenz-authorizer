@@ -985,8 +985,8 @@ func TestWithAccessTokenParams(t *testing.T) {
 		func() test {
 			accessTokenParam :=
 				NewAccessTokenParam(true, true, "1h", "1h", true, map[string][]string{
-					"common_name1": []string{"client_id1", "client_id2"},
-					"common_name2": []string{"client_id1", "client_id2"},
+					"common_name1": {"client_id1", "client_id2"},
+					"common_name2": {"client_id1", "client_id2"},
 				})
 
 			return test{

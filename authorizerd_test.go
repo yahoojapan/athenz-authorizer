@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	jwtgo "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
@@ -1600,7 +1600,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 				act: &access.OAuth2AccessTokenClaim{
 					Scope: []string{"role"},
 					BaseClaim: access.BaseClaim{
-						StandardClaims: jwtgo.StandardClaims{
+						StandardClaims: jwt.StandardClaims{
 							Audience: "domain",
 						},
 					},

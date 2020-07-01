@@ -238,10 +238,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				handleErr := func(err error) {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, e := w.Write([]byte(err.Error()))
-					if e != nil {
-						panic(e.Error())
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, e := w.Write([]byte(err.Error()))
+						if e != nil {
+							panic(e.Error())
+						}
 					}
 				}
 
@@ -316,10 +318,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				handleErr := func(err error) {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, e := w.Write([]byte(err.Error()))
-					if e != nil {
-						panic(e.Error())
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, e := w.Write([]byte(err.Error()))
+						if e != nil {
+							panic(e.Error())
+						}
 					}
 				}
 
@@ -395,10 +399,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				handleErr := func(err error) {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, e := w.Write([]byte(err.Error()))
-					if e != nil {
-						panic(e.Error())
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, e := w.Write([]byte(err.Error()))
+						if e != nil {
+							panic(e.Error())
+						}
 					}
 				}
 
@@ -539,10 +545,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				handleErr := func(err error) {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, e := w.Write([]byte(err.Error()))
-					if e != nil {
-						panic(e.Error())
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, e := w.Write([]byte(err.Error()))
+						if e != nil {
+							panic(e.Error())
+						}
 					}
 				}
 

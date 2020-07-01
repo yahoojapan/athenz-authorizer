@@ -937,7 +937,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
-					w.Header().Add("ETag", "dummyzmsEtag")
+					w.Header().Add("ETag", "dummyZMSETag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -947,7 +947,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 					return
 				}
 				if r.URL.Path == "/domain/dummyDom/service/zts" {
-					w.Header().Add("ETag", "dummyztsEtag")
+					w.Header().Add("ETag", "dummyZTSETag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1057,7 +1057,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
-					w.Header().Add("ETag", "dummyzmsEtag")
+					w.Header().Add("ETag", "dummyZMSETag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1067,7 +1067,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 					return
 				}
 				if r.URL.Path == "/domain/dummyDom/service/zts" {
-					w.Header().Add("ETag", "dummyztsEtag")
+					w.Header().Add("ETag", "dummyZTSETag")
 					w.WriteHeader(http.StatusOK)
 					return
 				}
@@ -1099,9 +1099,9 @@ func Test_pubkeyd_Start(t *testing.T) {
 					gotErr := <-ch
 					cancel()
 
-					want := "error update pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
-					if gotErr.Error() != want {
-						return errors.Errorf("got: %s, want: %s", gotErr, want)
+					wantErr := "error update pubkey: error when processing pubkey: Error updating ZTS athenz pubkey: error fetch public key entries: json format not correct: EOF"
+					if gotErr.Error() != wantErr {
+						return errors.Errorf("got: %s, want: %s", gotErr, wantErr)
 					}
 					return nil
 				},
@@ -1117,7 +1117,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
-					w.Header().Add("ETag", fmt.Sprintf("dummyzmsEtag%d", zmsc))
+					w.Header().Add("ETag", fmt.Sprintf("dummyZMSETag%d", zmsc))
 					_, err := w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, zmsc)))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1132,7 +1132,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
-					w.Header().Add("ETag", fmt.Sprintf("dummyztsEtag%d", ztsc))
+					w.Header().Add("ETag", fmt.Sprintf("dummyZTSETag%d", ztsc))
 					_, err := w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, ztsc)))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
