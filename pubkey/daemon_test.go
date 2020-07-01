@@ -937,7 +937,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
-					w.Header().Add("ETag", "dummyZMSETag")
+					w.Header().Add("ETag", "dummy-zms-etag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -947,7 +947,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 					return
 				}
 				if r.URL.Path == "/domain/dummyDom/service/zts" {
-					w.Header().Add("ETag", "dummyZTSETag")
+					w.Header().Add("ETag", "dummy-zts-etag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1057,7 +1057,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 		func() test {
 			handler := http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/domain/dummyDom/service/zms" {
-					w.Header().Add("ETag", "dummyZMSETag")
+					w.Header().Add("ETag", "dummy-zms-etag")
 					_, err := w.Write([]byte(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"0"}],"modified":"2017-01-23T02:20:09.331Z"}`))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1067,7 +1067,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 					return
 				}
 				if r.URL.Path == "/domain/dummyDom/service/zts" {
-					w.Header().Add("ETag", "dummyZTSETag")
+					w.Header().Add("ETag", "dummy-zts-etag")
 					w.WriteHeader(http.StatusOK)
 					return
 				}
@@ -1117,7 +1117,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
-					w.Header().Add("ETag", fmt.Sprintf("dummyZMSETag%d", zmsc))
+					w.Header().Add("ETag", fmt.Sprintf("dummy-zms-etag%d", zmsc))
 					_, err := w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zms","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, zmsc)))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1132,7 +1132,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
-					w.Header().Add("ETag", fmt.Sprintf("dummyZTSETag%d", ztsc))
+					w.Header().Add("ETag", fmt.Sprintf("dummy-zts-etag%d", ztsc))
 					_, err := w.Write([]byte(fmt.Sprintf(`{"name":"dummyDom.zts","publicKeys":[{"key":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlHZk1BMEdDU3FHU0liM0RRRUJBUVVBQTRHTkFEQ0JpUUtCZ1FEVTU3VEVoWW5xUkRNM0R2UUM4ajNQSU1FeAp1M3JtYW9QakV6SnlRWTFrVm42MEE2cXJKTDJ1N3N2NHNTa1V5NjdJSUlhQ1VXNVp4aTRXUEdyazAvQm9oMDlGCkJWL1ZML0dMMTB6UmFvcDJXT3ZXRTlpSWNzKzJOK2pWTk1ycVhxZUNENFphK2dHdGdLTU5SMldiRlQvQlcra0wKUGlGeGg0U0NsVkZrdmI4Mm93SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQ--","id":"%d"}],"modified":"2017-01-23T02:20:09.331Z"}`, ztsc)))
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -1182,7 +1182,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 							err = errors.Errorf("unexpected key %s", key)
 							return false
 						}
-						wantEtag := fmt.Sprintf("dummy%sEtag%d", key, 4)
+						wantEtag := fmt.Sprintf("dummy-%s-etag%d", key, 4)
 						if val.(*confCache).eTag != wantEtag {
 							err = errors.Errorf("unexpected etag %s, want: %s", val.(*confCache).eTag, wantEtag)
 							return false
