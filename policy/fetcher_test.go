@@ -237,6 +237,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				handleErr := func(err error) {
+					w.WriteHeader(http.StatusInternalServerError)
+					_, e := w.Write([]byte(err.Error()))
+					if e != nil {
+						panic(e.Error())
+					}
+				}
+
 				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -245,20 +253,16 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-					return
-				}
+				handleErr(err)
 
 				w.Header().Add("ETag", etag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
+				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
 					"zmsKeyId": "%s",
 					"expires": %s
 				}}`, zmsKeyID, expiresStr)))
+				handleErr(err)
 			})
 
 			// want objects
@@ -311,6 +315,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				handleErr := func(err error) {
+					w.WriteHeader(http.StatusInternalServerError)
+					_, e := w.Write([]byte(err.Error()))
+					if e != nil {
+						panic(e.Error())
+					}
+				}
+
 				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -319,20 +331,16 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-					return
-				}
+				handleErr(err)
 
 				w.Header().Add("ETag", etag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
+				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
 					"zmsKeyId": "%s",
 					"expires": %s
 				}}`, zmsKeyID, expiresStr)))
+				handleErr(err)
 			})
 
 			// want objects
@@ -386,6 +394,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				handleErr := func(err error) {
+					w.WriteHeader(http.StatusInternalServerError)
+					_, e := w.Write([]byte(err.Error()))
+					if e != nil {
+						panic(e.Error())
+					}
+				}
+
 				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -394,20 +410,16 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-					return
-				}
+				handleErr(err)
 
 				w.Header().Add("ETag", "dummyNewEtag")
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
+				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
 					"zmsKeyId": "%s",
 					"expires": %s
 				}}`, zmsKeyID, expiresStr)))
+				handleErr(err)
 			})
 
 			// want objects
@@ -526,6 +538,14 @@ func Test_fetcher_Fetch(t *testing.T) {
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				handleErr := func(err error) {
+					w.WriteHeader(http.StatusInternalServerError)
+					_, e := w.Write([]byte(err.Error()))
+					if e != nil {
+						panic(e.Error())
+					}
+				}
+
 				if r.URL.Path != "/domain/dummyDomain/signed_policy_data" {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -534,20 +554,16 @@ func Test_fetcher_Fetch(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
-					return
-				}
+				handleErr(err)
 
 				w.Header().Add("ETag", etag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
+				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
 					"zmsKeyId": "%s",
 					"expires": %s
 				}}`, zmsKeyID, expiresStr)))
+				handleErr(err)
 			})
 
 			// want objects
@@ -743,7 +759,11 @@ func Test_fetcher_Fetch(t *testing.T) {
 			domain := "dummyDomain"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(""))
+				_, err := w.Write([]byte(""))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			})
 
 			// want objects
@@ -771,8 +791,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// http response
 			domain := "dummyDomain"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write([]byte("{}"))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("{}"))
 			})
 
 			// want objects
@@ -803,8 +827,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// http response
 			domain := "dummyDomain"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write([]byte(`{"signedPolicyData":{}}`))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{}}`))
 			})
 
 			// want objects
@@ -833,8 +861,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// http response
 			domain := "dummyDomain"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write([]byte(`{"signedPolicyData":{"expires":"2099-12-31"}}`))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"expires":"2099-12-31"}}`))
 			})
 
 			// want objects
@@ -863,8 +895,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// http response
 			domain := "dummyDomain"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write([]byte(`{"signedPolicyData":{"expires":"2006-01-02T15:04:05.999Z"}}`))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"signedPolicyData":{"expires":"2006-01-02T15:04:05.999Z"}}`))
 			})
 
 			// want objects
@@ -977,8 +1013,12 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Add("ETag", fmt.Sprintf(`"dummyEtag%d"`, atomic.AddUint32(&requestCount, 1)))
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				_, err := w.Write([]byte(fmt.Sprintf(`{"keyId":"%v","signedPolicyData":{"expires":""}}`, keyID)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"keyId":"%v","signedPolicyData":{"expires":""}}`, keyID)))
 			})
 
 			// want objects
@@ -1041,8 +1081,12 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 				w.Header().Add("ETag", fmt.Sprintf(`"dummyEtag%d"`, rc))
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				_, err := w.Write([]byte(fmt.Sprintf(`{"keyId":"%v","signedPolicyData":{"expires":""}}`, keyID)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{"keyId":"%v","signedPolicyData":{"expires":""}}`, keyID)))
 			})
 
 			// want objects

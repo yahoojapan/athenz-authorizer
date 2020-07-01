@@ -147,8 +147,12 @@ func Test_jwkd_Start(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
 
@@ -186,8 +190,12 @@ func Test_jwkd_Start(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(fmt.Sprintf(k, i)))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(fmt.Sprintf(k, i)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				i = i + 1
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
@@ -242,8 +250,12 @@ func Test_jwkd_Start(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				i = i + 1
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
@@ -322,8 +334,12 @@ func Test_jwkd_Update(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 
 			return test{
@@ -356,8 +372,12 @@ func Test_jwkd_Update(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 
 			return test{
@@ -464,7 +484,10 @@ func Test_jwkd_getKey(t *testing.T) {
 	}
 	newKey := func(k interface{}, keyID string) jwk.Key {
 		jwkKey, _ := jwk.New(k)
-		jwkKey.Set(jwk.KeyIDKey, keyID)
+		err := jwkKey.Set(jwk.KeyIDKey, keyID)
+		if err != nil {
+			t.Errorf("jwkd.getKey() setup error = %v", err)
+		}
 		return jwkKey
 	}
 	tests := []test{
