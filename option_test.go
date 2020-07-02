@@ -939,7 +939,7 @@ func TestWithDisableRoleToken(t *testing.T) {
 	}
 }
 
-func TestWithRTHeader(t *testing.T) {
+func TestWithRoleAuthHeader(t *testing.T) {
 	type args struct {
 		h string
 	}
@@ -961,7 +961,7 @@ func TestWithRTHeader(t *testing.T) {
 					if err := opt(authz); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(authz.rtHeader, header) {
+					if !reflect.DeepEqual(authz.roleAuthHeader, header) {
 						return fmt.Errorf("invalid param was set")
 					}
 					return nil
@@ -971,9 +971,9 @@ func TestWithRTHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRTHeader(tt.args.h)
+			got := WithRoleAuthHeader(tt.args.h)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRTHeader() = %v error: %v", got, err)
+				t.Errorf("WithRoleAuthHeader() = %v error: %v", got, err)
 			}
 		})
 	}

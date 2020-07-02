@@ -37,6 +37,7 @@ var (
 		WithJwkErrRetryInterval("1m"),
 		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithEnableRoleToken(),
+		WithRoleAuthHeader("Athenz-Role-Auth"),
 		WithEnableRoleCert(),
 	}
 )
@@ -304,10 +305,10 @@ func WithDisableRoleToken() Option {
 	}
 }
 
-// WithRTHeader returns a RTHeader functional option
-func WithRTHeader(h string) Option {
+// WithRoleAuthHeader returns a RoleAuthHeader functional option
+func WithRoleAuthHeader(h string) Option {
 	return func(authz *authorizer) error {
-		authz.rtHeader = h
+		authz.roleAuthHeader = h
 		return nil
 	}
 }

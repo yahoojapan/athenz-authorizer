@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -1090,8 +1091,9 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 			time.Sleep(time.Millisecond * 1500) // wait for some background process to cleanup
 			lenEnd := runtime.Stack(b, true)
 			// t.Log(string(b[:lenEnd]))
-			if math.Abs(float64(lenStart-lenEnd)) > 10 { // to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference
-				t.Errorf("go routine leak:\n%v", cmp.Diff(oldStack, string(b[:lenEnd])))
+			diff := cmp.Diff(oldStack, string(b[:lenEnd]))
+			if strings.Contains(diff, ".CheckPolicy") {
+				t.Errorf("go routine leak:\n%v", diff)
 			}
 		})
 	}

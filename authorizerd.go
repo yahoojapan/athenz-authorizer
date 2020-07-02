@@ -96,7 +96,7 @@ type authorizer struct {
 
 	// roleTokenProcessor parameters
 	enableRoleToken bool
-	rtHeader        string
+	roleAuthHeader  string
 
 	// roleCertificateProcessor parameters
 	enableRoleCert bool
@@ -236,7 +236,7 @@ func (a *authorizer) initVerifiers() error {
 
 	if a.enableRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.rtHeader), act, res)
+			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.roleAuthHeader), act, res)
 		}
 		glg.Info("initVerifiers: added role token verifier")
 		verifiers = append(verifiers, rtVerifier)
