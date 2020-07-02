@@ -556,6 +556,22 @@ func TestWithRetryAttempts(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "empty value",
+			args: args{
+				0,
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(pol, &policyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", pol)
+				}
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
