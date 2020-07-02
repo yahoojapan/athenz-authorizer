@@ -84,6 +84,7 @@ type authorizer struct {
 	athenzDomains          []string
 	policyRefreshDuration  string
 	policyErrRetryInterval string
+	policyRetryAttempts    int
 
 	// jwkd parameters
 	disableJwkd         bool
@@ -151,6 +152,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithAthenzDomains(prov.athenzDomains...),
 			policy.WithRefreshDuration(prov.policyRefreshDuration),
 			policy.WithErrRetryInterval(prov.policyErrRetryInterval),
+			policy.WithRetryAttempts(prov.policyRetryAttempts),
 			policy.WithHTTPClient(prov.client),
 			policy.WithPubKeyProvider(pubkeyProvider),
 		); err != nil {

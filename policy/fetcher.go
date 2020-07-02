@@ -49,7 +49,7 @@ type fetcher struct {
 
 	// retry related
 	retryInterval time.Duration
-	retryMaxCount int
+	retryAttempts int
 
 	// athenz related
 	domain     string
@@ -153,7 +153,7 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 // FetchWithRetry fetches policy with retry. Returns cached policy if all retries failed too.
 func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 	var lastErr error
-	for i := -1; i < f.retryMaxCount; i++ {
+	for i := -1; i < f.retryAttempts; i++ {
 		sp, err := f.Fetch(ctx)
 		if err == nil {
 			return sp, nil
@@ -166,7 +166,7 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 	errMsg := "max. retry count excess"
 	glg.Info("Will use policy cache, since: %s, domain: %s, error: %v", errMsg, f.domain, lastErr)
 	if lastErr == nil {
-		lastErr = fmt.Errorf("retryMaxCount %v", f.retryMaxCount)
+		lastErr = fmt.Errorf("retryAttempts %v", f.retryAttempts)
 	}
 	if f.policyCache == nil {
 		return nil, errors.Wrap(errors.Wrap(lastErr, errMsg), "no policy cache")
