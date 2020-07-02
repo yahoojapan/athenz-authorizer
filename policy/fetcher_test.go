@@ -212,11 +212,11 @@ func Test_fetcher_Fetch(t *testing.T) {
 		if a == b {
 			return nil
 		}
-		if a.etag != b.etag {
-			return errors.New("etag")
+		if a.eTag != b.eTag {
+			return errors.New("eTag")
 		}
-		if a.etagExpiry != b.etagExpiry {
-			return errors.New("etagExpiry")
+		if a.eTagExpiry != b.eTagExpiry {
+			return errors.New("eTagExpiry")
 		}
 		if !reflect.DeepEqual(a.sp, b.sp) {
 			return errors.New("sp")
@@ -233,7 +233,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			// http response
 			domain := "dummyDomain"
 			expiryMargin := time.Hour
-			etag := `"dummyEtag"`
+			eTag := `"dummyEtag"`
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +257,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				}
 				handleErr(err)
 
-				w.Header().Add("ETag", etag)
+				w.Header().Add("ETag", eTag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
@@ -283,8 +283,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: expires.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -308,12 +308,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			return t
 		}(),
 		func() (t test) {
-			t.name = "success, no etag"
+			t.name = "success, no eTag"
 
 			// http response
 			domain := "dummyDomain"
 			expiryMargin := time.Hour
-			etag := `"dummyEtag"`
+			eTag := `"dummyEtag"`
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -337,7 +337,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				}
 				handleErr(err)
 
-				w.Header().Add("ETag", etag)
+				w.Header().Add("ETag", eTag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
@@ -363,8 +363,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: expires.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -389,12 +389,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			return t
 		}(),
 		func() (t test) {
-			t.name = "success, etag with 200"
+			t.name = "success, eTag with 200"
 
 			// http response
 			domain := "dummyDomain"
 			expiryMargin := time.Hour
-			etag := `"dummyEtag"`
+			eTag := `"dummyEtag"`
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -445,8 +445,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       wantEtag,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       wantEtag,
+				eTagExpiry: expires.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -454,8 +454,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 
 			// test input
 			policyCache := unsafe.Pointer(&taggedPolicy{
-				etag:       etag,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       eTag,
+				eTagExpiry: expires.Add(-expiryMargin),
 			})
 			t.args = args{
 				ctx: context.Background(),
@@ -474,7 +474,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			return t
 		}(),
 		func() (t test) {
-			t.name = "success, etag with 304"
+			t.name = "success, eTag with 304"
 
 			// http response
 			domain := "dummyDomain"
@@ -509,8 +509,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: expires.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -535,12 +535,12 @@ func Test_fetcher_Fetch(t *testing.T) {
 			return t
 		}(),
 		func() (t test) {
-			t.name = "success, etag expiry passed, request without etag"
+			t.name = "success, eTag expiry passed, request without eTag"
 
 			// http response
 			domain := "dummyDomain"
 			expiryMargin := time.Hour
-			etag := `"dummyEtag"`
+			eTag := `"dummyEtag"`
 			zmsKeyID := "dummyZmsKeyId"
 			expires, expiresStr, err := createExpires(2 * expiryMargin)
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -564,7 +564,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 				}
 				handleErr(err)
 
-				w.Header().Add("ETag", etag)
+				w.Header().Add("ETag", eTag)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(fmt.Sprintf(`{"signedPolicyData":{
@@ -590,8 +590,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: expires.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: expires.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -599,8 +599,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 
 			// test input
 			policyCache := unsafe.Pointer(&taggedPolicy{
-				etag:       "dummyOldEtag",
-				etagExpiry: fastime.Now().Add(-expiryMargin),
+				eTag:       "dummyOldEtag",
+				eTagExpiry: fastime.Now().Add(-expiryMargin),
 				sp:         nil,
 			})
 			t.args = args{
@@ -655,8 +655,8 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: fastime.Now().Add(expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: fastime.Now().Add(expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -994,11 +994,11 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		if a == b {
 			return nil
 		}
-		if a.etag != b.etag {
-			return errors.New("etag")
+		if a.eTag != b.eTag {
+			return errors.New("eTag")
 		}
-		if a.etagExpiry != b.etagExpiry {
-			return errors.New("etagExpiry")
+		if a.eTagExpiry != b.eTagExpiry {
+			return errors.New("eTagExpiry")
 		}
 		if !reflect.DeepEqual(a.sp, b.sp) {
 			return errors.New("sp")
@@ -1045,8 +1045,8 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag1"`,
-				etagExpiry: time.Time{}.Add(-expiryMargin),
+				eTag:       `"dummyEtag1"`,
+				eTagExpiry: time.Time{}.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -1113,8 +1113,8 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag3"`,
-				etagExpiry: time.Time{}.Add(-expiryMargin),
+				eTag:       `"dummyEtag3"`,
+				eTagExpiry: time.Time{}.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -1212,8 +1212,8 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: time.Time{}.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: time.Time{}.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -1262,8 +1262,8 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.want = sp
 			t.wantPolicyCache = &taggedPolicy{
-				etag:       `"dummyEtag"`,
-				etagExpiry: time.Time{}.Add(-expiryMargin),
+				eTag:       `"dummyEtag"`,
+				eTagExpiry: time.Time{}.Add(-expiryMargin),
 				sp:         sp,
 				ctime:      fastime.Now(),
 			}
@@ -1319,8 +1319,8 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 func Test_taggedPolicy_String(t *testing.T) {
 	type fields struct {
-		etag       string
-		etagExpiry time.Time
+		eTag       string
+		eTagExpiry time.Time
 		sp         *SignedPolicy
 		ctime      time.Time
 	}
@@ -1332,22 +1332,22 @@ func Test_taggedPolicy_String(t *testing.T) {
 		{
 			name:   "default value",
 			fields: fields{},
-			want:   `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: , etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
+			want:   `{ ctime: 0001-01-01 00:00:00 +0000 UTC, eTag: , eTagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
 		},
 		{
 			name: "custom value",
 			fields: fields{
-				etag:       `"etag"`,
-				etagExpiry: time.Unix(1567454350, 167000000),
+				eTag:       `"eTag"`,
+				eTagExpiry: time.Unix(1567454350, 167000000),
 				ctime:      time.Unix(1566454350, 167000000),
 				// sp: &SignedPolicy{},
 			},
-			want: `{ ctime: 2019-08-22 06:12:30.167 +0000 UTC, etag: "etag", etagExpiry: 2019-09-02 19:59:10.167 +0000 UTC, sp.domain:  }`,
+			want: `{ ctime: 2019-08-22 06:12:30.167 +0000 UTC, eTag: "eTag", eTagExpiry: 2019-09-02 19:59:10.167 +0000 UTC, sp.domain:  }`,
 		},
 		{
 			name: "policy without data",
 			fields: fields{
-				etag: `"etag"`,
+				eTag: `"eTag"`,
 				sp: &SignedPolicy{
 					DomainSignedPolicyData: util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
@@ -1356,12 +1356,12 @@ func Test_taggedPolicy_String(t *testing.T) {
 					},
 				},
 			},
-			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: "etag", etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
+			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, eTag: "eTag", eTagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain:  }`,
 		},
 		{
 			name: "policy with data",
 			fields: fields{
-				etag: `"etag"`,
+				eTag: `"eTag"`,
 				sp: &SignedPolicy{
 					DomainSignedPolicyData: util.DomainSignedPolicyData{
 						SignedPolicyData: &util.SignedPolicyData{
@@ -1370,14 +1370,14 @@ func Test_taggedPolicy_String(t *testing.T) {
 					},
 				},
 			},
-			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, etag: "etag", etagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain: domain }`,
+			want: `{ ctime: 0001-01-01 00:00:00 +0000 UTC, eTag: "eTag", eTagExpiry: 0001-01-01 00:00:00 +0000 UTC, sp.domain: domain }`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tp := &taggedPolicy{
-				etag:       tt.fields.etag,
-				etagExpiry: tt.fields.etagExpiry,
+				eTag:       tt.fields.eTag,
+				eTagExpiry: tt.fields.eTagExpiry,
 				sp:         tt.fields.sp,
 				ctime:      tt.fields.ctime,
 			}

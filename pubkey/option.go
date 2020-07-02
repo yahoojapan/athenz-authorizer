@@ -102,7 +102,7 @@ func WithETagExpiry(d string) Option {
 
 		ee, err := time.ParseDuration(d)
 		if err != nil {
-			return errors.Wrap(err, "invalid etag expiry time")
+			return errors.Wrap(err, "invalid ETag expiry time")
 		}
 		p.eTagExpiry = ee
 		return nil
@@ -118,7 +118,7 @@ func WithETagPurgePeriod(d string) Option {
 
 		epp, err := time.ParseDuration(d)
 		if err != nil {
-			return errors.Wrap(err, "invalid etag purge period")
+			return errors.Wrap(err, "invalid ETag purge period")
 		}
 		p.eTagPurgePeriod = epp
 		return nil

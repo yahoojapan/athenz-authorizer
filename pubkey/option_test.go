@@ -158,7 +158,7 @@ func TestWithETagExpiry(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set etag expiry time success",
+			name: "set ETag expiry time success",
 			args: args{
 				time: "2h",
 			},
@@ -169,7 +169,7 @@ func TestWithETagExpiry(t *testing.T) {
 				}
 
 				if p.eTagExpiry != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set etag expiry time")
+					return fmt.Errorf("cannot set ETag expiry time")
 				}
 				return nil
 			},
@@ -200,7 +200,7 @@ func TestWithETagExpiry(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid etag expiry time was set")
+					return fmt.Errorf("invalid ETag expiry time was set")
 				}
 				return nil
 			},
@@ -302,7 +302,7 @@ func TestWithETagPurgePeriod(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set etag expiry time success",
+			name: "set ETag expiry time success",
 			args: args{
 				dur: "2h",
 			},
@@ -313,7 +313,7 @@ func TestWithETagPurgePeriod(t *testing.T) {
 				}
 
 				if p.eTagPurgePeriod != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set etag purge period")
+					return fmt.Errorf("cannot set ETag purge period")
 				}
 				return nil
 			},
@@ -328,7 +328,7 @@ func TestWithETagPurgePeriod(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid etag purge period was set")
+					return fmt.Errorf("invalid ETag purge period was set")
 				}
 				return nil
 			},

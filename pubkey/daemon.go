@@ -240,7 +240,7 @@ func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 		return nil, false, errors.Wrap(err, "error creating get pubkey request")
 	}
 
-	// etag header
+	// ETag header
 	t, ok := p.eTagCache.Get(string(env))
 	if ok {
 		eTag := t.(*confCache).eTag
@@ -257,7 +257,7 @@ func (p *pubkeyd) fetchPubKeyEntries(ctx context.Context, env AthenzEnv) (*SysAu
 	// if server return NotModified, return policy from cache
 	if r.StatusCode == http.StatusNotModified {
 		cache := t.(*confCache)
-		glg.Debugf("Server return not modified, etag: %s", cache.eTag)
+		glg.Debugf("Server return not modified, ETag: %s", cache.eTag)
 		return cache.sac, false, nil
 	}
 
