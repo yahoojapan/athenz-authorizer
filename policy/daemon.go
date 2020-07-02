@@ -81,10 +81,8 @@ func New(opts ...Option) (Daemon, error) {
 	for _, domain := range p.athenzDomains {
 		f := fetcher{
 			domain:        domain,
-			expireMargin:  p.expireMargin,
-			retryInterval: p.errRetryInterval,
 			expiryMargin:  p.expiryMargin,
-			retryInterval: p.retryDelay,
+			retryDelay:    p.retryDelay,
 			retryAttempts: p.retryAttempts,
 			athenzURL:     p.athenzURL,
 			spVerifier: func(sp *SignedPolicy) error {

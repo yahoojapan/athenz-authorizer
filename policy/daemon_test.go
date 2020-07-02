@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 			want: &policyd{
 				rolePolicies:  gache.New(),
 				expiryMargin:  3 * time.Hour,
-				purgePeriod:   1 * time.Minute,
+				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
 				retryDelay:    1 * time.Minute,
 				retryAttempts: 2,
@@ -78,10 +78,10 @@ func TestNew(t *testing.T) {
 			want: &policyd{
 				rolePolicies:  gache.New(),
 				expiryMargin:  5 * time.Second,
-				purgePeriod:   1 * time.Minute,
+				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
 				retryDelay:    1 * time.Minute,
-				retryAttempts: 2
+				retryAttempts: 2,
 				client:        http.DefaultClient,
 			},
 			wantErr: "",
@@ -94,7 +94,7 @@ func TestNew(t *testing.T) {
 			want: &policyd{
 				rolePolicies:  gache.New(),
 				expiryMargin:  3 * time.Hour,
-				purgePeriod:   1 * time.Minute,
+				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
 				retryDelay:    1 * time.Minute,
 				retryAttempts: 2,

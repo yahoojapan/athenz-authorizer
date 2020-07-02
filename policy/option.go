@@ -29,7 +29,7 @@ var (
 	defaultOptions = []Option{
 		WithExpiryMargin("3h"),
 		WithRefreshPeriod("30m"),
-		WithPurgePeriod("1m"),
+		WithPurgePeriod("1h"),
 		WithRetryDelay("1m"),
 		WithRetryAttempts(2),
 		WithHTTPClient(http.DefaultClient),
@@ -132,20 +132,23 @@ func WithRetryDelay(d string) Option {
 	}
 }
 
+// WithRetryAttempts returns an RetryAttempts functional option
+func WithRetryAttempts(c int) Option {
+	return func(pol *policyd) error {
+		if c == 0 {
+			return nil
+		}
+		pol.retryAttempts = c
+		return nil
+	}
+}
+
 // WithHTTPClient returns a HttpClient functional option
 func WithHTTPClient(c *http.Client) Option {
 	return func(pol *policyd) error {
 		if c != nil {
 			pol.client = c
 		}
-		return nil
-	}
-}
-
-// WithRetryAttempts returns an RetryAttempts functional option
-func WithRetryAttempts(c int) Option {
-	return func(pol *policyd) error {
-		pol.retryAttempts = c
 		return nil
 	}
 }

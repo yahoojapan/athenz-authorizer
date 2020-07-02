@@ -28,9 +28,9 @@ var (
 	defaultOptions = []Option{
 		WithSysAuthDomain("sys.auth"),
 		WithRefreshPeriod("24h"),
-		WithRetryDelay("1m"),
 		WithETagExpiry("168h"), // 1 week
 		WithETagPurgePeriod("84h"),
+		WithRetryDelay("1m"),
 		WithHTTPClient(&http.Client{}),
 	}
 )

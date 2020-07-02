@@ -17,7 +17,6 @@ package authorizerd
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -35,7 +34,6 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v3/policy"
 	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/v3/role"
-	"github.com/yahoojapan/athenz-authorizer/v3/service"
 )
 
 func TestNew(t *testing.T) {
@@ -79,32 +77,6 @@ func TestNew(t *testing.T) {
 				}
 				if prov.(*authorizer).athenzURL != "www.dummy.com" {
 					return errors.New("invalid url")
-				}
-				return nil
-			},
-		},
-		{
-			name: "test New error, options",
-			args: args{
-				[]Option{WithAthenzTimeout("dummy")},
-			},
-			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error creating authorizerd: invalid Athenz timeout: time: invalid duration dummy"
-				if err.Error() != wantErr {
-					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
-				}
-				return nil
-			},
-		},
-		{
-			name: "test New error, http client",
-			args: args{
-				[]Option{WithAthenzCAPath("./test/data/non_existing_CA.pem")},
-			},
-			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create HTTP client: stat ./test/data/non_existing_CA.pem: no such file or directory"
-				if err.Error() != wantErr {
-					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
 				return nil
 			},
@@ -186,77 +158,6 @@ func TestNew(t *testing.T) {
 			got, gotErr := New(tt.args.opts...)
 			if err := tt.checkFunc(got, gotErr); err != nil {
 				t.Errorf("New() error = %v", err)
-			}
-		})
-	}
-}
-
-func Test_createHTTPClient(t *testing.T) {
-	type args struct {
-		timeout time.Duration
-		caPath  string
-	}
-	tests := []struct {
-		name       string
-		args       args
-		want       *http.Client
-		wantErrStr string
-	}{
-		{
-			name: "HTTP client with CA",
-			args: args{
-				timeout: 30 * time.Second,
-				caPath:  "./test/data/dummy_CA.pem",
-			},
-			want: &http.Client{
-				Timeout: 30 * time.Second,
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs: func() *x509.CertPool {
-							cp, err := service.NewX509CertPool("./test/data/dummy_CA.pem")
-							if err == nil {
-								return cp
-							}
-							return nil
-						}(),
-					},
-				},
-			},
-		},
-		{
-			name: "HTTP client without CA",
-			args: args{
-				timeout: time.Second,
-				caPath:  "",
-			},
-			want: &http.Client{
-				Timeout: time.Second,
-			},
-		},
-		{
-			name: "invalid CA path",
-			args: args{
-				caPath: "./test/data/non_existing_CA.pem",
-			},
-			wantErrStr: "stat ./test/data/non_existing_CA.pem: no such file or directory",
-		},
-		{
-			name: "invalid CA file",
-			args: args{
-				caPath: "./test/data/invalid_dummy_CA.pem",
-			},
-			wantErrStr: "Certification Failed",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := createHTTPClient(tt.args.timeout, tt.args.caPath)
-			if (err == nil && tt.wantErrStr != "") || (err != nil && err.Error() != tt.wantErrStr) {
-				t.Errorf("createHTTPClient() error = %v, wantErr %v", err, tt.wantErrStr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("createHTTPClient() = %v, want %v", got, tt.want)
 			}
 		})
 	}

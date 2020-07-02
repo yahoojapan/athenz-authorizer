@@ -126,7 +126,7 @@ func Test_flushAndClose(t *testing.T) {
 func Test_fetcher_Domain(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		retryInterval time.Duration
+		retryDelay    time.Duration
 		retryAttempts int
 		domain        string
 		athenzURL     string
@@ -151,7 +151,7 @@ func Test_fetcher_Domain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &fetcher{
 				expiryMargin:  tt.fields.expiryMargin,
-				retryInterval: tt.fields.retryInterval,
+				retryDelay:    tt.fields.retryDelay,
 				retryAttempts: tt.fields.retryAttempts,
 				domain:        tt.fields.domain,
 				athenzURL:     tt.fields.athenzURL,
@@ -169,7 +169,7 @@ func Test_fetcher_Domain(t *testing.T) {
 func Test_fetcher_Fetch(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		retryInterval time.Duration
+		retryDelay    time.Duration
 		retryAttempts int
 		domain        string
 		athenzURL     string
@@ -296,7 +296,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -377,7 +377,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -462,7 +462,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -523,7 +523,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -608,7 +608,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -669,7 +669,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: time.Second,
+				retryDelay:    time.Second,
 				retryAttempts: 3,
 				domain:        domain,
 				athenzURL:     url,
@@ -937,7 +937,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &fetcher{
 				expiryMargin:  tt.fields.expiryMargin,
-				retryInterval: tt.fields.retryInterval,
+				retryDelay:    tt.fields.retryDelay,
 				retryAttempts: tt.fields.retryAttempts,
 				domain:        tt.fields.domain,
 				athenzURL:     tt.fields.athenzURL,
@@ -966,7 +966,7 @@ func Test_fetcher_Fetch(t *testing.T) {
 func Test_fetcher_FetchWithRetry(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		retryInterval time.Duration
+		retryDelay    time.Duration
 		retryAttempts int
 		domain        string
 		athenzURL     string
@@ -1015,7 +1015,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 			// HTTP response
 			expiryMargin := time.Hour
-			retryInterval := time.Minute
+			retryDelay := time.Minute
 			retryAttempts := 0
 			keyID := "keyId"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -1060,7 +1060,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: retryInterval,
+				retryDelay:    retryDelay,
 				retryAttempts: retryAttempts,
 				domain:        "dummyDomain",
 				athenzURL:     url,
@@ -1077,7 +1077,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 			// HTTP response
 			expiryMargin := time.Hour
-			retryInterval := 100 * time.Millisecond
+			retryDelay := 100 * time.Millisecond
 			retryAttempts := 2
 			keyID := "keyId"
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -1127,7 +1127,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 				// check retry interval
 				diff := a.ctime.Sub(b.ctime)
-				if diff < retryInterval*time.Duration(retryAttempts) || diff > retryInterval*time.Duration(retryAttempts+1) {
+				if diff < retryDelay*time.Duration(retryAttempts) || diff > retryDelay*time.Duration(retryAttempts+1) {
 					return errors.New("retry interval not working")
 				}
 				return nil
@@ -1140,7 +1140,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: retryInterval,
+				retryDelay:    retryDelay,
 				retryAttempts: retryAttempts,
 				domain:        "dummyDomain",
 				athenzURL:     url,
@@ -1156,7 +1156,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 			// HTTP response
 			expiryMargin := time.Hour
-			retryInterval := time.Millisecond
+			retryDelay := time.Millisecond
 			retryAttempts := 2
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -1174,7 +1174,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: retryInterval,
+				retryDelay:    retryDelay,
 				retryAttempts: retryAttempts,
 				domain:        "dummyDomain",
 				athenzURL:     url,
@@ -1190,7 +1190,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 			// HTTP response
 			expiryMargin := time.Hour
-			retryInterval := time.Millisecond
+			retryDelay := time.Millisecond
 			retryAttempts := 2
 			_, client, url := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -1227,7 +1227,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: retryInterval,
+				retryDelay:    retryDelay,
 				retryAttempts: retryAttempts,
 				domain:        "dummyDomain",
 				athenzURL:     url,
@@ -1243,7 +1243,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 
 			// HTTP response
 			expiryMargin := time.Hour
-			retryInterval := time.Millisecond
+			retryDelay := time.Millisecond
 			retryAttempts := -1
 
 			// want objects
@@ -1277,7 +1277,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 			}
 			t.fields = fields{
 				expiryMargin:  expiryMargin,
-				retryInterval: retryInterval,
+				retryDelay:    retryDelay,
 				retryAttempts: retryAttempts,
 				domain:        "dummyDomain",
 				spVerifier:    func(sp *SignedPolicy) error { return nil },
@@ -1291,7 +1291,7 @@ func Test_fetcher_FetchWithRetry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &fetcher{
 				expiryMargin:  tt.fields.expiryMargin,
-				retryInterval: tt.fields.retryInterval,
+				retryDelay:    tt.fields.retryDelay,
 				retryAttempts: tt.fields.retryAttempts,
 				domain:        tt.fields.domain,
 				athenzURL:     tt.fields.athenzURL,

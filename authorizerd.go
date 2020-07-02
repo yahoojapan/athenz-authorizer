@@ -18,10 +18,8 @@ package authorizerd
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -36,7 +34,6 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v3/policy"
 	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 	"github.com/yahoojapan/athenz-authorizer/v3/role"
-	"github.com/yahoojapan/athenz-authorizer/v3/service"
 )
 
 // Authorizerd represents a daemon for user to verify the role token
@@ -63,10 +60,8 @@ type authorizer struct {
 	verifiers       []verifier
 
 	// athenz connection parameters
-	athenzURL     string
-	athenzTimeout time.Duration
-	athenzCAPath  string
-	client        *http.Client
+	athenzURL string
+	client    *http.Client
 
 	// successful result cache
 	cache    gache.Gache
@@ -85,9 +80,10 @@ type authorizer struct {
 
 	// policyd parameters
 	disablePolicyd      bool
-	policyExpiryMargin  string
 	athenzDomains       []string
+	policyExpiryMargin  string
 	policyRefreshPeriod string
+	policyPurgePeriod   string
 	policyRetryDelay    string
 	policyRetryAttempts int
 
@@ -130,14 +126,6 @@ func New(opts ...Option) (Authorizerd, error) {
 		}
 	}
 
-	// HTTP client to Athenz server
-	if prov.client, err = createHTTPClient(
-		prov.athenzTimeout,
-		prov.athenzCAPath,
-	); err != nil {
-		return nil, errors.Wrap(err, "error create HTTP client")
-	}
-
 	if !prov.disablePubkeyd {
 		if prov.pubkeyd, err = pubkey.New(
 			pubkey.WithAthenzURL(prov.athenzURL),
@@ -154,10 +142,11 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	if !prov.disablePolicyd {
 		if prov.policyd, err = policy.New(
-			policy.WithExpiryMargin(prov.policyExpiryMargin),
 			policy.WithAthenzURL(prov.athenzURL),
 			policy.WithAthenzDomains(prov.athenzDomains...),
+			policy.WithExpiryMargin(prov.policyExpiryMargin),
 			policy.WithRefreshPeriod(prov.policyRefreshPeriod),
+			policy.WithPurgePeriod(prov.policyPurgePeriod),
 			policy.WithRetryDelay(prov.policyRetryDelay),
 			policy.WithRetryAttempts(prov.policyRetryAttempts),
 			policy.WithHTTPClient(prov.client),
@@ -206,31 +195,6 @@ func New(opts ...Option) (Authorizerd, error) {
 	}
 
 	return prov, nil
-}
-
-func createHTTPClient(timeout time.Duration, caPath string) (*http.Client, error) {
-	if len(caPath) == 0 {
-		client := http.DefaultClient
-		client.Timeout = timeout
-		return client, nil
-	}
-
-	_, err := os.Stat(caPath)
-	if err != nil {
-		return nil, err
-	}
-	cp, err := service.NewX509CertPool(caPath)
-	if err != nil {
-		return nil, err
-	}
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: cp,
-			},
-		},
-		Timeout: timeout,
-	}, nil
 }
 
 func (a *authorizer) initVerifiers() error {

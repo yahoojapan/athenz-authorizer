@@ -48,7 +48,7 @@ type fetcher struct {
 	expiryMargin time.Duration
 
 	// retry related
-	retryInterval time.Duration
+	retryDelay    time.Duration
 	retryAttempts int
 
 	// athenz related
@@ -160,7 +160,7 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 		}
 
 		lastErr = err
-		time.Sleep(f.retryInterval)
+		time.Sleep(f.retryDelay)
 	}
 
 	errMsg := "max. retry count excess"
