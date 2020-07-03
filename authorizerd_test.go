@@ -63,6 +63,33 @@ func TestNew(t *testing.T) {
 				if prov.(*authorizer).policyd == nil {
 					return errors.New("cannot new policyd")
 				}
+				if prov.(*authorizer).jwkd == nil {
+					return errors.New("cannot new jwkd")
+				}
+				return nil
+			},
+		},
+		{
+			name: "test New success, disable jwkd",
+			args: args{
+				[]Option{WithDisableJwkd()},
+			},
+			checkFunc: func(prov Authorizerd, err error) error {
+				if err != nil {
+					return errors.Wrap(err, "unexpected error")
+				}
+				if prov.(*authorizer).athenzURL != "athenz.io/zts/v1" {
+					return errors.New("invalid url")
+				}
+				if prov.(*authorizer).pubkeyd == nil {
+					return errors.New("cannot new pubkeyd")
+				}
+				if prov.(*authorizer).policyd == nil {
+					return errors.New("cannot new policyd")
+				}
+				if prov.(*authorizer).jwkd != nil {
+					return errors.New("cannot disable jwkd")
+				}
 				return nil
 			},
 		},
