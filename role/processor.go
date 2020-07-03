@@ -25,10 +25,6 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
 )
 
-const (
-	CONFIRM_METHOD_MEMBER = "x5t#S256"
-)
-
 // Processor represents the role token parser interface.
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)

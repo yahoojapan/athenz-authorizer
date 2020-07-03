@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	CONFIRM_METHOD_MEMBER = "x5t#S256"
+	confirmMethodMember = "x5t#S256"
 )
 
 // Processor represents the access token parser interface.
@@ -115,7 +115,7 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return errors.New("error claim of access token is nil")
 	}
 
-	certThumbprint, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]
+	certThumbprint, ok := claims.Confirm[confirmMethodMember]
 	if !ok {
 		return errors.New("error token is not certificate bound access token")
 	}
