@@ -117,7 +117,9 @@ func New(opts ...Option) (Authorizerd, error) {
 		prov = &authorizer{
 			cache: gache.New(),
 		}
-		err error
+		err    error
+		pkPro  pubkey.Provider
+		jwkPro jwk.Provider
 	)
 
 	for _, opt := range append(defaultOptions, opts...) {
@@ -138,6 +140,7 @@ func New(opts ...Option) (Authorizerd, error) {
 		); err != nil {
 			return nil, err
 		}
+		pkPro = prov.pubkeyd.GetProvider()
 	}
 
 	if !prov.disablePolicyd {
@@ -150,7 +153,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithRetryDelay(prov.policyRetryDelay),
 			policy.WithRetryAttempts(prov.policyRetryAttempts),
 			policy.WithHTTPClient(prov.client),
-			policy.WithPubKeyProvider(prov.pubkeyd.GetProvider()),
+			policy.WithPubKeyProvider(pkPro),
 		); err != nil {
 			return nil, err
 		}
@@ -165,12 +168,13 @@ func New(opts ...Option) (Authorizerd, error) {
 		); err != nil {
 			return nil, err
 		}
+		jwkPro = prov.jwkd.GetProvider()
 	}
 
 	if prov.enableRoleToken {
 		if prov.roleProcessor, err = role.New(
-			role.WithPubkeyProvider(prov.pubkeyd.GetProvider()),
-			role.WithJWKProvider(prov.jwkd.GetProvider()),
+			role.WithPubkeyProvider(pkPro),
+			role.WithJWKProvider(jwkPro),
 		); err != nil {
 			return nil, err
 		}
@@ -178,7 +182,7 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	if prov.accessTokenParam.enable {
 		if prov.accessProcessor, err = access.New(
-			access.WithJWKProvider(prov.jwkd.GetProvider()),
+			access.WithJWKProvider(jwkPro),
 			access.WithEnableMTLSCertificateBoundAccessToken(prov.accessTokenParam.verifyCertThumbprint),
 			access.WithEnableVerifyClientID(prov.accessTokenParam.verifyClientID),
 			access.WithAuthorizedClientIDs(prov.accessTokenParam.authorizedClientIDs),
