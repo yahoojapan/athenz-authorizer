@@ -27,10 +27,10 @@ import (
 var (
 	defaultOptions = []Option{
 		WithSysAuthDomain("sys.auth"),
-		WithEtagExpTime("168h"), // 1 week
-		WithEtagFlushDuration("84h"),
-		WithRefreshDuration("24h"),
-		WithErrRetryInterval("1m"),
+		WithRefreshPeriod("24h"),
+		WithETagExpiry("168h"), // 1 week
+		WithETagPurgePeriod("84h"),
+		WithRetryDelay("1m"),
 		WithHTTPClient(&http.Client{}),
 	}
 )
@@ -61,40 +61,8 @@ func WithSysAuthDomain(d string) Option {
 	}
 }
 
-// WithEtagExpTime returns an EtagExpTime functional option
-func WithEtagExpTime(t string) Option {
-	return func(p *pubkeyd) error {
-		if t == "" {
-			return nil
-		}
-
-		etagExpTime, err := time.ParseDuration(t)
-		if err != nil {
-			return errors.Wrap(err, "invalid etag expire time")
-		}
-		p.etagExpTime = etagExpTime
-		return nil
-	}
-}
-
-// WithEtagFlushDuration returns an EtagFlushDur functional option
-func WithEtagFlushDuration(t string) Option {
-	return func(p *pubkeyd) error {
-		if t == "" {
-			return nil
-		}
-
-		etagFlushDur, err := time.ParseDuration(t)
-		if err != nil {
-			return errors.Wrap(err, "invalid etag flush duration")
-		}
-		p.etagFlushDur = etagFlushDur
-		return nil
-	}
-}
-
-// WithRefreshDuration returns a RefreshDuration functional option
-func WithRefreshDuration(t string) Option {
+// WithRefreshPeriod returns a RefreshPeriod functional option
+func WithRefreshPeriod(t string) Option {
 	return func(p *pubkeyd) error {
 		if t == "" {
 			return nil
@@ -102,9 +70,57 @@ func WithRefreshDuration(t string) Option {
 
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid refresh period")
 		}
-		p.refreshDuration = rd
+		p.refreshPeriod = rd
+		return nil
+	}
+}
+
+// WithRetryDelay returns an RetryDelay functional option
+func WithRetryDelay(i string) Option {
+	return func(p *pubkeyd) error {
+		if i == "" {
+			return nil
+		}
+
+		ri, err := time.ParseDuration(i)
+		if err != nil {
+			return errors.Wrap(err, "invalid retry delay")
+		}
+		p.retryDelay = ri
+		return nil
+	}
+}
+
+// WithETagExpiry returns an ETagExpiry functional option
+func WithETagExpiry(d string) Option {
+	return func(p *pubkeyd) error {
+		if d == "" {
+			return nil
+		}
+
+		ee, err := time.ParseDuration(d)
+		if err != nil {
+			return errors.Wrap(err, "invalid ETag expiry time")
+		}
+		p.eTagExpiry = ee
+		return nil
+	}
+}
+
+// WithETagPurgePeriod returns an ETagPurgePeriod functional option
+func WithETagPurgePeriod(d string) Option {
+	return func(p *pubkeyd) error {
+		if d == "" {
+			return nil
+		}
+
+		epp, err := time.ParseDuration(d)
+		if err != nil {
+			return errors.Wrap(err, "invalid ETag purge period")
+		}
+		p.eTagPurgePeriod = epp
 		return nil
 	}
 }
@@ -115,22 +131,6 @@ func WithHTTPClient(cl *http.Client) Option {
 		if p != nil {
 			p.client = cl
 		}
-		return nil
-	}
-}
-
-// WithErrRetryInterval returns an ErrRetryInterval functional option
-func WithErrRetryInterval(i string) Option {
-	return func(p *pubkeyd) error {
-		if i == "" {
-			return nil
-		}
-
-		ri, err := time.ParseDuration(i)
-		if err != nil {
-			return errors.Wrap(err, "invalid err retry interval")
-		}
-		p.errRetryInterval = ri
 		return nil
 	}
 }

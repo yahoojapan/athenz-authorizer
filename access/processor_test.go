@@ -280,7 +280,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 					}),
 					enableVerifyClientID: true,
 					authorizedClientIDs: map[string][]string{
-						"domain.tenant.service": []string{
+						"domain.tenant.service": {
 							"domain.tenant.service",
 						},
 					},
@@ -584,8 +584,8 @@ func Test_rtp_validateClientID(t *testing.T) {
 			fields: fields{
 				enableVerifyClientID: true,
 				authorizedClientIDs: map[string][]string{
-					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
-					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
+					"dummy cn1": {"dummy client_id1", "dummy client_id2"},
+					"dummy cn2": {"dummy client_id1", "dummy client_id2"},
 				},
 			},
 			args: args{
@@ -671,8 +671,8 @@ func Test_rtp_validateClientID(t *testing.T) {
 			fields: fields{
 				enableVerifyClientID: true,
 				authorizedClientIDs: map[string][]string{
-					"dummy cn1": []string{"dummy client_id1", "dummy client_id2"},
-					"dummy cn2": []string{"dummy client_id1", "dummy client_id2"},
+					"dummy cn1": {"dummy client_id1", "dummy client_id2"},
+					"dummy cn2": {"dummy client_id1", "dummy client_id2"},
 				},
 			},
 			args: args{

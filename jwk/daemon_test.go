@@ -53,17 +53,17 @@ func TestNew(t *testing.T) {
 				},
 			},
 			want: &jwkd{
-				athenzURL:        "www.dummy.com",
-				refreshDuration:  time.Hour * 24,
-				errRetryInterval: time.Minute,
-				client:           http.DefaultClient,
+				athenzURL:     "www.dummy.com",
+				refreshPeriod: time.Hour * 24,
+				retryDelay:    time.Minute,
+				client:        http.DefaultClient,
 			},
 		},
 		{
 			name: "New daemon fail",
 			args: args{
 				opts: []Option{
-					WithRefreshDuration("dummy"),
+					WithRefreshPeriod("dummy"),
 				},
 			},
 			wantErr: true,
@@ -85,11 +85,11 @@ func TestNew(t *testing.T) {
 
 func Test_jwkd_Start(t *testing.T) {
 	type fields struct {
-		athenzURL        string
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		client           *http.Client
-		keys             atomic.Value
+		athenzURL     string
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		client        *http.Client
+		keys          atomic.Value
 	}
 	type args struct {
 		ctx context.Context
@@ -112,10 +112,10 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "canceled context",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					refreshDuration:  time.Millisecond * 10,
-					errRetryInterval: time.Millisecond,
-					client:           srv.Client(),
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					refreshPeriod: time.Millisecond * 10,
+					retryDelay:    time.Millisecond,
+					client:        srv.Client(),
 				},
 				args: args{
 					ctx: ctx,
@@ -147,18 +147,22 @@ func Test_jwkd_Start(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
 
 			return test{
 				name: "Start success",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					refreshDuration:  time.Millisecond * 10,
-					errRetryInterval: time.Millisecond,
-					client:           srv.Client(),
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					refreshPeriod: time.Millisecond * 10,
+					retryDelay:    time.Millisecond,
+					client:        srv.Client(),
 				},
 				args: args{
 					ctx: ctx,
@@ -186,8 +190,12 @@ func Test_jwkd_Start(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(fmt.Sprintf(k, i)))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(fmt.Sprintf(k, i)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				i = i + 1
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
@@ -195,10 +203,10 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start can update",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					refreshDuration:  time.Millisecond * 10,
-					errRetryInterval: time.Millisecond,
-					client:           srv.Client(),
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					refreshPeriod: time.Millisecond * 10,
+					retryDelay:    time.Millisecond,
+					client:        srv.Client(),
 				},
 				args: args{
 					ctx: ctx,
@@ -242,8 +250,12 @@ func Test_jwkd_Start(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 				i = i + 1
 			}))
 			ctx, cancel := context.WithCancel(context.Background())
@@ -251,10 +263,10 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start retry update",
 				fields: fields{
-					athenzURL:        strings.Replace(srv.URL, "https://", "", 1),
-					refreshDuration:  time.Millisecond * 10,
-					errRetryInterval: time.Millisecond,
-					client:           srv.Client(),
+					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					refreshPeriod: time.Millisecond * 10,
+					retryDelay:    time.Millisecond,
+					client:        srv.Client(),
 				},
 				args: args{
 					ctx: ctx,
@@ -280,11 +292,11 @@ func Test_jwkd_Start(t *testing.T) {
 				defer tt.afterFunc()
 			}
 			j := &jwkd{
-				athenzURL:        tt.fields.athenzURL,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				client:           tt.fields.client,
-				keys:             tt.fields.keys,
+				athenzURL:     tt.fields.athenzURL,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				client:        tt.fields.client,
+				keys:          tt.fields.keys,
 			}
 			got := j.Start(tt.args.ctx)
 			if tt.checkFunc != nil {
@@ -298,11 +310,11 @@ func Test_jwkd_Start(t *testing.T) {
 
 func Test_jwkd_Update(t *testing.T) {
 	type fields struct {
-		athenzURL        string
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		client           *http.Client
-		keys             atomic.Value
+		athenzURL     string
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		client        *http.Client
+		keys          atomic.Value
 	}
 	type args struct {
 		ctx context.Context
@@ -322,8 +334,12 @@ func Test_jwkd_Update(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 
 			return test{
@@ -356,8 +372,12 @@ func Test_jwkd_Update(t *testing.T) {
 "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 }`
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
-				w.Write([]byte(k))
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}))
 
 			return test{
@@ -382,11 +402,11 @@ func Test_jwkd_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:        tt.fields.athenzURL,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				client:           tt.fields.client,
-				keys:             tt.fields.keys,
+				athenzURL:     tt.fields.athenzURL,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				client:        tt.fields.client,
+				keys:          tt.fields.keys,
 			}
 			if err := j.Update(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("jwkd.Update() error = %v, wantErr %v", err, tt.wantErr)
@@ -402,11 +422,11 @@ func Test_jwkd_Update(t *testing.T) {
 
 func Test_jwkd_GetProvider(t *testing.T) {
 	type fields struct {
-		athenzURL        string
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		client           *http.Client
-		keys             atomic.Value
+		athenzURL     string
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		client        *http.Client
+		keys          atomic.Value
 	}
 	tests := []struct {
 		name      string
@@ -426,11 +446,11 @@ func Test_jwkd_GetProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:        tt.fields.athenzURL,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				client:           tt.fields.client,
-				keys:             tt.fields.keys,
+				athenzURL:     tt.fields.athenzURL,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				client:        tt.fields.client,
+				keys:          tt.fields.keys,
 			}
 			got := j.GetProvider()
 			if err := tt.checkFunc(got); err != nil {
@@ -442,11 +462,11 @@ func Test_jwkd_GetProvider(t *testing.T) {
 
 func Test_jwkd_getKey(t *testing.T) {
 	type fields struct {
-		athenzURL        string
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		client           *http.Client
-		keys             atomic.Value
+		athenzURL     string
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		client        *http.Client
+		keys          atomic.Value
 	}
 	type args struct {
 		keyID string
@@ -464,7 +484,10 @@ func Test_jwkd_getKey(t *testing.T) {
 	}
 	newKey := func(k interface{}, keyID string) jwk.Key {
 		jwkKey, _ := jwk.New(k)
-		jwkKey.Set(jwk.KeyIDKey, keyID)
+		err := jwkKey.Set(jwk.KeyIDKey, keyID)
+		if err != nil {
+			t.Errorf("jwkd.getKey() setup error = %v", err)
+		}
 		return jwkKey
 	}
 	tests := []test{
@@ -643,11 +666,11 @@ func Test_jwkd_getKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:        tt.fields.athenzURL,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				client:           tt.fields.client,
-				keys:             tt.fields.keys,
+				athenzURL:     tt.fields.athenzURL,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				client:        tt.fields.client,
+				keys:          tt.fields.keys,
 			}
 			if got := j.getKey(tt.args.keyID); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("jwkd.getKey() = %#v, want %#v", got, tt.want)

@@ -148,7 +148,7 @@ func TestWithSysAuthDomain(t *testing.T) {
 	}
 }
 
-func TestWithEtagExpTime(t *testing.T) {
+func TestWithETagExpiry(t *testing.T) {
 	type args struct {
 		time string
 	}
@@ -158,7 +158,7 @@ func TestWithEtagExpTime(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set etag expire time success",
+			name: "set ETag expiry time success",
 			args: args{
 				time: "2h",
 			},
@@ -168,8 +168,8 @@ func TestWithEtagExpTime(t *testing.T) {
 					return err
 				}
 
-				if p.etagExpTime != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set etag expire time")
+				if p.eTagExpiry != time.Duration(time.Hour*2) {
+					return fmt.Errorf("cannot set ETag expiry time")
 				}
 				return nil
 			},
@@ -200,7 +200,7 @@ func TestWithEtagExpTime(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid etag expire time was set")
+					return fmt.Errorf("invalid ETag expiry time was set")
 				}
 				return nil
 			},
@@ -208,19 +208,19 @@ func TestWithEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithEtagExpTime(tt.args.time)
+			got := WithETagExpiry(tt.args.time)
 			if got == nil {
-				t.Errorf("WithEtagExpTime() = nil")
+				t.Errorf("WithETagExpiry() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithEtagExpTime() = %v", err)
+				t.Errorf("WithETagExpiry() = %v", err)
 			}
 		})
 	}
 }
 
-func TestWithErrRetryInterval(t *testing.T) {
+func TestWithRetryDelay(t *testing.T) {
 	type args struct {
 		time string
 	}
@@ -230,7 +230,7 @@ func TestWithErrRetryInterval(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set errRetryInterval expire time success",
+			name: "set retryDelay expire time success",
 			args: args{
 				time: "2h",
 			},
@@ -240,8 +240,8 @@ func TestWithErrRetryInterval(t *testing.T) {
 					return err
 				}
 
-				if p.errRetryInterval != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set errRetryInterval time")
+				if p.retryDelay != time.Duration(time.Hour*2) {
+					return fmt.Errorf("cannot set retryDelay time")
 				}
 				return nil
 			},
@@ -272,7 +272,7 @@ func TestWithErrRetryInterval(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid errRetryInterval time was set")
+					return fmt.Errorf("invalid retryDelay time was set")
 				}
 				return nil
 			},
@@ -280,19 +280,19 @@ func TestWithErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithErrRetryInterval(tt.args.time)
+			got := WithRetryDelay(tt.args.time)
 			if got == nil {
-				t.Errorf("WithErrRetryInterval() = nil")
+				t.Errorf("WithRetryDelay() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithErrRetryInterval() = %v", err)
+				t.Errorf("WithRetryDelay() = %v", err)
 			}
 		})
 	}
 }
 
-func TestWithEtagFlushDuration(t *testing.T) {
+func TestWithETagPurgePeriod(t *testing.T) {
 	type args struct {
 		dur string
 	}
@@ -302,7 +302,7 @@ func TestWithEtagFlushDuration(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set etag expire time success",
+			name: "set ETag expiry time success",
 			args: args{
 				dur: "2h",
 			},
@@ -312,8 +312,8 @@ func TestWithEtagFlushDuration(t *testing.T) {
 					return err
 				}
 
-				if p.etagFlushDur != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set etag flush duration")
+				if p.eTagPurgePeriod != time.Duration(time.Hour*2) {
+					return fmt.Errorf("cannot set ETag purge period")
 				}
 				return nil
 			},
@@ -328,7 +328,7 @@ func TestWithEtagFlushDuration(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid etag flush duration was set")
+					return fmt.Errorf("invalid ETag purge period was set")
 				}
 				return nil
 			},
@@ -352,19 +352,19 @@ func TestWithEtagFlushDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithEtagFlushDuration(tt.args.dur)
+			got := WithETagPurgePeriod(tt.args.dur)
 			if got == nil {
-				t.Errorf("WithEtagFlushDuration() = nil")
+				t.Errorf("WithETagPurgePeriod() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithEtagFlushDuration() = %v", err)
+				t.Errorf("WithETagPurgePeriod() = %v", err)
 			}
 		})
 	}
 }
 
-func TestWithRefreshDuration(t *testing.T) {
+func TestWithRefreshPeriod(t *testing.T) {
 	type args struct {
 		dur string
 	}
@@ -374,7 +374,7 @@ func TestWithRefreshDuration(t *testing.T) {
 		checkFunc func(Option) error
 	}{
 		{
-			name: "set refresh duration success",
+			name: "set refresh period success",
 			args: args{
 				dur: "2h",
 			},
@@ -384,8 +384,8 @@ func TestWithRefreshDuration(t *testing.T) {
 					return err
 				}
 
-				if p.refreshDuration != time.Duration(time.Hour*2) {
-					return fmt.Errorf("cannot set refresh duration")
+				if p.refreshPeriod != time.Duration(time.Hour*2) {
+					return fmt.Errorf("cannot set refresh period")
 				}
 				return nil
 			},
@@ -400,7 +400,7 @@ func TestWithRefreshDuration(t *testing.T) {
 				err := got(p)
 
 				if err == nil {
-					return fmt.Errorf("invalid refresh duration was set")
+					return fmt.Errorf("invalid refresh period was set")
 				}
 				return nil
 			},
@@ -424,13 +424,13 @@ func TestWithRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRefreshDuration(tt.args.dur)
+			got := WithRefreshPeriod(tt.args.dur)
 			if got == nil {
-				t.Errorf("WithRefreshDuration() = nil")
+				t.Errorf("WithRefreshPeriod() = nil")
 				return
 			}
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRefreshDuration() = %v", err)
+				t.Errorf("WithRefreshPeriod() = %v", err)
 			}
 		})
 	}

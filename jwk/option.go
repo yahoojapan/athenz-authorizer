@@ -26,8 +26,8 @@ import (
 
 var (
 	defaultOptions = []Option{
-		WithRefreshDuration("24h"),
-		WithErrRetryInterval("1m"),
+		WithRefreshPeriod("24h"),
+		WithRetryDelay("1m"),
 		WithHTTPClient(http.DefaultClient),
 	}
 )
@@ -47,32 +47,32 @@ func WithAthenzURL(url string) Option {
 	}
 }
 
-// WithRefreshDuration returns a RefreshDuration functional option
-func WithRefreshDuration(t string) Option {
+// WithRefreshPeriod returns a RefreshPeriod functional option
+func WithRefreshPeriod(t string) Option {
 	return func(j *jwkd) error {
 		if t == "" {
 			return nil
 		}
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid refresh period")
 		}
-		j.refreshDuration = rd
+		j.refreshPeriod = rd
 		return nil
 	}
 }
 
-// WithErrRetryInterval returns an ErrRetryInterval functional option
-func WithErrRetryInterval(i string) Option {
+// WithRetryDelay returns an RetryDelay functional option
+func WithRetryDelay(i string) Option {
 	return func(j *jwkd) error {
 		if i == "" {
 			return nil
 		}
 		ri, err := time.ParseDuration(i)
 		if err != nil {
-			return errors.Wrap(err, "invalid err retry interval")
+			return errors.Wrap(err, "invalid retry delay")
 		}
-		j.errRetryInterval = ri
+		j.retryDelay = ri
 		return nil
 	}
 }

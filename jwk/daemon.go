@@ -36,9 +36,10 @@ type Daemon interface {
 }
 
 type jwkd struct {
-	athenzURL        string
-	refreshDuration  time.Duration
-	errRetryInterval time.Duration
+	athenzURL string
+
+	refreshPeriod time.Duration
+	retryDelay    time.Duration
 
 	client *http.Client
 
@@ -54,7 +55,7 @@ func New(opts ...Option) (Daemon, error) {
 	for _, opt := range append(defaultOptions, opts...) {
 		err := opt(j)
 		if err != nil {
-			return nil, errors.Wrap(err, "error create policyd")
+			return nil, errors.Wrap(err, "error create jwkd")
 		}
 	}
 
@@ -69,13 +70,13 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 	go func() {
 		defer close(fch)
 		defer close(ech)
-		ticker := time.NewTicker(j.refreshDuration)
+		ticker := time.NewTicker(j.refreshPeriod)
 		ebuf := errors.New("")
 
 		update := func() {
 			if err := j.Update(ctx); err != nil {
 				err = errors.Wrap(err, "error update athenz json web key")
-				time.Sleep(j.errRetryInterval)
+				time.Sleep(j.retryDelay)
 
 				select {
 				case ech <- errors.Wrap(ebuf, err.Error()):

@@ -44,11 +44,11 @@ type Fetcher interface {
 
 type fetcher struct {
 
-	// etag related
-	expireMargin time.Duration
+	// ETag related
+	expiryMargin time.Duration
 
 	// retry related
-	retryInterval time.Duration
+	retryDelay    time.Duration
 	retryAttempts int
 
 	// athenz related
@@ -61,8 +61,8 @@ type fetcher struct {
 }
 
 type taggedPolicy struct {
-	etag       string
-	etagExpiry time.Time
+	eTag       string
+	eTagExpiry time.Time
 	sp         *SignedPolicy
 	ctime      time.Time
 }
@@ -86,13 +86,13 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 		return nil, errors.Wrap(err, errMsg)
 	}
 
-	// etag header
+	// ETag header
 	var tp *taggedPolicy
 	if f.policyCache != nil {
 		tp = (*taggedPolicy)(atomic.LoadPointer(&f.policyCache))
-		if tp.etag != "" && tp.etagExpiry.After(fastime.Now()) {
-			glg.Debugf("request on domain: %s, with etag: %s", f.domain, tp.etag)
-			req.Header.Set("If-None-Match", tp.etag)
+		if tp.eTag != "" && tp.eTagExpiry.After(fastime.Now()) {
+			glg.Debugf("request on domain: %s, with ETag: %s", f.domain, tp.eTag)
+			req.Header.Set("If-None-Match", tp.eTag)
 		}
 	}
 
@@ -110,7 +110,7 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 
 	// if server responses NotModified, return policy from cache
 	if res.StatusCode == http.StatusNotModified {
-		glg.Debugf("policy = 304 not modified, use cache for domain: %s, etag: %v", f.domain, tp.etag)
+		glg.Debugf("policy = 304 not modified, use cache for domain: %s, ETag: %v", f.domain, tp.eTag)
 		return tp.sp, nil
 	}
 
@@ -136,11 +136,11 @@ func (f *fetcher) Fetch(ctx context.Context) (*SignedPolicy, error) {
 	}
 
 	// set policy cache
-	etag := res.Header.Get("ETag")
-	etagExpiry := sp.SignedPolicyData.Expires.Time.Add(-f.expireMargin)
+	eTag := res.Header.Get("ETag")
+	eTagExpiry := sp.SignedPolicyData.Expires.Time.Add(-f.expiryMargin)
 	newTp := &taggedPolicy{
-		etag:       etag,
-		etagExpiry: etagExpiry,
+		eTag:       eTag,
+		eTagExpiry: eTagExpiry,
 		sp:         sp,
 		ctime:      fastime.Now(),
 	}
@@ -160,7 +160,7 @@ func (f *fetcher) FetchWithRetry(ctx context.Context) (*SignedPolicy, error) {
 		}
 
 		lastErr = err
-		time.Sleep(f.retryInterval)
+		time.Sleep(f.retryDelay)
 	}
 
 	errMsg := "max. retry count excess"
@@ -179,7 +179,7 @@ func (t *taggedPolicy) String() string {
 	if t.sp != nil && t.sp.SignedPolicyData != nil && t.sp.SignedPolicyData.PolicyData != nil {
 		policyDomain = t.sp.SignedPolicyData.PolicyData.Domain
 	}
-	return fmt.Sprintf("{ ctime: %s, etag: %s, etagExpiry: %s, sp.domain: %s }", t.ctime.UTC().String(), t.etag, t.etagExpiry.UTC().String(), policyDomain)
+	return fmt.Sprintf("{ ctime: %s, eTag: %s, eTagExpiry: %s, sp.domain: %s }", t.ctime.UTC().String(), t.eTag, t.eTagExpiry.UTC().String(), policyDomain)
 }
 
 // flushAndClose helps to flush and close a ReadCloser. Used for request body internal.
