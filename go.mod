@@ -1,4 +1,4 @@
-module github.com/yahoojapan/athenz-authorizer/v3
+module github.com/yahoojapan/athenz-authorizer/v4
 
 go 1.14
 
@@ -11,6 +11,6 @@ require (
 	github.com/kpango/glg v1.5.1
 	github.com/lestrrat-go/jwx v1.0.2
 	github.com/pkg/errors v0.9.1
-	github.com/yahoo/athenz v1.9.9
+	github.com/yahoo/athenz v1.9.10
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 )

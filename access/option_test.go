@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
 
 func TestWithJWKProvider(t *testing.T) {
