@@ -706,7 +706,7 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &role.Token{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -925,7 +925,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &role.RoleJWTClaim{})
 			pm := &RoleProcessorMock{
 				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
@@ -1145,7 +1145,7 @@ func Test_authorizer_verify(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
-			if err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
+			if _, err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -1435,8 +1435,8 @@ func Test_authorizer_Verify(t *testing.T) {
 			name: "Verify success, 1 verifier",
 			fields: fields{
 				verifiers: []verifier{
-					func(r *http.Request, act, res string) error {
-						return nil
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, nil
 					},
 				},
 			},
@@ -1446,14 +1446,14 @@ func Test_authorizer_Verify(t *testing.T) {
 			name: "Verify success, multiple verifier",
 			fields: fields{
 				verifiers: []verifier{
-					func(r *http.Request, act, res string) error {
-						return errors.Errorf("Testing verify error 1")
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, errors.Errorf("Testing verify error 1")
 					},
-					func(r *http.Request, act, res string) error {
-						return nil
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, nil
 					},
-					func(r *http.Request, act, res string) error {
-						return nil
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, nil
 					},
 				},
 			},
@@ -1463,8 +1463,8 @@ func Test_authorizer_Verify(t *testing.T) {
 			name: "Verify fail, 1 verifier",
 			fields: fields{
 				verifiers: []verifier{
-					func(r *http.Request, act, res string) error {
-						return errors.Errorf("Testing verify error 1")
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, errors.Errorf("Testing verify error 1")
 					},
 				},
 			},
@@ -1474,14 +1474,14 @@ func Test_authorizer_Verify(t *testing.T) {
 			name: "Verify fail, multiple verifier",
 			fields: fields{
 				verifiers: []verifier{
-					func(r *http.Request, act, res string) error {
-						return errors.Errorf("Testing verify error 1")
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, errors.Errorf("Testing verify error 1")
 					},
-					func(r *http.Request, act, res string) error {
-						return errors.Errorf("Testing verify error 2")
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, errors.Errorf("Testing verify error 2")
 					},
-					func(r *http.Request, act, res string) error {
-						return errors.Errorf("Testing verify error 3")
+					func(r *http.Request, act, res string) (Principal, error) {
+						return nil, errors.Errorf("Testing verify error 3")
 					},
 				},
 			},
@@ -1574,7 +1574,7 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			c.SetWithExpire("dummyTokdummyActdummyRes", "dummy", time.Minute)
+			c.SetWithExpire("dummyTokdummyActdummyRes", &access.OAuth2AccessTokenClaim{}, time.Minute)
 			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,

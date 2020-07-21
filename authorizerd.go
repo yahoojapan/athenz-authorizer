@@ -41,14 +41,33 @@ type Authorizerd interface {
 	Init(ctx context.Context) error
 	Start(ctx context.Context) <-chan error
 	Verify(r *http.Request, act, res string) error
+	Authorize(r *http.Request, act, res string) (Principal, error)
 	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
+	AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error)
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
+	AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error)
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
+	authorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error)
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
 
-type verifier func(r *http.Request, act, res string) error
+type verifier func(r *http.Request, act, res string) (Principal, error)
+
+// A Principal is an authenticated entity
+type Principal interface {
+	GetName() string
+	GetRoles() []string
+	GetDomain() string
+	GetIssueTime() int64
+	GetExpiryTime() int64
+}
+
+// A ClientID is an interface for a principal that has a ClientID
+type ClientID interface {
+	Principal
+	GetClientID() string
+}
 
 type authorizer struct {
 	//
@@ -206,34 +225,34 @@ func (a *authorizer) initVerifiers() error {
 	verifiers := make([]verifier, 0, 3) // rolecert, access token, roletoken
 
 	if a.enableRoleCert {
-		rcVerifier := func(r *http.Request, act, res string) error {
+		rcVerifier := func(r *http.Request, act, res string) (Principal, error) {
 			if r.TLS != nil {
-				return a.VerifyRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+				return a.authorizeRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
 			}
-			return a.VerifyRoleCert(r.Context(), nil, act, res)
+			return a.authorizeRoleCert(r.Context(), nil, act, res)
 		}
 		glg.Info("initVerifiers: added role certificate verifier")
 		verifiers = append(verifiers, rcVerifier)
 	}
 
 	if a.accessTokenParam.enable {
-		atVerifier := func(r *http.Request, act, res string) error {
+		atVerifier := func(r *http.Request, act, res string) (Principal, error) {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if r.TLS != nil && len(r.TLS.PeerCertificates) != 0 {
-				return a.VerifyAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+				return a.AuthorizeAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
 			}
-			return a.VerifyAccessToken(r.Context(), tokenString, act, res, nil)
+			return a.AuthorizeAccessToken(r.Context(), tokenString, act, res, nil)
 		}
 		glg.Infof("initVerifiers: added access token verifier having param: %+v", a.accessTokenParam)
 		verifiers = append(verifiers, atVerifier)
 	}
 
 	if a.enableRoleToken {
-		rtVerifier := func(r *http.Request, act, res string) error {
-			return a.VerifyRoleToken(r.Context(), r.Header.Get(a.roleAuthHeader), act, res)
+		rtVerifier := func(r *http.Request, act, res string) (Principal, error) {
+			return a.AuthorizeRoleToken(r.Context(), r.Header.Get(a.roleAuthHeader), act, res)
 		}
 		glg.Info("initVerifiers: added role token verifier")
 		verifiers = append(verifiers, rtVerifier)
@@ -331,34 +350,48 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
+	_, err := a.verify(ctx, roleToken, tok, act, res, nil)
+	return err
+}
+
+// AuthorizeRoleToken verifies the role token for specific resource and return the result of verifying and verification error.
+func (a *authorizer) AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error) {
 	return a.verify(ctx, roleToken, tok, act, res, nil)
 }
 
 // VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, roleJWT, tok, act, res, nil)
+	_, err := a.verify(ctx, roleJWT, tok, act, res, nil)
+	return err
 }
 
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
+	_, err := a.verify(ctx, accessToken, tok, act, res, cert)
+	return err
+}
+
+// AuthorizeAccessToken verifies the access token on the specific (action, resource) pair and returns the result of verifying and verification error if unauthorized.
+func (a *authorizer) AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error) {
 	return a.verify(ctx, accessToken, tok, act, res, cert)
 }
 
-func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) error {
+func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
 	if act == "" || res == "" {
-		return errors.Wrap(ErrInvalidParameters, "empty action / resource")
+		return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 	}
 
 	// check if exists in verification success cache
-	_, ok := a.cache.Get(tok + act + res)
+	cached, ok := a.cache.Get(tok + act + res)
 	if ok {
 		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
-		return nil
+		return cached.(Principal), nil
 	}
 
 	var (
-		domain string
-		roles  []string
+		domain    string
+		roles     []string
+		principal Principal
 	)
 
 	switch m {
@@ -366,48 +399,64 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
-			return errors.Wrap(err, "error verify role token")
+			return nil, errors.Wrap(err, "error verify role token")
 		}
 		domain = rt.Domain
 		roles = rt.Roles
+		principal = rt
 	case roleJWT:
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
-			return errors.Wrap(err, "error verify role jwt")
+			return nil, errors.Wrap(err, "error verify role jwt")
 		}
 		domain = rc.Domain
 		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
+		principal = nil
 	case accessToken:
 		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 		if err != nil {
 			glg.Debugf("error parse and validate access token, err: %v", err)
-			return errors.Wrap(err, "error verify access token")
+			return nil, errors.Wrap(err, "error verify access token")
 		}
 		domain = ac.Audience
 		roles = ac.Scope
+		principal = ac
 	}
 
 	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
 		glg.Debugf("error check, err: %v", err)
-		return errors.Wrap(err, "token unauthorized")
+		return nil, errors.Wrap(err, "token unauthorized")
 	}
 	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(tok+act+res, struct{}{}, a.cacheExp)
-	return nil
+	a.cache.SetWithExpire(tok+act+res, principal, a.cacheExp)
+	return principal, nil
 }
 
 // Verify returns error of verification. Returns nil if ANY verifier succeeds (OR logic).
 func (a *authorizer) Verify(r *http.Request, act, res string) error {
 	for _, verifier := range a.verifiers {
 		// OR logic on multiple credentials
-		err := verifier(r, act, res)
+		_, err := verifier(r, act, res)
 		if err == nil {
 			return nil
 		}
 	}
 
 	return ErrInvalidCredentials
+}
+
+// Authorize returns the result of verifying and error of verification.
+func (a *authorizer) Authorize(r *http.Request, act, res string) (Principal, error) {
+	for _, verifier := range a.verifiers {
+		// OR logic on multiple credentials
+		verified, err := verifier(r, act, res)
+		if err == nil {
+			return verified, nil
+		}
+	}
+
+	return nil, ErrInvalidCredentials
 }
 
 // VerifyRoleCert verifies the role certificate for specific resource and return and verification error.
@@ -445,6 +494,13 @@ func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	}
 
 	return errors.Wrap(err, "role certificates unauthorized")
+}
+
+// authorizeRoleCert verifies the role certificate for specific resource and return and verification error.
+func (a *authorizer) authorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error) {
+	err := a.VerifyRoleCert(ctx, peerCerts, act, res)
+	// TODO VerifyRoleCert has not yet been implemented to return a Principal
+	return nil, err
 }
 
 // GetPolicyCache returns the cached policy data

@@ -77,6 +77,7 @@ func TestToken_SetParams(t *testing.T) {
 						t, _ := strconv.ParseInt("1550643321", 10, 64)
 						return time.Unix(t, 0)
 					}(),
+					IntExpiryTime: 1550643321,
 				}
 
 				if !reflect.DeepEqual(got, expected) {
