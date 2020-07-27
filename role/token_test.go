@@ -27,9 +27,12 @@ import (
 
 func TestToken_SetParams(t *testing.T) {
 	type fields struct {
+		Principal     string
 		Domain        string
 		Roles         []string
+		IntTimeStamp  int64
 		ExpiryTime    time.Time
+		IntExpiryTime int64
 		KeyID         string
 		Signature     string
 		UnsignedToken string
@@ -46,6 +49,25 @@ func TestToken_SetParams(t *testing.T) {
 		wantErr   bool
 	}{
 		{
+			name:   "set param p success",
+			fields: fields{},
+			args: args{
+				key:   "p",
+				value: "dummyp",
+			},
+			checkFunc: func(got *Token) error {
+				expected := &Token{
+					Principal: "dummyp",
+				}
+
+				if !reflect.DeepEqual(got, expected) {
+					return fmt.Errorf("error")
+				}
+
+				return nil
+			},
+		},
+		{
 			name:   "set param d success",
 			fields: fields{},
 			args: args{
@@ -55,6 +77,25 @@ func TestToken_SetParams(t *testing.T) {
 			checkFunc: func(got *Token) error {
 				expected := &Token{
 					Domain: "dummyd",
+				}
+
+				if !reflect.DeepEqual(got, expected) {
+					return fmt.Errorf("error")
+				}
+
+				return nil
+			},
+		},
+		{
+			name:   "set param t success",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "1595809891",
+			},
+			checkFunc: func(got *Token) error {
+				expected := &Token{
+					IntTimeStamp: 1595809891,
 				}
 
 				if !reflect.DeepEqual(got, expected) {
@@ -234,6 +275,67 @@ func TestToken_Expired(t *testing.T) {
 			}
 			if got := r.Expired(); got != tt.want {
 				t.Errorf("Token.Expired() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToken_Principal(t *testing.T) {
+	type fields struct {
+		Principal     string
+		Domain        string
+		Roles         []string
+		IntTimeStamp  int64
+		IntExpiryTime int64
+	}
+	tests := []struct {
+		name           string
+		fields         fields
+		wantName       string
+		wantRoles      []string
+		wantDomain     string
+		wantIssueTime  int64
+		wantExpiryTime int64
+	}{
+		{
+			name: "success",
+			fields: fields{
+				Principal:     "principal",
+				Roles:         []string{"role1", "role2", "role3"},
+				Domain:        "domain",
+				IntTimeStamp:  1595809911,
+				IntExpiryTime: 1595809926,
+			},
+			wantName:       "principal",
+			wantRoles:      []string{"role1", "role2", "role3"},
+			wantDomain:     "domain",
+			wantIssueTime:  1595809911,
+			wantExpiryTime: 1595809926,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Token{
+				Principal:     tt.fields.Principal,
+				Domain:        tt.fields.Domain,
+				Roles:         tt.fields.Roles,
+				IntTimeStamp:  tt.fields.IntTimeStamp,
+				IntExpiryTime: tt.fields.IntExpiryTime,
+			}
+			if got := r.GetName(); got != tt.wantName {
+				t.Errorf("Token.GetName() = %v, want %v", got, tt.wantName)
+			}
+			if got := r.GetRoles(); !reflect.DeepEqual(got, tt.wantRoles) {
+				t.Errorf("Token.GetRoles() = %v, want %v", got, tt.wantRoles)
+			}
+			if got := r.GetDomain(); got != tt.wantDomain {
+				t.Errorf("Token.GetDomain() = %v, want %v", got, tt.wantDomain)
+			}
+			if got := r.GetIssueTime(); got != tt.wantIssueTime {
+				t.Errorf("Token.GetIssueTime() = %v, want %v", got, tt.wantIssueTime)
+			}
+			if got := r.GetExpiryTime(); got != tt.wantExpiryTime {
+				t.Errorf("Token.GetExpiryTime() = %v, want %v", got, tt.wantExpiryTime)
 			}
 		})
 	}

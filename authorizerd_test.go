@@ -652,7 +652,7 @@ func Test_authorizer_Start(t *testing.T) {
 	}
 }
 
-func Test_authorizer_VerifyRoleToken(t *testing.T) {
+func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		tok string
@@ -666,17 +666,19 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		roleTokenProcessor role.Processor
 	}
 	type test struct {
-		name      string
-		args      args
-		fields    fields
-		wantErr   string
-		checkFunc func(*authorizer) error
+		name       string
+		args       args
+		fields     fields
+		wantErr    string
+		wantResult Principal
+		checkFunc  func(*authorizer) error
 	}
 	tests := []test{
 		func() test {
 			c := gache.New()
+			p := &role.Token{}
 			rpm := &RoleProcessorMock{
-				rt:      &role.Token{},
+				rt:      p,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -694,7 +696,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "",
+				wantErr:    "",
+				wantResult: p,
 				checkFunc: func(prov *authorizer) error {
 					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
 					if !ok {
@@ -706,9 +709,10 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &role.Token{})
+			p := &role.Token{}
+			c.Set("dummyTokdummyActdummyRes", p)
 			rpm := &RoleProcessorMock{
-				rt:      &role.Token{},
+				rt:      p,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -726,7 +730,8 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "",
+				wantErr:    "",
+				wantResult: p,
 			}
 		}(),
 		func() test {
@@ -853,6 +858,28 @@ func Test_authorizer_VerifyRoleToken(t *testing.T) {
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(prov); err != nil {
 					t.Errorf("VerifyRoleToken() error: %v", err)
+				}
+			}
+
+			p, err := prov.AuthorizeRoleToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("AuthorizeRoleToken() unexpected error want:%s, result:%s", tt.wantErr, err.Error())
+					return
+				}
+			} else {
+				if tt.wantErr != "" {
+					t.Errorf("AuthorizeRoleToken() return nil. want %s", tt.wantErr)
+					return
+				}
+				if !reflect.DeepEqual(p, tt.wantResult) {
+					t.Errorf("AuthorizeRoleToken() results don't match. want %s, result %s", tt.wantResult, p)
+					return
+				}
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(prov); err != nil {
+					t.Errorf("AuthorizeRoleToken() error: %v", err)
 				}
 			}
 		})
@@ -1118,10 +1145,11 @@ func Test_authorizer_verify(t *testing.T) {
 		cert *x509.Certificate
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name       string
+		fields     fields
+		args       args
+		wantErr    bool
+		wantResult Principal
 	}{
 		// TODO: Add test cases.
 	}
@@ -1145,8 +1173,11 @@ func Test_authorizer_verify(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
-			if _, err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
+			if p, err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
+				if reflect.DeepEqual(p, tt.wantResult) {
+					t.Errorf("authorizer.verify() results don't match. result %v, wantResult %v", p, tt.wantResult)
+				}
 			}
 		})
 	}
@@ -1415,7 +1446,10 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 	}
 }
 
-func Test_authorizer_Verify(t *testing.T) {
+func Test_authorizer_Verify_Authorize(t *testing.T) {
+	type DummyPrincipal struct {
+		role.Token
+	}
 	type fields struct {
 		verifiers []verifier
 	}
@@ -1436,7 +1470,7 @@ func Test_authorizer_Verify(t *testing.T) {
 			fields: fields{
 				verifiers: []verifier{
 					func(r *http.Request, act, res string) (Principal, error) {
-						return nil, nil
+						return &DummyPrincipal{}, nil
 					},
 				},
 			},
@@ -1450,10 +1484,10 @@ func Test_authorizer_Verify(t *testing.T) {
 						return nil, errors.Errorf("Testing verify error 1")
 					},
 					func(r *http.Request, act, res string) (Principal, error) {
-						return nil, nil
+						return &DummyPrincipal{}, nil
 					},
 					func(r *http.Request, act, res string) (Principal, error) {
-						return nil, nil
+						return &DummyPrincipal{}, nil
 					},
 				},
 			},
@@ -1496,10 +1530,14 @@ func Test_authorizer_Verify(t *testing.T) {
 			if err := a.Verify(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.Verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if _, err := a.Authorize(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.Authorize() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }
-func Test_authorizer_VerifyAccessToken(t *testing.T) {
+
+func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 	type fields struct {
 		policyd         policy.Daemon
 		accessProcessor access.Processor
@@ -1514,25 +1552,27 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		cert *x509.Certificate
 	}
 	type test struct {
-		name      string
-		fields    fields
-		args      args
-		wantErr   string
-		checkFunc func(prov *authorizer) error
+		name       string
+		fields     fields
+		args       args
+		wantErr    string
+		wantResult Principal
+		checkFunc  func(prov *authorizer) error
 	}
 	tests := []test{
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			apm := &AccessProcessorMock{
-				act: &access.OAuth2AccessTokenClaim{
-					Scope: []string{"role"},
-					BaseClaim: access.BaseClaim{
-						StandardClaims: jwt.StandardClaims{
-							Audience: "domain",
-						},
+			p := &access.OAuth2AccessTokenClaim{
+				Scope: []string{"role"},
+				BaseClaim: access.BaseClaim{
+					StandardClaims: jwt.StandardClaims{
+						Audience: "domain",
 					},
 				},
+			}
+			apm := &AccessProcessorMock{
+				act:     p,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1557,7 +1597,8 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
-				wantErr: "",
+				wantErr:    "",
+				wantResult: p,
 				checkFunc: func(prov *authorizer) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
 					if !ok {
@@ -1574,9 +1615,10 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			c.SetWithExpire("dummyTokdummyActdummyRes", &access.OAuth2AccessTokenClaim{}, time.Minute)
+			p := &access.OAuth2AccessTokenClaim{}
+			c.SetWithExpire("dummyTokdummyActdummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				act:     p,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1601,7 +1643,8 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
-				wantErr: "",
+				wantErr:    "",
+				wantResult: p,
 				checkFunc: func(prov *authorizer) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
 					if !ok {
@@ -1739,6 +1782,28 @@ func Test_authorizer_VerifyAccessToken(t *testing.T) {
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(a); err != nil {
 					t.Errorf("authorizer.VerifyAccessToken() error: %v", err)
+				}
+			}
+
+			p, err := a.AuthorizeAccessToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("authorizer.AuthorizeAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
+					return
+				}
+			} else {
+				if tt.wantErr != "" {
+					t.Errorf("authorizer.AuthorizeAccessToken() return nil.  want %s", tt.wantErr)
+					return
+				}
+				if !reflect.DeepEqual(p, tt.wantResult) {
+					t.Errorf("authorizer.AuthorizeAccessToken() results don't match. want %s, result %s", tt.wantResult, p)
+					return
+				}
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(a); err != nil {
+					t.Errorf("authorizer.AuthorizeAccessToken() error: %v", err)
 				}
 			}
 		})
