@@ -1376,6 +1376,11 @@ bu80CwTnWhmdBo36Ig==
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
+			_, err := p.AuthorizeRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res)
+			if err == nil {
+				t.Errorf("AuthorizeRoleCert has not yet been implemented")
+			}
 		})
 	}
 }

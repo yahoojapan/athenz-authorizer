@@ -48,7 +48,7 @@ type Authorizerd interface {
 	AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error)
 	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
-	authorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error)
+	AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error)
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
 
@@ -227,9 +227,9 @@ func (a *authorizer) initVerifiers() error {
 	if a.enableRoleCert {
 		rcVerifier := func(r *http.Request, act, res string) (Principal, error) {
 			if r.TLS != nil {
-				return a.authorizeRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
+				return a.AuthorizeRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
 			}
-			return a.authorizeRoleCert(r.Context(), nil, act, res)
+			return a.AuthorizeRoleCert(r.Context(), nil, act, res)
 		}
 		glg.Info("initVerifiers: added role certificate verifier")
 		verifiers = append(verifiers, rcVerifier)
@@ -496,11 +496,10 @@ func (a *authorizer) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certi
 	return errors.Wrap(err, "role certificates unauthorized")
 }
 
-// authorizeRoleCert verifies the role certificate for specific resource and return and verification error.
-func (a *authorizer) authorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error) {
-	err := a.VerifyRoleCert(ctx, peerCerts, act, res)
+// AuthorizeRoleCert verifies the role certificate for specific resource and return and verification error.
+func (a *authorizer) AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error) {
 	// TODO VerifyRoleCert has not yet been implemented to return a Principal
-	return nil, err
+	return nil, errors.New("AuthorizeRoleCert has not yet been implemented")
 }
 
 // GetPolicyCache returns the cached policy data
