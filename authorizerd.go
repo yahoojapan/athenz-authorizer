@@ -43,7 +43,6 @@ type Authorizerd interface {
 	Verify(r *http.Request, act, res string) error
 	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
-	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
@@ -107,7 +106,6 @@ type mode uint8
 
 const (
 	roleToken mode = iota
-	roleJWT
 	accessToken
 )
 
@@ -334,11 +332,6 @@ func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) 
 	return a.verify(ctx, roleToken, tok, act, res, nil)
 }
 
-// VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
-func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	return a.verify(ctx, roleJWT, tok, act, res, nil)
-}
-
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
 	return a.verify(ctx, accessToken, tok, act, res, cert)
@@ -370,14 +363,6 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		}
 		domain = rt.Domain
 		roles = rt.Roles
-	case roleJWT:
-		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
-		if err != nil {
-			glg.Debugf("error parse and validate role jwt, err: %v", err)
-			return errors.Wrap(err, "error verify role jwt")
-		}
-		domain = rc.Domain
-		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
 	case accessToken:
 		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 		if err != nil {
