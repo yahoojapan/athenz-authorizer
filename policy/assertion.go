@@ -47,7 +47,7 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	dom := domres[0]
 	res := domres[1]
 
-	reg, err := regexp.Compile("^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$")
+	reg, err := regexp.Compile(patternFromGlob(strings.ToLower(action + "-" + res)))
 	if err != nil {
 		return nil, errors.Wrap(err, "assertion format not correct")
 	}
@@ -65,4 +65,41 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 		Resource:    res,
 		RegexString: reg.String(),
 	}, nil
+}
+
+func isRegexMetaCharacter(target rune) bool {
+	switch target {
+	case '^':
+	case '$':
+	case '.':
+	case '|':
+	case '[':
+	case '+':
+	case '\\':
+	case '(':
+	case ')':
+	case '{':
+	default:
+		return false
+	}
+	return true
+}
+
+func patternFromGlob(glob string) string {
+	var sb strings.Builder
+	sb.WriteString("^")
+	for _, c := range glob {
+		if c == '*' {
+			sb.WriteString(".*")
+		} else if c == '?' {
+			sb.WriteString(".")
+		} else {
+			if isRegexMetaCharacter(c) {
+				sb.WriteString("\\")
+			}
+			sb.WriteRune(c)
+		}
+	}
+	sb.WriteString("$")
+	return sb.String()
 }
