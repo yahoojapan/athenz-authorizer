@@ -65,7 +65,9 @@ if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
 
 // Verified results are returned
 principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
-name := principal.GetName()
+if err != nil {
+    name := principal.GetName()
+}
 ```
 
 ## How it works

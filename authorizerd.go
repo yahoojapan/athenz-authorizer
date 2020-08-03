@@ -63,9 +63,8 @@ type Principal interface {
 	GetExpiryTime() int64
 }
 
-// A ClientID is an interface for a principal that has a ClientID
-type ClientID interface {
-	Principal
+// A OAuthAccessToken is an interface for a principal that has a OAuthAccessToken
+type OAuthAccessToken interface {
 	GetClientID() string
 }
 
@@ -350,33 +349,33 @@ func (a *authorizer) Start(ctx context.Context) <-chan error {
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
-	_, err := a.verify(ctx, roleToken, tok, act, res, nil)
+	_, err := a.authorize(ctx, roleToken, tok, act, res, nil)
 	return err
 }
 
 // AuthorizeRoleToken verifies the role token for specific resource and return the result of verifying and verification error.
 func (a *authorizer) AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error) {
-	return a.verify(ctx, roleToken, tok, act, res, nil)
+	return a.authorize(ctx, roleToken, tok, act, res, nil)
 }
 
 // VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
 func (a *authorizer) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	_, err := a.verify(ctx, roleJWT, tok, act, res, nil)
+	_, err := a.authorize(ctx, roleJWT, tok, act, res, nil)
 	return err
 }
 
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authorizer) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
-	_, err := a.verify(ctx, accessToken, tok, act, res, cert)
+	_, err := a.authorize(ctx, accessToken, tok, act, res, cert)
 	return err
 }
 
 // AuthorizeAccessToken verifies the access token on the specific (action, resource) pair and returns the result of verifying and verification error if unauthorized.
 func (a *authorizer) AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error) {
-	return a.verify(ctx, accessToken, tok, act, res, cert)
+	return a.authorize(ctx, accessToken, tok, act, res, cert)
 }
 
-func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
+func (a *authorizer) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
 	if act == "" || res == "" {
 		return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 	}
@@ -399,7 +398,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role token, err: %v", err)
-			return nil, errors.Wrap(err, "error verify role token")
+			return nil, errors.Wrap(err, "error authorize role token")
 		}
 		domain = rt.Domain
 		roles = rt.Roles
@@ -408,7 +407,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
 		if err != nil {
 			glg.Debugf("error parse and validate role jwt, err: %v", err)
-			return nil, errors.Wrap(err, "error verify role jwt")
+			return nil, errors.Wrap(err, "error authorize role jwt")
 		}
 		domain = rc.Domain
 		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
@@ -417,7 +416,7 @@ func (a *authorizer) verify(ctx context.Context, m mode, tok, act, res string, c
 		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 		if err != nil {
 			glg.Debugf("error parse and validate access token, err: %v", err)
-			return nil, errors.Wrap(err, "error verify access token")
+			return nil, errors.Wrap(err, "error authorize access token")
 		}
 		domain = ac.Audience
 		roles = ac.Scope

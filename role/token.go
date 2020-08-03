@@ -36,7 +36,6 @@ type Token struct {
 	// TimeStamp  time.Time // required
 	IntTimeStamp  int64     // required
 	ExpiryTime    time.Time // required
-	IntExpiryTime int64     // requir_ed
 	KeyID         string    // required
 	// IP         string
 	// ProxyUser  string
@@ -57,7 +56,6 @@ func (r *Token) SetParams(key, value string) error {
 		if err != nil {
 			return errors.Wrap(err, "invalid expiry time")
 		}
-		r.IntExpiryTime = i
 		r.ExpiryTime = time.Unix(i, 0)
 	// case "h":
 	// r.Host = value
@@ -114,5 +112,5 @@ func (r *Token) GetIssueTime() int64 {
 
 // GetExpiryTime returns the the expiry time of the principal
 func (r *Token) GetExpiryTime() int64 {
-	return r.IntExpiryTime
+	return r.ExpiryTime.Unix()
 }

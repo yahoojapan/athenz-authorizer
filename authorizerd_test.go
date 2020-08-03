@@ -804,7 +804,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 					cache:              c,
 					cacheExp:           time.Minute,
 				},
-				wantErr: "error verify role token: cannot parse roletoken",
+				wantErr: "error authorize role token: cannot parse roletoken",
 			}
 		}(),
 		func() test {
@@ -1045,7 +1045,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					cache:         c,
 					cacheExp:      time.Minute,
 				},
-				wantErr: "error verify role jwt: cannot parse role jwt",
+				wantErr: "error authorize role jwt: cannot parse role jwt",
 			}
 		}(),
 		func() test {
@@ -1173,10 +1173,10 @@ func Test_authorizer_verify(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
-			if p, err := p.verify(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.verify() error = %v, wantErr %v", err, tt.wantErr)
+			if p, err := p.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
+				t.Errorf("authorizer.authorize() error = %v, wantErr %v", err, tt.wantErr)
 				if reflect.DeepEqual(p, tt.wantResult) {
-					t.Errorf("authorizer.verify() results don't match. result %v, wantResult %v", p, tt.wantResult)
+					t.Errorf("authorizer.authorize() results don't match. result %v, wantResult %v", p, tt.wantResult)
 				}
 			}
 		})
@@ -1733,7 +1733,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 					cache:           c,
 					cacheExp:        time.Minute,
 				},
-				wantErr: "error verify access token: cannot parse access token",
+				wantErr: "error authorize access token: cannot parse access token",
 			}
 		}(),
 		func() test {

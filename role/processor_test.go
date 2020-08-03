@@ -107,7 +107,6 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				Signature:     "dummysignature",
 				Principal:     "takumats.tenant.test",
 				IntTimeStamp:  1550463321,
-				IntExpiryTime: 9999999999,
 			},
 		},
 		{
@@ -156,7 +155,6 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				Signature:     "dummysignature;d=dummy1;r=users2",
 				Principal:     "takumats.tenant.test",
 				IntTimeStamp:  1550463321,
-				IntExpiryTime: 9999999999,
 			},
 		},
 		{
@@ -182,7 +180,6 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				Signature:     "dummysignature;s=dummysignature2",
 				Principal:     "takumats.tenant.test",
 				IntTimeStamp:  1550463321,
-				IntExpiryTime: 9999999999,
 			},
 		},
 	}
@@ -231,7 +228,6 @@ func Test_rtp_parseToken(t *testing.T) {
 				Signature:     "dummysignature",
 				Principal:     "takumats.tenant.test",
 				IntTimeStamp:  1550463321,
-				IntExpiryTime: 1550643321,
 			},
 		},
 		{
