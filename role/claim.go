@@ -33,30 +33,3 @@ type RoleJWTClaim struct {
 	Version  string `json:"v"`
 	access.BaseClaim
 }
-
-// TODO The following will be removed later.
-
-// GetName returns the the name of the principal
-func (r *RoleJWTClaim) GetName() string {
-	return ""
-}
-
-// GetRoles returns the the roles of the principal
-func (r *RoleJWTClaim) GetRoles() []string {
-	return []string{}
-}
-
-// GetDomain returns the the domain of the principal
-func (r *RoleJWTClaim) GetDomain() string {
-	return ""
-}
-
-// GetIssueTime returns the the issued time of the principal
-func (r *RoleJWTClaim) GetIssueTime() int64 {
-	return 0
-}
-
-// GetExpiryTime returns the the expiry time of the principal
-func (r *RoleJWTClaim) GetExpiryTime() int64 {
-	return 0
-}

@@ -54,16 +54,16 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*authorizer).athenzURL != "athenz.io/zts/v1" {
+				if prov.(*authority).athenzURL != "athenz.io/zts/v1" {
 					return errors.New("invalid url")
 				}
-				if prov.(*authorizer).pubkeyd == nil {
+				if prov.(*authority).pubkeyd == nil {
 					return errors.New("cannot new pubkeyd")
 				}
-				if prov.(*authorizer).policyd == nil {
+				if prov.(*authority).policyd == nil {
 					return errors.New("cannot new policyd")
 				}
-				if prov.(*authorizer).jwkd == nil {
+				if prov.(*authority).jwkd == nil {
 					return errors.New("cannot new jwkd")
 				}
 				return nil
@@ -78,16 +78,16 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*authorizer).athenzURL != "athenz.io/zts/v1" {
+				if prov.(*authority).athenzURL != "athenz.io/zts/v1" {
 					return errors.New("invalid url")
 				}
-				if prov.(*authorizer).pubkeyd == nil {
+				if prov.(*authority).pubkeyd == nil {
 					return errors.New("cannot new pubkeyd")
 				}
-				if prov.(*authorizer).policyd == nil {
+				if prov.(*authority).policyd == nil {
 					return errors.New("cannot new policyd")
 				}
-				if prov.(*authorizer).jwkd != nil {
+				if prov.(*authority).jwkd != nil {
 					return errors.New("cannot disable jwkd")
 				}
 				return nil
@@ -102,7 +102,7 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					return errors.Wrap(err, "unexpected error")
 				}
-				if prov.(*authorizer).athenzURL != "www.dummy.com" {
+				if prov.(*authority).athenzURL != "www.dummy.com" {
 					return errors.New("invalid url")
 				}
 				return nil
@@ -163,7 +163,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name: "test New error, verifier",
+			name: "test New error, authorizer",
 			args: args{
 				[]Option{
 					WithDisableRoleToken(),
@@ -172,7 +172,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create verifiers: error no verifiers"
+				wantErr := "error create authorizers: error no authorizers"
 				if err.Error() != wantErr {
 					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
@@ -190,9 +190,9 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func Test_authorizer_initVerifiers(t *testing.T) {
+func Test_authorizer_initAuthorizers(t *testing.T) {
 	type fields struct {
-		verifiers             []verifier
+		authorizers           []authorizer
 		athenzURL             string
 		client                *http.Client
 		cache                 gache.Gache
@@ -222,7 +222,7 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 		name      string
 		fields    fields
 		wantErr   bool
-		checkFunc func(a authorizer) error
+		checkFunc func(a authority) error
 	}{
 		{
 			name: "initVerifier success, no role flags",
@@ -232,9 +232,9 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				enableRoleToken:  false,
 			},
 			wantErr: false,
-			checkFunc: func(a authorizer) error {
-				if len(a.verifiers) != 1 {
-					return errors.New("failed init verifier")
+			checkFunc: func(a authority) error {
+				if len(a.authorizers) != 1 {
+					return errors.New("failed init authorizer")
 				}
 				return nil
 			},
@@ -245,9 +245,9 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				enableRoleCert: true,
 			},
 			wantErr: false,
-			checkFunc: func(a authorizer) error {
-				if len(a.verifiers) != 1 {
-					return errors.New("failed init verifier")
+			checkFunc: func(a authority) error {
+				if len(a.authorizers) != 1 {
+					return errors.New("failed init authorizer")
 				}
 				return nil
 			},
@@ -259,23 +259,23 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				enableRoleToken: true,
 			},
 			wantErr: false,
-			checkFunc: func(a authorizer) error {
-				if len(a.verifiers) != 2 {
-					return errors.New("failed init verifier")
+			checkFunc: func(a authority) error {
+				if len(a.authorizers) != 2 {
+					return errors.New("failed init authorizer")
 				}
 				return nil
 			},
 		},
 		{
-			name:    "initVerifier fail, no verifiers",
+			name:    "initVerifier fail, no authorizers",
 			fields:  fields{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &authorizer{
-				verifiers:             tt.fields.verifiers,
+			a := &authority{
+				authorizers:           tt.fields.authorizers,
 				athenzURL:             tt.fields.athenzURL,
 				client:                tt.fields.client,
 				cache:                 tt.fields.cache,
@@ -301,8 +301,8 @@ func Test_authorizer_initVerifiers(t *testing.T) {
 				roleAuthHeader:        tt.fields.roleAuthHeader,
 				enableRoleCert:        tt.fields.enableRoleCert,
 			}
-			if err := a.initVerifiers(); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.initVerifiers() error = %v, wantErr %v", err, tt.wantErr)
+			if err := a.initAuthorizers(); (err != nil) != tt.wantErr {
+				t.Errorf("authority.initAuthorizers() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(*a); err != nil {
@@ -459,7 +459,7 @@ func Test_authorizer_Init(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &authorizer{
+			a := &authority{
 				pubkeyd:        tt.fields.pubkeyd,
 				policyd:        tt.fields.policyd,
 				jwkd:           tt.fields.jwkd,
@@ -469,7 +469,7 @@ func Test_authorizer_Init(t *testing.T) {
 			}
 			err := a.Init(tt.args.ctx)
 			if (err == nil && tt.wantErrStr != "") || (err != nil && err.Error() != tt.wantErrStr) {
-				t.Errorf("authorizer.Init() error = %v, wantErr %v", err, tt.wantErrStr)
+				t.Errorf("authority.Init() error = %v, wantErr %v", err, tt.wantErrStr)
 				return
 			}
 		})
@@ -635,7 +635,7 @@ func Test_authorizer_Start(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prov := &authorizer{
+			prov := &authority{
 				pubkeyd:  tt.fields.pubkeyd,
 				policyd:  tt.fields.policyd,
 				jwkd:     tt.fields.jwkd,
@@ -671,14 +671,21 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 		fields     fields
 		wantErr    string
 		wantResult Principal
-		checkFunc  func(*authorizer) error
+		checkFunc  func(*authority) error
 	}
 	tests := []test{
 		func() test {
 			c := gache.New()
-			p := &role.Token{}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.IntTimeStamp,
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
 			rpm := &RoleProcessorMock{
-				rt:      p,
+				rt:      rt,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -698,7 +705,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 				},
 				wantErr:    "",
 				wantResult: p,
-				checkFunc: func(prov *authorizer) error {
+				checkFunc: func(prov *authority) error {
 					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
@@ -709,10 +716,17 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			p := &role.Token{}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.IntTimeStamp,
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
 			c.Set("dummyTokdummyActdummyRes", p)
 			rpm := &RoleProcessorMock{
-				rt:      p,
+				rt:      rt,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -736,7 +750,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -761,7 +775,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -837,7 +851,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prov := &authorizer{
+			prov := &authority{
 				policyd:       tt.fields.policyd,
 				roleProcessor: tt.fields.roleTokenProcessor,
 				cache:         tt.fields.cache,
@@ -916,7 +930,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		args      args
 		fields    fields
 		wantErr   string
-		checkFunc func(*authorizer) error
+		checkFunc func(*authority) error
 	}
 	tests := []test{
 		func() test {
@@ -941,7 +955,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 					cacheExp:      time.Minute,
 				},
 				wantErr: "",
-				checkFunc: func(prov *authorizer) error {
+				checkFunc: func(prov *authority) error {
 					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
@@ -952,7 +966,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &role.RoleJWTClaim{})
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			pm := &RoleProcessorMock{
 				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
@@ -977,7 +991,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			pm := &RoleProcessorMock{
 				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
@@ -1002,7 +1016,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			pm := &RoleProcessorMock{
 				rjc:     &role.RoleJWTClaim{},
 				wantErr: nil,
@@ -1078,7 +1092,7 @@ func Test_authorizer_VerifyRoleJWT(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &authorizer{
+			p := &authority{
 				pubkeyd:               tt.fields.pubkeyd,
 				policyd:               tt.fields.policyd,
 				jwkd:                  tt.fields.jwkd,
@@ -1155,7 +1169,7 @@ func Test_authorizer_verify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &authorizer{
+			p := &authority{
 				pubkeyd:               tt.fields.pubkeyd,
 				policyd:               tt.fields.policyd,
 				jwkd:                  tt.fields.jwkd,
@@ -1174,9 +1188,9 @@ func Test_authorizer_verify(t *testing.T) {
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if p, err := p.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.authorize() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("authority.authorize() error = %v, wantErr %v", err, tt.wantErr)
 				if reflect.DeepEqual(p, tt.wantResult) {
-					t.Errorf("authorizer.authorize() results don't match. result %v, wantResult %v", p, tt.wantResult)
+					t.Errorf("authority.authorize() results don't match. result %v, wantResult %v", p, tt.wantResult)
 				}
 			}
 		})
@@ -1355,7 +1369,7 @@ bu80CwTnWhmdBo36Ig==
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &authorizer{
+			p := &authority{
 				pubkeyd:               tt.fields.pubkeyd,
 				policyd:               tt.fields.policyd,
 				jwkd:                  tt.fields.jwkd,
@@ -1374,7 +1388,7 @@ bu80CwTnWhmdBo36Ig==
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("authority.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			_, err := p.AuthorizeRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res)
@@ -1426,7 +1440,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &authorizer{
+			a := &authority{
 				pubkeyd:               tt.fields.pubkeyd,
 				policyd:               tt.fields.policyd,
 				jwkd:                  tt.fields.jwkd,
@@ -1445,18 +1459,15 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("authorizer.GetPolicyCache() = %v, want %v", got, tt.want)
+				t.Errorf("authority.GetPolicyCache() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func Test_authorizer_Verify_Authorize(t *testing.T) {
-	type DummyPrincipal struct {
-		role.Token
-	}
 	type fields struct {
-		verifiers []verifier
+		authorizers []authorizer
 	}
 	type args struct {
 		r   *http.Request
@@ -1471,37 +1482,37 @@ func Test_authorizer_Verify_Authorize(t *testing.T) {
 	}
 	tests := []test{
 		{
-			name: "Verify success, 1 verifier",
+			name: "Verify success, 1 authorizer",
 			fields: fields{
-				verifiers: []verifier{
+				authorizers: []authorizer{
 					func(r *http.Request, act, res string) (Principal, error) {
-						return &DummyPrincipal{}, nil
+						return &principal{}, nil
 					},
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name: "Verify success, multiple verifier",
+			name: "Verify success, multiple authorizer",
 			fields: fields{
-				verifiers: []verifier{
+				authorizers: []authorizer{
 					func(r *http.Request, act, res string) (Principal, error) {
 						return nil, errors.Errorf("Testing verify error 1")
 					},
 					func(r *http.Request, act, res string) (Principal, error) {
-						return &DummyPrincipal{}, nil
+						return &principal{}, nil
 					},
 					func(r *http.Request, act, res string) (Principal, error) {
-						return &DummyPrincipal{}, nil
+						return &principal{}, nil
 					},
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name: "Verify fail, 1 verifier",
+			name: "Verify fail, 1 authorizer",
 			fields: fields{
-				verifiers: []verifier{
+				authorizers: []authorizer{
 					func(r *http.Request, act, res string) (Principal, error) {
 						return nil, errors.Errorf("Testing verify error 1")
 					},
@@ -1510,9 +1521,9 @@ func Test_authorizer_Verify_Authorize(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Verify fail, multiple verifier",
+			name: "Verify fail, multiple authorizer",
 			fields: fields{
-				verifiers: []verifier{
+				authorizers: []authorizer{
 					func(r *http.Request, act, res string) (Principal, error) {
 						return nil, errors.Errorf("Testing verify error 1")
 					},
@@ -1529,14 +1540,14 @@ func Test_authorizer_Verify_Authorize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &authorizer{
-				verifiers: tt.fields.verifiers,
+			a := &authority{
+				authorizers: tt.fields.authorizers,
 			}
 			if err := a.Verify(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.Verify() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("authority.Verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if _, err := a.Authorize(tt.args.r, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
-				t.Errorf("authorizer.Authorize() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("authority.Authorize() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -1562,13 +1573,13 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 		args       args
 		wantErr    string
 		wantResult Principal
-		checkFunc  func(prov *authorizer) error
+		checkFunc  func(prov *authority) error
 	}
 	tests := []test{
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			p := &access.OAuth2AccessTokenClaim{
+			at := &access.OAuth2AccessTokenClaim{
 				Scope: []string{"role"},
 				BaseClaim: access.BaseClaim{
 					StandardClaims: jwt.StandardClaims{
@@ -1576,8 +1587,18 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 					},
 				},
 			}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
 			apm := &AccessProcessorMock{
-				act:     p,
+				act:     at,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1604,7 +1625,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 				},
 				wantErr:    "",
 				wantResult: p,
-				checkFunc: func(prov *authorizer) error {
+				checkFunc: func(prov *authority) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
@@ -1620,10 +1641,20 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 		func() test {
 			now := fastime.Now()
 			c := gache.New()
-			p := &access.OAuth2AccessTokenClaim{}
+			at := &access.OAuth2AccessTokenClaim{}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
 			c.SetWithExpire("dummyTokdummyActdummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
-				act:     p,
+				act:     at,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1650,7 +1681,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 				},
 				wantErr:    "",
 				wantResult: p,
-				checkFunc: func(prov *authorizer) error {
+				checkFunc: func(prov *authority) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
@@ -1665,7 +1696,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
@@ -1690,7 +1721,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", "dummy")
+			c.Set("dummyTokdummyActdummyRes", &principal{})
 			apm := &AccessProcessorMock{
 				act:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
@@ -1766,7 +1797,7 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &authorizer{
+			a := &authority{
 				policyd:         tt.fields.policyd,
 				accessProcessor: tt.fields.accessProcessor,
 				cache:           tt.fields.cache,
@@ -1775,40 +1806,40 @@ func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
 			err := a.VerifyAccessToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
 			if err != nil {
 				if err.Error() != tt.wantErr {
-					t.Errorf("authorizer.VerifyAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
+					t.Errorf("authority.VerifyAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
 					return
 				}
 			} else {
 				if tt.wantErr != "" {
-					t.Errorf("authorizer.VerifyAccessToken() return nil.  want %s", tt.wantErr)
+					t.Errorf("authority.VerifyAccessToken() return nil.  want %s", tt.wantErr)
 					return
 				}
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(a); err != nil {
-					t.Errorf("authorizer.VerifyAccessToken() error: %v", err)
+					t.Errorf("authority.VerifyAccessToken() error: %v", err)
 				}
 			}
 
 			p, err := a.AuthorizeAccessToken(tt.args.ctx, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
 			if err != nil {
 				if err.Error() != tt.wantErr {
-					t.Errorf("authorizer.AuthorizeAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
+					t.Errorf("authority.AuthorizeAccessToken() error want:%s, result: %s", tt.wantErr, err.Error())
 					return
 				}
 			} else {
 				if tt.wantErr != "" {
-					t.Errorf("authorizer.AuthorizeAccessToken() return nil.  want %s", tt.wantErr)
+					t.Errorf("authority.AuthorizeAccessToken() return nil.  want %s", tt.wantErr)
 					return
 				}
 				if !reflect.DeepEqual(p, tt.wantResult) {
-					t.Errorf("authorizer.AuthorizeAccessToken() results don't match. want %s, result %s", tt.wantResult, p)
+					t.Errorf("authority.AuthorizeAccessToken() results don't match. want %s, result %s", tt.wantResult, p)
 					return
 				}
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(a); err != nil {
-					t.Errorf("authorizer.AuthorizeAccessToken() error: %v", err)
+					t.Errorf("authority.AuthorizeAccessToken() error: %v", err)
 				}
 			}
 		})

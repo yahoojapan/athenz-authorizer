@@ -67,33 +67,3 @@ type OAuth2AccessTokenClaim struct {
 	Confirm        map[string]string `json:"cnf"`
 	BaseClaim
 }
-
-// GetName returns the the name of the principal
-func (a *OAuth2AccessTokenClaim) GetName() string {
-	return a.BaseClaim.Subject
-}
-
-// GetRoles returns the the roles of the principal
-func (a *OAuth2AccessTokenClaim) GetRoles() []string {
-	return a.Scope
-}
-
-// GetDomain returns the the domain of the principal
-func (a *OAuth2AccessTokenClaim) GetDomain() string {
-	return a.BaseClaim.Audience
-}
-
-// GetIssueTime returns the the issued time of the principal (unix timestamp in second)
-func (a *OAuth2AccessTokenClaim) GetIssueTime() int64 {
-	return a.BaseClaim.IssuedAt
-}
-
-// GetExpiryTime returns the the expiry time of the principal (unix timestamp in second)
-func (a *OAuth2AccessTokenClaim) GetExpiryTime() int64 {
-	return a.BaseClaim.ExpiresAt
-}
-
-// GetClientID returns the the client id of the principal
-func (a *OAuth2AccessTokenClaim) GetClientID() string {
-	return a.ClientID
-}

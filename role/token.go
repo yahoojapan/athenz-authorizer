@@ -34,9 +34,9 @@ type Token struct {
 	// Host       string
 	// Salt       string    // required
 	// TimeStamp  time.Time // required
-	IntTimeStamp  int64     // required
-	ExpiryTime    time.Time // required
-	KeyID         string    // required
+	IntTimeStamp int64     // required
+	ExpiryTime   time.Time // required
+	KeyID        string    // required
 	// IP         string
 	// ProxyUser  string
 	Signature string // required
@@ -88,29 +88,4 @@ func (r *Token) SetParams(key, value string) error {
 // Expired returns if the role token is expired or not.
 func (r *Token) Expired() bool {
 	return fastime.Now().After(r.ExpiryTime)
-}
-
-// GetName returns the the name of the principal
-func (r *Token) GetName() string {
-	return r.Principal
-}
-
-// GetRoles returns the the roles of the principal
-func (r *Token) GetRoles() []string {
-	return r.Roles
-}
-
-// GetDomain returns the the domain of the principal
-func (r *Token) GetDomain() string {
-	return r.Domain
-}
-
-// GetIssueTime returns the the issued time of the principal
-func (r *Token) GetIssueTime() int64 {
-	return r.IntTimeStamp
-}
-
-// GetExpiryTime returns the the expiry time of the principal
-func (r *Token) GetExpiryTime() int64 {
-	return r.ExpiryTime.Unix()
 }
