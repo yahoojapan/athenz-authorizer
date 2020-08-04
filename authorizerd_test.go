@@ -681,7 +681,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 				name:       rt.Principal,
 				roles:      rt.Roles,
 				domain:     rt.Domain,
-				issueTime:  rt.IntTimeStamp,
+				issueTime:  rt.TimeStamp.Unix(),
 				expiryTime: rt.ExpiryTime.Unix(),
 			}
 			rpm := &RoleProcessorMock{
@@ -721,7 +721,7 @@ func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
 				name:       rt.Principal,
 				roles:      rt.Roles,
 				domain:     rt.Domain,
-				issueTime:  rt.IntTimeStamp,
+				issueTime:  rt.TimeStamp.Unix(),
 				expiryTime: rt.ExpiryTime.Unix(),
 			}
 			c.Set("dummyTokdummyActdummyRes", p)

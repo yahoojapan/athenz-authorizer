@@ -54,57 +54,6 @@ type Authorizerd interface {
 
 type authorizer func(r *http.Request, act, res string) (Principal, error)
 
-// A Principal is an authenticated entity
-type Principal interface {
-	Name() string
-	Roles() []string
-	Domain() string
-	IssueTime() int64
-	ExpiryTime() int64
-}
-
-// A OAuthAccessToken is an interface for a principal that has a OAuthAccessToken
-type OAuthAccessToken interface {
-	ClientID() string
-}
-
-type principal struct {
-	name       string
-	roles      []string
-	domain     string
-	issueTime  int64
-	expiryTime int64
-}
-
-type oAuthAccessToken struct {
-	principal
-	clientID string
-}
-
-func (p *principal) Name() string {
-	return p.name
-}
-
-func (p *principal) Roles() []string {
-	return p.roles
-}
-
-func (p *principal) Domain() string {
-	return p.domain
-}
-
-func (p *principal) IssueTime() int64 {
-	return p.issueTime
-}
-
-func (p *principal) ExpiryTime() int64 {
-	return p.expiryTime
-}
-
-func (c *oAuthAccessToken) ClientID() string {
-	return c.clientID
-}
-
 type authority struct {
 	//
 	pubkeyd         pubkey.Daemon
@@ -443,7 +392,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 			name:       rt.Principal,
 			roles:      rt.Roles,
 			domain:     rt.Domain,
-			issueTime:  rt.IntTimeStamp,
+			issueTime:  rt.TimeStamp.Unix(),
 			expiryTime: rt.ExpiryTime.Unix(),
 		}
 	case roleJWT:

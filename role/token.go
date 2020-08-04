@@ -33,10 +33,9 @@ type Token struct {
 	Principal string   // required
 	// Host       string
 	// Salt       string    // required
-	// TimeStamp  time.Time // required
-	IntTimeStamp int64     // required
-	ExpiryTime   time.Time // required
-	KeyID        string    // required
+	TimeStamp  time.Time // required
+	ExpiryTime time.Time // required
+	KeyID      string    // required
 	// IP         string
 	// ProxyUser  string
 	Signature string // required
@@ -72,10 +71,9 @@ func (r *Token) SetParams(key, value string) error {
 	case "t":
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "invalid timestamp")
 		}
-		r.IntTimeStamp = i
-		// r.TimeStamp = time.Unix(i, 0)
+		r.TimeStamp = time.Unix(i, 0)
 		// case "proxy":
 		// r.ProxyUser = value
 		// case "v":
