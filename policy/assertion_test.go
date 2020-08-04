@@ -132,3 +132,102 @@ func TestNewAssertion(t *testing.T) {
 		})
 	}
 }
+
+func Test_isRegexMetaCharacter(t *testing.T) {
+	type args struct {
+		target rune
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "check '^', return true",
+			args: args{
+				target: '^',
+			},
+			want: true,
+		},
+		{
+			name: "check '$', return true",
+			args: args{
+				target: '$',
+			},
+			want: true,
+		},
+		{
+			name: "check '.', return true",
+			args: args{
+				target: '.',
+			},
+			want: true,
+		},
+		{
+			name: "check ')', return true",
+			args: args{
+				target: ')',
+			},
+			want: true,
+		},
+		{
+			name: "check '*', return false",
+			args: args{
+				target: '*',
+			},
+			want: false,
+		},
+		{
+			name: "check ']', return false",
+			args: args{
+				target: ']',
+			},
+			want: false,
+		},
+		{
+			name: "check 'a', return false",
+			args: args{
+				target: 'a',
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isRegexMetaCharacter(tt.args.target); got != tt.want {
+				t.Errorf("isRegexMetaCharacter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_patternFromGlob(t *testing.T) {
+	type args struct {
+		glob string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "check escape regex meta character",
+			args: args{
+				glob: "^$.|[+\\(){",
+			},
+			want: "^\\^\\$\\.\\|\\[\\+\\\\\\(\\)\\{$",
+		},
+		// need wildcard test case
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := patternFromGlob(tt.args.glob)
+			if got != tt.want {
+				t.Errorf("patternFromGlob() = %v, want %v", got, tt.want)
+			}
+			if _, err := regexp.Compile(got); err != nil {
+				t.Errorf("regexp.Compile() error = %v, got %v", err, got)
+			}
+		})
+	}
+}
