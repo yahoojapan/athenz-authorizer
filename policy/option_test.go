@@ -23,11 +23,11 @@ import (
 	"time"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	urlutil "github.com/yahoojapan/athenz-authorizer/v3/internal/url"
-	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
+	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
-func TestWithExpireMargin(t *testing.T) {
+func TestWithExpiryMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -46,13 +46,14 @@ func TestWithExpireMargin(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.expireMargin != time.Hour {
+				if pol.expiryMargin != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -85,9 +86,9 @@ func TestWithExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithExpireMargin(tt.args.t)
+			got := WithExpiryMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithExpireMargin() error = %v", err)
+				t.Errorf("WithExpiryMargin() error = %v", err)
 			}
 		})
 	}
@@ -212,7 +213,7 @@ func TestWithAthenzDomains(t *testing.T) {
 	}
 }
 
-func TestWithPolicyExpiredDuration(t *testing.T) {
+func TestWithPurgePeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -231,13 +232,14 @@ func TestWithPolicyExpiredDuration(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.policyExpiredDuration != time.Hour {
+				if pol.purgePeriod != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -270,15 +272,15 @@ func TestWithPolicyExpiredDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyExpiredDuration(tt.args.t)
+			got := WithPurgePeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyExpiredDuration() error = %v", err)
+				t.Errorf("WithPurgePeriod() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestWithRefreshDuration(t *testing.T) {
+func TestWithRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -297,13 +299,14 @@ func TestWithRefreshDuration(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.refreshDuration != time.Hour {
+				if pol.refreshPeriod != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -336,9 +339,9 @@ func TestWithRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRefreshDuration(tt.args.t)
+			got := WithRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRefreshDuration() error = %v", err)
+				t.Errorf("WithRefreshPeriod() error = %v", err)
 			}
 		})
 	}
@@ -460,7 +463,7 @@ func TestWithPubKeyProvider(t *testing.T) {
 	}
 }
 
-func TestWithErrRetryInterval(t *testing.T) {
+func TestWithRetryDelay(t *testing.T) {
 	type args struct {
 		i string
 	}
@@ -479,13 +482,14 @@ func TestWithErrRetryInterval(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.errRetryInterval != time.Hour {
+				if pol.retryDelay != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -518,9 +522,62 @@ func TestWithErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithErrRetryInterval(tt.args.i)
+			got := WithRetryDelay(tt.args.i)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithErrRetryInterval() error= %v", err)
+				t.Errorf("WithRetryDelay() error= %v", err)
+			}
+		})
+	}
+}
+
+func TestWithRetryAttempts(t *testing.T) {
+	type args struct {
+		c int
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				c: 2,
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if pol.retryAttempts != 2 {
+					return fmt.Errorf("Error")
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "empty value",
+			args: args{
+				0,
+			},
+			checkFunc: func(opt Option) error {
+				pol := &policyd{}
+				if err := opt(pol); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(pol, &policyd{}) {
+					return fmt.Errorf("expected no changes, but got %v", pol)
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRetryAttempts(tt.args.c)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRetryAttempts() error= %v", err)
 			}
 		})
 	}

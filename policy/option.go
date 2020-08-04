@@ -21,16 +21,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	urlutil "github.com/yahoojapan/athenz-authorizer/v3/internal/url"
-	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
+	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
 var (
 	defaultOptions = []Option{
-		WithExpireMargin("3h"),
-		WithPolicyExpiredDuration("1m"),
-		WithRefreshDuration("30m"),
-		WithErrRetryInterval("1m"),
+		WithExpiryMargin("3h"),
+		WithRefreshPeriod("30m"),
+		WithPurgePeriod("1h"),
+		WithRetryDelay("1m"),
+		WithRetryAttempts(2),
 		WithHTTPClient(http.DefaultClient),
 	}
 )
@@ -38,17 +39,12 @@ var (
 // Option represents a functional option
 type Option func(*policyd) error
 
-// WithExpireMargin returns an ExpiryMargin functional option
-func WithExpireMargin(t string) Option {
+// WithPubKeyProvider returns a PubKeyProvider functional option
+func WithPubKeyProvider(pkp pubkey.Provider) Option {
 	return func(pol *policyd) error {
-		if t == "" {
-			return nil
+		if pkp != nil {
+			pol.pkp = pkp
 		}
-		expireMargin, err := time.ParseDuration(t)
-		if err != nil {
-			return errors.Wrap(err, "invalid expire margin")
-		}
-		pol.expireMargin = expireMargin
 		return nil
 	}
 }
@@ -76,32 +72,73 @@ func WithAthenzDomains(doms ...string) Option {
 	}
 }
 
-// WithPolicyExpiredDuration returns a PolicyExpiredDuration functional option
-func WithPolicyExpiredDuration(t string) Option {
+// WithExpiryMargin returns an ExpiryMargin functional option
+func WithExpiryMargin(d string) Option {
 	return func(pol *policyd) error {
-		if t == "" {
+		if d == "" {
 			return nil
 		}
-		rd, err := time.ParseDuration(t)
+		em, err := time.ParseDuration(d)
 		if err != nil {
-			return errors.Wrap(err, "invalid flush duration")
+			return errors.Wrap(err, "invalid expiry margin")
 		}
-		pol.policyExpiredDuration = rd
+		pol.expiryMargin = em
 		return nil
 	}
 }
 
-// WithRefreshDuration returns a RefreshDuration functional option
-func WithRefreshDuration(t string) Option {
+// WithRefreshPeriod returns a RefreshPeriod functional option
+func WithRefreshPeriod(d string) Option {
 	return func(pol *policyd) error {
-		if t == "" {
+		if d == "" {
 			return nil
 		}
-		rd, err := time.ParseDuration(t)
+		rp, err := time.ParseDuration(d)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid refresh period")
 		}
-		pol.refreshDuration = rd
+		pol.refreshPeriod = rp
+		return nil
+	}
+}
+
+// WithPurgePeriod returns a PurgePeriod functional option
+func WithPurgePeriod(d string) Option {
+	return func(pol *policyd) error {
+		if d == "" {
+			return nil
+		}
+		pp, err := time.ParseDuration(d)
+		if err != nil {
+			return errors.Wrap(err, "invalid purge period")
+		}
+		pol.purgePeriod = pp
+		return nil
+	}
+}
+
+// WithRetryDelay returns an RetryDelay functional option
+func WithRetryDelay(d string) Option {
+	return func(pol *policyd) error {
+		if d == "" {
+			return nil
+		}
+		rd, err := time.ParseDuration(d)
+		if err != nil {
+			return errors.Wrap(err, "invalid retry delay")
+		}
+		pol.retryDelay = rd
+		return nil
+	}
+}
+
+// WithRetryAttempts returns an RetryAttempts functional option
+func WithRetryAttempts(c int) Option {
+	return func(pol *policyd) error {
+		if c == 0 {
+			return nil
+		}
+		pol.retryAttempts = c
 		return nil
 	}
 }
@@ -112,31 +149,6 @@ func WithHTTPClient(c *http.Client) Option {
 		if c != nil {
 			pol.client = c
 		}
-		return nil
-	}
-}
-
-// WithPubKeyProvider returns a PubKeyProvider functional option
-func WithPubKeyProvider(pkp pubkey.Provider) Option {
-	return func(pol *policyd) error {
-		if pkp != nil {
-			pol.pkp = pkp
-		}
-		return nil
-	}
-}
-
-// WithErrRetryInterval returns an ErrRetryInterval functional option
-func WithErrRetryInterval(i string) Option {
-	return func(pol *policyd) error {
-		if i == "" {
-			return nil
-		}
-		ri, err := time.ParseDuration(i)
-		if err != nil {
-			return errors.Wrap(err, "invalid err retry interval")
-		}
-		pol.errRetryInterval = ri
 		return nil
 	}
 }

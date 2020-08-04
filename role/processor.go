@@ -21,12 +21,8 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
-	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
-)
-
-const (
-	CONFIRM_METHOD_MEMBER = "x5t#S256"
+	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
 // Processor represents the role token parser interface.
@@ -45,7 +41,7 @@ func New(opts ...Option) (Processor, error) {
 	r := new(rtp)
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(r); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error create role token processor")
 		}
 	}
 	return r, nil

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/kpango/gache"
-	urlutil "github.com/yahoojapan/athenz-authorizer/v3/internal/url"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
 )
 
 func TestWithEnablePubkeyd(t *testing.T) {
@@ -84,7 +84,7 @@ func TestWithDisablePubkeyd(t *testing.T) {
 	}
 }
 
-func TestWithPolicyErrRetryInterval(t *testing.T) {
+func TestWithPubkeyRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -103,7 +103,7 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyErrRetryInterval != "dummy" {
+				if authz.pubkeyRefreshPeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -112,14 +112,15 @@ func TestWithPolicyErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyErrRetryInterval(tt.args.t)
+			got := WithPubkeyRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyErrRetryInterval() error = %v", err)
+				t.Errorf("WithPubkeyRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithPolicyRefreshDuration(t *testing.T) {
+
+func TestWithPubkeyRetryDelay(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -138,7 +139,7 @@ func TestWithPolicyRefreshDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyRefreshDuration != "dummy" {
+				if authz.pubkeyRetryDelay != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -147,79 +148,9 @@ func TestWithPolicyRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyRefreshDuration(tt.args.t)
+			got := WithPubkeyRetryDelay(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyRefreshDuration() error = %v", err)
-			}
-		})
-	}
-}
-func TestWithPubkeyRefreshDuration(t *testing.T) {
-	type args struct {
-		t string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
-	}{
-		{
-			name: "set success",
-			args: args{
-				t: "dummy",
-			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.pubkeyRefreshDuration != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyRefreshDuration(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyRefreshDuration() error = %v", err)
-			}
-		})
-	}
-}
-func TestWithPubkeyErrRetryInterval(t *testing.T) {
-	type args struct {
-		t string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		checkFunc func(Option) error
-	}{
-		{
-			name: "set success",
-			args: args{
-				t: "dummy",
-			},
-			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
-				if err := opt(authz); err != nil {
-					return err
-				}
-				if authz.pubkeyErrRetryInterval != "dummy" {
-					return fmt.Errorf("invalid param was set")
-				}
-				return nil
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyErrRetryInterval(tt.args.t)
-			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyErrRetryInterval() error = %v", err)
+				t.Errorf("WithPubkeyRetryDelay() error = %v", err)
 			}
 		})
 	}
@@ -363,7 +294,7 @@ func TestWithPubkeySysAuthDomain(t *testing.T) {
 	}
 }
 
-func TestWithPubkeyEtagExpTime(t *testing.T) {
+func TestWithPubkeyETagExpiry(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -382,7 +313,7 @@ func TestWithPubkeyEtagExpTime(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyEtagExpTime != "dummy" {
+				if authz.pubkeyETagExpiry != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -391,14 +322,15 @@ func TestWithPubkeyEtagExpTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyEtagExpTime(tt.args.t)
+			got := WithPubkeyETagExpiry(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyEtagExpTime() error = %v", err)
+				t.Errorf("WithPubkeyETagExpiry() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithPubkeyEtagFlushDuration(t *testing.T) {
+
+func TestWithPubkeyETagPurgePeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -417,7 +349,7 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.pubkeyEtagFlushDur != "dummy" {
+				if authz.pubkeyETagPurgePeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -426,9 +358,9 @@ func TestWithPubkeyEtagFlushDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPubkeyEtagFlushDuration(tt.args.t)
+			got := WithPubkeyETagPurgePeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPubkeyEtagFlushDuration() error = %v", err)
+				t.Errorf("WithPubkeyETagPurgePeriod() error = %v", err)
 			}
 		})
 	}
@@ -492,7 +424,7 @@ func TestWithDisablePolicyd(t *testing.T) {
 	}
 }
 
-func TestWithPolicyExpireMargin(t *testing.T) {
+func TestWithPolicyExpiryMargin(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -511,7 +443,7 @@ func TestWithPolicyExpireMargin(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.policyExpireMargin != "dummy" {
+				if authz.policyExpiryMargin != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -520,9 +452,153 @@ func TestWithPolicyExpireMargin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithPolicyExpireMargin(tt.args.t)
+			got := WithPolicyExpiryMargin(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithPolicyExpireMargin() error = %v", err)
+				t.Errorf("WithPolicyExpiryMargin() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyRefreshPeriod(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.policyRefreshPeriod != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyRefreshPeriod(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyRefreshPeriod() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyPurgePeriod(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.policyPurgePeriod != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyPurgePeriod(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyPurgePeriod() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyRetryDelay(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: "dummy",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.policyRetryDelay != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyRetryDelay(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyRetryDelay() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithPolicyRetryAttempts(t *testing.T) {
+	type args struct {
+		c int
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				c: 2,
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.policyRetryAttempts != 2 {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithPolicyRetryAttempts(tt.args.c)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithPolicyRetryAttempts() error = %v", err)
 			}
 		})
 	}
@@ -565,9 +641,10 @@ func TestWithCacheExp(t *testing.T) {
 		})
 	}
 }
-func TestWithTransport(t *testing.T) {
+
+func TestWithRoleCertURIPrefix(t *testing.T) {
 	type args struct {
-		t *http.Transport
+		p string
 	}
 	tests := []struct {
 		name      string
@@ -577,14 +654,50 @@ func TestWithTransport(t *testing.T) {
 		{
 			name: "set success",
 			args: args{
-				t: &http.Transport{},
+				p: "dummy",
 			},
 			checkFunc: func(opt Option) error {
 				authz := &authorizer{}
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(authz.client.Transport, &http.Transport{}) {
+				if authz.roleCertURIPrefix != "dummy" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithRoleCertURIPrefix(tt.args.p)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithRoleCertURIPrefix() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithHTTPClient(t *testing.T) {
+	type args struct {
+		c *http.Client
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				c: http.DefaultClient,
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authorizer{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(authz.client, http.DefaultClient) {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -593,7 +706,7 @@ func TestWithTransport(t *testing.T) {
 		{
 			name: "set nil",
 			args: args{
-				t: nil,
+				c: nil,
 			},
 			checkFunc: func(opt Option) error {
 				authz := &authorizer{}
@@ -601,7 +714,7 @@ func TestWithTransport(t *testing.T) {
 					return err
 				}
 				want := &http.Client{
-					Timeout: time.Second * 30,
+					Timeout: 30 * time.Second,
 				}
 				if !reflect.DeepEqual(authz.client, want) {
 					return fmt.Errorf("invalid param was set")
@@ -612,9 +725,9 @@ func TestWithTransport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithTransport(tt.args.t)
+			got := WithHTTPClient(tt.args.c)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithTransport() error = %v", err)
+				t.Errorf("WithHTTPClient() error = %v", err)
 			}
 		})
 	}
@@ -678,7 +791,7 @@ func TestWithDisableJwkd(t *testing.T) {
 	}
 }
 
-func TestWithJwkRefreshDuration(t *testing.T) {
+func TestWithJwkRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -697,7 +810,7 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.jwkRefreshDuration != "dummy" {
+				if authz.jwkRefreshPeriod != "dummy" {
 					return fmt.Errorf("invalid param was set")
 				}
 				return nil
@@ -706,14 +819,14 @@ func TestWithJwkRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithJwkRefreshDuration(tt.args.t)
+			got := WithJwkRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithJwkRefreshDuration() error = %v", err)
+				t.Errorf("WithJwkRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
-func TestWithJwkErrRetryInterval(t *testing.T) {
+func TestWithJwkRetryDelay(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -732,7 +845,7 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 				if err := opt(authz); err != nil {
 					return err
 				}
-				if authz.jwkErrRetryInterval != "dummy" {
+				if authz.jwkRetryDelay != "dummy" {
 
 					return fmt.Errorf("invalid param was set")
 				}
@@ -742,9 +855,9 @@ func TestWithJwkErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithJwkErrRetryInterval(tt.args.t)
+			got := WithJwkRetryDelay(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithJwkErrRetryInterval() error = %v", err)
+				t.Errorf("WithJwkRetryDelay() error = %v", err)
 			}
 		})
 	}
@@ -807,8 +920,8 @@ func TestWithAccessTokenParams(t *testing.T) {
 		func() test {
 			accessTokenParam :=
 				NewAccessTokenParam(true, true, "1h", "1h", true, map[string][]string{
-					"common_name1": []string{"client_id1", "client_id2"},
-					"common_name2": []string{"client_id1", "client_id2"},
+					"common_name1": {"client_id1", "client_id2"},
+					"common_name2": {"client_id1", "client_id2"},
 				})
 
 			return test{
@@ -903,7 +1016,7 @@ func TestWithDisableRoleToken(t *testing.T) {
 	}
 }
 
-func TestWithRTHeader(t *testing.T) {
+func TestWithRoleAuthHeader(t *testing.T) {
 	type args struct {
 		h string
 	}
@@ -925,7 +1038,7 @@ func TestWithRTHeader(t *testing.T) {
 					if err := opt(authz); err != nil {
 						return err
 					}
-					if !reflect.DeepEqual(authz.rtHeader, header) {
+					if !reflect.DeepEqual(authz.roleAuthHeader, header) {
 						return fmt.Errorf("invalid param was set")
 					}
 					return nil
@@ -935,9 +1048,9 @@ func TestWithRTHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRTHeader(tt.args.h)
+			got := WithRoleAuthHeader(tt.args.h)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRTHeader() = %v error: %v", got, err)
+				t.Errorf("WithRoleAuthHeader() = %v error: %v", got, err)
 			}
 		})
 	}

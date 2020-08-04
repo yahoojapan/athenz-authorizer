@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
 func TestNew(t *testing.T) {
@@ -59,27 +60,29 @@ func TestNew(t *testing.T) {
 				opts: []Option{},
 			},
 			want: &policyd{
-				rolePolicies:          gache.New(),
-				expireMargin:          3 * time.Hour,
-				policyExpiredDuration: 1 * time.Minute,
-				refreshDuration:       30 * time.Minute,
-				errRetryInterval:      1 * time.Minute,
-				client:                http.DefaultClient,
+				rolePolicies:  gache.New(),
+				expiryMargin:  3 * time.Hour,
+				purgePeriod:   1 * time.Hour,
+				refreshPeriod: 30 * time.Minute,
+				retryDelay:    1 * time.Minute,
+				retryAttempts: 2,
+				client:        http.DefaultClient,
 			},
 			wantErr: "",
 		},
 		{
 			name: "new success with options",
 			args: args{
-				opts: []Option{WithExpireMargin("5s")},
+				opts: []Option{WithExpiryMargin("5s")},
 			},
 			want: &policyd{
-				rolePolicies:          gache.New(),
-				expireMargin:          5 * time.Second,
-				policyExpiredDuration: 1 * time.Minute,
-				refreshDuration:       30 * time.Minute,
-				errRetryInterval:      1 * time.Minute,
-				client:                http.DefaultClient,
+				rolePolicies:  gache.New(),
+				expiryMargin:  5 * time.Second,
+				purgePeriod:   1 * time.Hour,
+				refreshPeriod: 30 * time.Minute,
+				retryDelay:    1 * time.Minute,
+				retryAttempts: 2,
+				client:        http.DefaultClient,
 			},
 			wantErr: "",
 		},
@@ -89,13 +92,14 @@ func TestNew(t *testing.T) {
 				opts: []Option{WithAthenzDomains("dom1", "dom2")},
 			},
 			want: &policyd{
-				rolePolicies:          gache.New(),
-				expireMargin:          3 * time.Hour,
-				policyExpiredDuration: 1 * time.Minute,
-				refreshDuration:       30 * time.Minute,
-				errRetryInterval:      1 * time.Minute,
-				client:                http.DefaultClient,
-				athenzDomains:         []string{"dom1", "dom2"},
+				rolePolicies:  gache.New(),
+				expiryMargin:  3 * time.Hour,
+				purgePeriod:   1 * time.Hour,
+				refreshPeriod: 30 * time.Minute,
+				retryDelay:    1 * time.Minute,
+				retryAttempts: 2,
+				client:        http.DefaultClient,
+				athenzDomains: []string{"dom1", "dom2"},
 				fetchers: map[string]Fetcher{
 					"dom1": &fetcher{domain: "dom1"},
 					"dom2": &fetcher{domain: "dom2"},
@@ -131,15 +135,15 @@ func TestNew(t *testing.T) {
 
 func Test_policyd_Start(t *testing.T) {
 	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		athenzURL             string
-		athenzDomains         []string
-		fetchers              map[string]Fetcher
+		expiryMargin  time.Duration
+		rolePolicies  gache.Gache
+		purgePeriod   time.Duration
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		pkp           pubkey.Provider
+		athenzURL     string
+		athenzDomains []string
+		fetchers      map[string]Fetcher
 	}
 	type args struct {
 		ctx context.Context
@@ -196,12 +200,12 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start success",
 				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					refreshDuration:       time.Millisecond * 30,
-					expireMargin:          time.Hour,
-					athenzDomains:         []string{domain},
-					fetchers:              fetchers,
+					rolePolicies:  gache.New(),
+					purgePeriod:   time.Minute * 30,
+					refreshPeriod: time.Millisecond * 30,
+					expiryMargin:  time.Hour,
+					athenzDomains: []string{domain},
+					fetchers:      fetchers,
 				},
 				args: args{
 					ctx: ctx,
@@ -272,12 +276,12 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start can update cache",
 				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					refreshDuration:       time.Millisecond * 30,
-					expireMargin:          time.Hour,
-					athenzDomains:         []string{domain},
-					fetchers:              fetchers,
+					rolePolicies:  gache.New(),
+					purgePeriod:   time.Minute * 30,
+					refreshPeriod: time.Millisecond * 30,
+					expiryMargin:  time.Hour,
+					athenzDomains: []string{domain},
+					fetchers:      fetchers,
 				},
 				args: args{
 					ctx: ctx,
@@ -358,13 +362,13 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start retry update",
 				fields: fields{
-					rolePolicies:          gache.New(),
-					policyExpiredDuration: time.Minute * 30,
-					refreshDuration:       time.Millisecond * 30,
-					errRetryInterval:      time.Millisecond * 5,
-					expireMargin:          time.Hour,
-					athenzDomains:         []string{domain},
-					fetchers:              fetchers,
+					rolePolicies:  gache.New(),
+					purgePeriod:   time.Minute * 30,
+					refreshPeriod: time.Millisecond * 30,
+					retryDelay:    time.Millisecond * 5,
+					expiryMargin:  time.Hour,
+					athenzDomains: []string{domain},
+					fetchers:      fetchers,
 				},
 				args: args{
 					ctx: ctx,
@@ -401,15 +405,15 @@ func Test_policyd_Start(t *testing.T) {
 				defer tt.afterFunc()
 			}
 			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				fetchers:              tt.fields.fetchers,
+				expiryMargin:  tt.fields.expiryMargin,
+				rolePolicies:  tt.fields.rolePolicies,
+				purgePeriod:   tt.fields.purgePeriod,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				pkp:           tt.fields.pkp,
+				athenzURL:     tt.fields.athenzURL,
+				athenzDomains: tt.fields.athenzDomains,
+				fetchers:      tt.fields.fetchers,
 			}
 			ch := p.Start(tt.args.ctx)
 			if tt.checkFunc != nil {
@@ -423,16 +427,16 @@ func Test_policyd_Start(t *testing.T) {
 
 func Test_policyd_Update(t *testing.T) {
 	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		athenzURL             string
-		athenzDomains         []string
-		client                *http.Client
-		fetchers              map[string]Fetcher
+		expiryMargin  time.Duration
+		rolePolicies  gache.Gache
+		purgePeriod   time.Duration
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		pkp           pubkey.Provider
+		athenzURL     string
+		athenzDomains []string
+		client        *http.Client
+		fetchers      map[string]Fetcher
 	}
 	type args struct {
 		ctx context.Context
@@ -520,10 +524,10 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:          gache.New(),
-				policyExpiredDuration: time.Hour,
-				athenzDomains:         []string{domain},
-				fetchers:              fetchers,
+				rolePolicies:  gache.New(),
+				purgePeriod:   time.Hour,
+				athenzDomains: []string{domain},
+				fetchers:      fetchers,
 			}
 			t.args = args{
 				ctx: ctx,
@@ -587,10 +591,10 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:          gache.New(),
-				policyExpiredDuration: time.Hour,
-				athenzDomains:         domains,
-				fetchers:              fetchers,
+				rolePolicies:  gache.New(),
+				purgePeriod:   time.Hour,
+				athenzDomains: domains,
+				fetchers:      fetchers,
 			}
 			t.args = args{
 				ctx: ctx,
@@ -642,7 +646,7 @@ func Test_policyd_Update(t *testing.T) {
 					},
 				}
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*999) // timeout should be long enough to enter Fetch()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*1111) // timeout should be long enough to enter Fetch()
 			go func() {
 				select {
 				case <-ctx.Done():
@@ -671,10 +675,10 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:          gache.New(),
-				policyExpiredDuration: time.Hour,
-				athenzDomains:         domains,
-				fetchers:              fetchers,
+				rolePolicies:  gache.New(),
+				purgePeriod:   time.Hour,
+				athenzDomains: domains,
+				fetchers:      fetchers,
 			}
 			t.args = args{
 				ctx: ctx,
@@ -689,16 +693,16 @@ func Test_policyd_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
-				fetchers:              tt.fields.fetchers,
+				expiryMargin:  tt.fields.expiryMargin,
+				rolePolicies:  tt.fields.rolePolicies,
+				purgePeriod:   tt.fields.purgePeriod,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				pkp:           tt.fields.pkp,
+				athenzURL:     tt.fields.athenzURL,
+				athenzDomains: tt.fields.athenzDomains,
+				client:        tt.fields.client,
+				fetchers:      tt.fields.fetchers,
 			}
 			err := p.Update(tt.args.ctx)
 			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
@@ -716,14 +720,14 @@ func Test_policyd_Update(t *testing.T) {
 
 func Test_policyd_CheckPolicy(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expiryMargin  time.Duration
+		rolePolicies  gache.Gache
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		pkp           pubkey.Provider
+		athenzURL     string
+		athenzDomains []string
+		client        *http.Client
 	}
 	type args struct {
 		ctx      context.Context
@@ -938,14 +942,14 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expiryMargin:  tt.fields.expiryMargin,
+				rolePolicies:  tt.fields.rolePolicies,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				pkp:           tt.fields.pkp,
+				athenzURL:     tt.fields.athenzURL,
+				athenzDomains: tt.fields.athenzDomains,
+				client:        tt.fields.client,
 			}
 			err := p.CheckPolicy(tt.args.ctx, tt.args.domain, tt.args.roles, tt.args.action, tt.args.resource)
 			if err == nil {
@@ -965,14 +969,14 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 
 func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 	type fields struct {
-		expireMargin     time.Duration
-		rolePolicies     gache.Gache
-		refreshDuration  time.Duration
-		errRetryInterval time.Duration
-		pkp              pubkey.Provider
-		athenzURL        string
-		athenzDomains    []string
-		client           *http.Client
+		expiryMargin  time.Duration
+		rolePolicies  gache.Gache
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		pkp           pubkey.Provider
+		athenzURL     string
+		athenzDomains []string
+		client        *http.Client
 	}
 	type args struct {
 		ctx      context.Context
@@ -1056,14 +1060,14 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:     tt.fields.expireMargin,
-				rolePolicies:     tt.fields.rolePolicies,
-				refreshDuration:  tt.fields.refreshDuration,
-				errRetryInterval: tt.fields.errRetryInterval,
-				pkp:              tt.fields.pkp,
-				athenzURL:        tt.fields.athenzURL,
-				athenzDomains:    tt.fields.athenzDomains,
-				client:           tt.fields.client,
+				expiryMargin:  tt.fields.expiryMargin,
+				rolePolicies:  tt.fields.rolePolicies,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				pkp:           tt.fields.pkp,
+				athenzURL:     tt.fields.athenzURL,
+				athenzDomains: tt.fields.athenzDomains,
+				client:        tt.fields.client,
 			}
 
 			b := make([]byte, 10240)
@@ -1084,11 +1088,12 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 			}
 
 			// check runtime stack for go routine leak
-			time.Sleep(time.Millisecond * 500) // wait for some background process to cleanup
+			time.Sleep(time.Millisecond * 1500) // wait for some background process to cleanup
 			lenEnd := runtime.Stack(b, true)
 			// t.Log(string(b[:lenEnd]))
-			if math.Abs(float64(lenStart-lenEnd)) > 10 { // to tolerate fastime package goroutine status change, leaking will cause much larger stack length difference
-				t.Errorf("go routine leak:\n%v", cmp.Diff(oldStack, string(b[:lenEnd])))
+			diff := cmp.Diff(oldStack, string(b[:lenEnd]))
+			if strings.Contains(diff, ".CheckPolicy") {
+				t.Errorf("go routine leak:\n%v", diff)
 			}
 		})
 	}
@@ -1661,7 +1666,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 					name: "cache delete",
 					fields: fields{
 						rolePolicies:          rp,
-						policyExpiredDuration: time.Minute * 30,
+						purgePeriod: time.Minute * 30,
 					},
 					args: args{
 						ctx: context.Background(),
@@ -1941,15 +1946,15 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 
 func Test_policyd_GetPolicyCache(t *testing.T) {
 	type fields struct {
-		expireMargin          time.Duration
-		rolePolicies          gache.Gache
-		policyExpiredDuration time.Duration
-		refreshDuration       time.Duration
-		errRetryInterval      time.Duration
-		pkp                   pubkey.Provider
-		athenzURL             string
-		athenzDomains         []string
-		client                *http.Client
+		expiryMargin  time.Duration
+		rolePolicies  gache.Gache
+		purgePeriod   time.Duration
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		pkp           pubkey.Provider
+		athenzURL     string
+		athenzDomains []string
+		client        *http.Client
 	}
 	type args struct {
 		ctx context.Context
@@ -2009,15 +2014,15 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &policyd{
-				expireMargin:          tt.fields.expireMargin,
-				rolePolicies:          tt.fields.rolePolicies,
-				policyExpiredDuration: tt.fields.policyExpiredDuration,
-				refreshDuration:       tt.fields.refreshDuration,
-				errRetryInterval:      tt.fields.errRetryInterval,
-				pkp:                   tt.fields.pkp,
-				athenzURL:             tt.fields.athenzURL,
-				athenzDomains:         tt.fields.athenzDomains,
-				client:                tt.fields.client,
+				expiryMargin:  tt.fields.expiryMargin,
+				rolePolicies:  tt.fields.rolePolicies,
+				purgePeriod:   tt.fields.purgePeriod,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				pkp:           tt.fields.pkp,
+				athenzURL:     tt.fields.athenzURL,
+				athenzDomains: tt.fields.athenzDomains,
+				client:        tt.fields.client,
 			}
 			if got := p.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("policyd.GetPolicyCache() = %+v, want %v", got, tt.want)

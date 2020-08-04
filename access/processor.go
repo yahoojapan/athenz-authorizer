@@ -23,11 +23,11 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
 
 const (
-	CONFIRM_METHOD_MEMBER = "x5t#S256"
+	confirmMethodMember = "x5t#S256"
 )
 
 // Processor represents the access token parser interface.
@@ -51,7 +51,7 @@ func New(opts ...Option) (Processor, error) {
 	a := new(atp)
 	for _, opt := range append(defaultOptions, opts...) {
 		if err := opt(a); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error create access token processor")
 		}
 	}
 	return a, nil
@@ -115,7 +115,7 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return errors.New("error claim of access token is nil")
 	}
 
-	certThumbprint, ok := claims.Confirm[CONFIRM_METHOD_MEMBER]
+	certThumbprint, ok := claims.Confirm[confirmMethodMember]
 	if !ok {
 		return errors.New("error token is not certificate bound access token")
 	}

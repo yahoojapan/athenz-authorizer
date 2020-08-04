@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
 
 var (
@@ -70,7 +70,7 @@ func WithClientCertificateGoBackSeconds(t string) Option {
 		}
 		rd, err := time.ParseDuration(t)
 		if err != nil {
-			return errors.Wrap(err, "invalid refresh duration")
+			return errors.Wrap(err, "invalid refresh period")
 		}
 		r.clientCertificateGoBackSeconds = int64(rd.Seconds())
 		return nil

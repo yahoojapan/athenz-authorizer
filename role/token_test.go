@@ -58,7 +58,7 @@ func TestToken_SetParams(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(got, expected) {
-					return fmt.Errorf("erorr")
+					return fmt.Errorf("error")
 				}
 
 				return nil
@@ -80,7 +80,7 @@ func TestToken_SetParams(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(got, expected) {
-					return fmt.Errorf("erorr")
+					return fmt.Errorf("error")
 				}
 
 				return nil
@@ -125,7 +125,7 @@ func TestToken_SetParams(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(got, expected) {
-					return fmt.Errorf("erorr")
+					return fmt.Errorf("error")
 				}
 
 				return nil
@@ -144,7 +144,7 @@ func TestToken_SetParams(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(got, expected) {
-					return fmt.Errorf("erorr")
+					return fmt.Errorf("error")
 				}
 
 				return nil
@@ -163,7 +163,7 @@ func TestToken_SetParams(t *testing.T) {
 				}
 
 				if !reflect.DeepEqual(got, expected) {
-					return fmt.Errorf("erorr")
+					return fmt.Errorf("error")
 				}
 
 				return nil

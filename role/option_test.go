@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoojapan/athenz-authorizer/v3/jwk"
-	"github.com/yahoojapan/athenz-authorizer/v3/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
+	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
 func TestWithPubkeyProvider(t *testing.T) {

@@ -1,12 +1,37 @@
 # Athenz authorizer
 
-[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![release](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://github.com/yahoojapan/athenz-authorizer/releases/latest) [![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer) [![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer) [![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer) [![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&utm_medium=referral&utm_content=yahoojapan/athenz-authorizer&utm_campaign=Badge_Grade) [![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
+[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-authorizer/releases/latest)
+[![CircleCI](https://circleci.com/gh/yahoojapan/athenz-authorizer.svg)](https://circleci.com/gh/yahoojapan/athenz-authorizer)
+[![codecov](https://codecov.io/gh/yahoojapan/athenz-authorizer/branch/master/graph/badge.svg?token=2CzooNJtUu&style=flat-square)](https://codecov.io/gh/yahoojapan/athenz-authorizer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yahoojapan/athenz-authorizer)](https://goreportcard.com/report/github.com/yahoojapan/athenz-authorizer)
+[![GolangCI](https://golangci.com/badges/github.com/yahoojapan/athenz-authorizer.svg?style=flat-square)](https://golangci.com/r/github.com/yahoojapan/athenz-authorizer)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/828220605c43419e92fb0667876dd2d0)](https://www.codacy.com/app/i.can.feel.gravity/athenz-authorizer?utm_source=github.com&utm_medium=referral&utm_content=yahoojapan/athenz-authorizer&utm_campaign=Badge_Grade)
+[![GoDoc](http://godoc.org/github.com/yahoojapan/athenz-authorizer?status.svg)](http://godoc.org/github.com/yahoojapan/athenz-authorizer)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](code_of_conduct.md)
+
+<!-- TOC insertAnchor:false -->
+
+- [Athenz authorizer](#athenz-authorizer)
+    - [What is Athenz authorizer](#what-is-athenz-authorizer)
+    - [Usage](#usage)
+    - [How it works](#how-it-works)
+        - [Athenz public key daemon](#athenz-public-key-daemon)
+        - [Athenz policy daemon](#athenz-policy-daemon)
+    - [Configuration](#configuration)
+        - [AccessTokenParam](#accesstokenparam)
+    - [License](#license)
+    - [Contributor License Agreement](#contributor-license-agreement)
+    - [About releases](#about-releases)
+    - [Authors](#authors)
+
+<!-- /TOC -->
 
 ## What is Athenz authorizer
 
 Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authentication and authorization check of user request.
 
-![Overview](./doc/policy_updater_overview.png)
+![Overview](./docs/assets/policy_updater_overview.png)
 
 ## Usage
 
@@ -18,8 +43,8 @@ To initialize authorizer.
 daemon, err := authorizerd.New(
     authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
     authorizerd.WithAthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
-    authorizerd.WithPubkeyRefreshDuration(time.Hour * 24), // set athenz public key refresh duration
-    authorizerd.WithPolicyRefreshDuration(time.Hour), // set policy refresh duration
+    authorizerd.WithPubkeyRefreshPeriod(time.Hour * 24), // set athenz public key refresh period
+    authorizerd.WithPolicyRefreshPeriod(time.Hour), // set policy refresh period
 )
 if err != nil {
    // cannot initialize authorizer daemon
@@ -43,11 +68,11 @@ if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
 
 To do the authentication and authorization check, the user needs to specify which [domain data](https://github.com/yahoo/athenz/blob/master/docs/data_model.md#data-model) to be cache. The authorizer will periodically refresh the policies and Athenz public key data to [verify and decode](https://github.com/yahoo/athenz/blob/master/docs/zpu_policy_file.md#zts-signature-validation) the domain data. The verified domain data will cache into the memory, and use for authentication and authorization check.
 
-The authorizer contains two sub-module, Athenz pubkey daemon (pubkeyd) and Athenz policy daemon (policyd).
+The authorizer contains two sub-module, Athenz public key daemon (pubkeyd) and Athenz policy daemon (policyd).
 
-### Athenz pubkey daemon
+### Athenz public key daemon
 
-Athenz pubkey daemon (pubkeyd) is responsible for periodically update the Athenz public key data from Athenz server to verify the policy data received from Athenz policy daemon and verify the role token.
+Athenz public key daemon (pubkeyd) is responsible for periodically update the Athenz public key data from Athenz server to verify the policy data received from Athenz policy daemon and verify the role token.
 
 ### Athenz policy daemon
 
@@ -57,21 +82,43 @@ Athenz policy daemon (policyd) is responsible for periodically update the policy
 
 The authorizer uses functional options pattern to initialize the instance. All the options are defined [here](./option.go).
 
-| Option name           | Description                                                                                                        | Default Value                                                                                                                                                                                                                                                                                                         | Required | Example                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------- |
-| AthenzURL             | The Athenz server URL                                                                                              | "athenz.io/zts/v1"                                                                                                                                                                                                                                                                                                    | No       |                        |
-| AthenzDomains         | Athenz domain name of Policy cache                                                                                 |                                                                                                                                                                                                                                                                                                                       | Yes      | "domName1", "domName2" |
-| Transport             | The HTTP transport for getting policy data and Athenz public key data                                              | nil                                                                                                                                                                                                                                                                                                                   | No       |                        |
-| CacheExp              | The TTL of the success cache                                                                                       | 1 Minute                                                                                                                                                                                                                                                                                                              | No       |                        |
-| PubkeyRefreshDuration | The refresh duration to update the Athenz public key data                                                          | 24 Hours                                                                                                                                                                                                                                                                                                              | No       |                        |
-| PubkeySysAuthDomain   | System authority domain name to retrieve Athenz public key data                                                    | sys.auth                                                                                                                                                                                                                                                                                                              | No       |                        |
-| PubkeyEtagExpTime     | ETag cache TTL of Athenz public key data                                                                           | 168 Hours (1 Week)                                                                                                                                                                                                                                                                                                    | No       |                        |
-| PubkeyEtagFlushDur    | ETag cache purge duration                                                                                          | 84 Hours                                                                                                                                                                                                                                                                                                              | No       |                        |
-| PolicyRefreshDuration | The refresh duration to update Athenz policy data                                                                  | 30 Minutes                                                                                                                                                                                                                                                                                                            | No       |                        |
-| PolicyExpireMargin    | The expire margin to update the policy data. It forces update the policy data before the policy expiration margin. | 3 Hours                                                                                                                                                                                                                                                                                                               | No       |                        |
-| AccessTokenParam      | Use access token verification. See [here](./option.go) for details of the options that can be specified.           | <table><tbody><tr><td>enable</td><td>true</td></tr><tr><td>verifyCertThumbprint</td><td>true</td></tr><tr><td>verifyClientID</td><td>false</td></tr><tr><td>authorizedClientIDs</td><td>nil</td></tr><tr><td>certBackdateDur</td><td>1 hours</td></tr><tr><td>certOffsetDur</td><td>1 hours</td></tr></tbody></table> | No       |                        |
-| EnableRoleToken       | Use role token verification                                                                                        | true                                                                                                                                                                                                                                                                                                                  | No       | true                   |
-| EnableRoleCert        | Use role cert verification                                                                                         | true                                                                                                                                                                                                                                                                                                                  | No       | true                   |
+| Option name                      | Description                                                                                  | Default Value                                        | Required | Example                |
+|----------------------------------|----------------------------------------------------------------------------------------------|------------------------------------------------------|----------|------------------------|
+| AthenzURL                        | The Athenz server URL                                                                        | athenz\.io/zts/v1                                    | Yes      | "athenz\.io/zts/v1"    |
+| AthenzDomains                    | Athenz domain names that contain the RBAC policies                                           | \[\]                                                 | Yes      | "domName1", "domName2" |
+| HTTPClient                       | The HTTP client for connecting to Athenz server                                              | http\.Client\{ Timeout: 30 \* time\.Second \}        | No       | http\.DefaultClient    |
+| CacheExp                         | The TTL of the success cache                                                                 | 1 Minute                                             | No       | 1 \* time\.Minute      |
+| Enable/DisablePubkeyd            | Run public key daemon or not                                                                 | true                                                 | No       |                        |
+| PubkeySysAuthDomain              | System authority domain name to retrieve Athenz public key data                              | sys\.auth                                            | No       | "sys.auth"             |
+| PubkeyRefreshPeriod              | Period to refresh the Athenz public key data                                                 | 24 Hours                                             | No       | "24h"                  |
+| PubkeyETagExpiry                 | ETag cache TTL of Athenz public key data                                                     | 168 Hours \(1 Week\)                                 | No       | "168h"                 |
+| PubkeyETagPurgePeriod            | ETag cache purge duration                                                                    | 84 Hours                                             | No       | "84h"                  |
+| PubkeyRetryDelay                 | Delay of next retry on request failed                                                        | 1 Minute                                             | No       | "1m"                   |
+| Enable/DisablePolicyd            | Run policy daemon or not                                                                     | true                                                 | No       |                        |
+| PolicyExpiryMargin               | Update the policy by a margin duration before the policy actually expires                    | 3 Hours                                              | No       | "3h"                   |
+| PolicyRefreshPeriod              | Period to refresh the Athenz policies                                                        | 30 Minutes                                           | No       | "30m"                  |
+| PolicyPurgePeriod                | Policy cache purge duration                                                                  | 1 Hours                                              | No       | "1h"                   |
+| PolicyRetryDelay                 | Delay of next retry on request fail                                                          | 1 Minute                                             | No       | "1m"                   |
+| PolicyRetryAttempts              | Maximum retry attempts on request fail                                                       | 2                                                    | No       | 2                      |
+| Enable/DisableJwkd               | Run JWK daemon or not                                                                        | true                                                 | No       |                        |
+| JwkRefreshPeriod                 | Period to refresh the Athenz JWK                                                             | 24 Hours                                             | No       | "24h"                  |
+| JwkRetryDelay                    | Delay of next retry on request fail                                                          | 1 Minute                                             | No       | "1m"                   |
+| AccessTokenParam                 | Use access token verification, details: [AccessTokenParam](#accesstokenparam)                | Same as [AccessTokenParam](#accesstokenparam)        | No       | \{\}                   |
+| Enable/DisableRoleToken          | Use role token verification or not                                                           | true                                                 | No       |                        |
+| RoleAuthHeader                   | The HTTP header to extract role token                                                        | Athenz\-Role\-Auth                                   | No       | "Athenz\-Role\-Auth"   |
+| Enable/DisableRoleCert           | Use role certificate verification or not                                                     | true                                                 | No       |                        |
+| RoleCertURIPrefix                | Extract role from role certificate                                                           | athenz://role/                                       | No       | "athenz://role/"       |
+
+### AccessTokenParam
+
+| **Option name**      | **Description**                                                                | **Default Value** | **Required** | **Example**                                    |
+|----------------------|--------------------------------------------------------------------------------|-------------------|--------------|------------------------------------------------|
+| enable               | Use access token verification or not                                           | true              | No           | true                                           |
+| verifyCertThumbprint | Use certificate bound access token verification                                | true              | No           | true                                           |
+| certBackdateDur      | Backdate duration of the issue time of the certificate                         | 1 Hour            | No           | "1h"                                           |
+| certOffsetDur        | Offset window to accept access token with a mismatching certificate thumbprint | 1 Hour            | No           | "1h"                                           |
+| verifyClientID       | Use authorized client ID verification                                          | false             | No           | false                                          |
+| authorizedClientIDs  | Authorized client ID to certificate common name map                            | nil               | No           | \{ "atClientID": \{ "certCN1", "certCN2" \} \} |
 
 ## License
 
@@ -95,7 +142,12 @@ limitations under the License.
 
 This project requires contributors to agree to a [Contributor License Agreement (CLA)](https://gist.github.com/ydnjp/3095832f100d5c3d2592).
 
-Note that only for contributions to the garm repository on the [GitHub](https://github.com/yahoojapan/garm), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
+Note that only for contributions to the `athenz-authorizer` repository on the [GitHub](https://github.com/yahoojapan/athenz-authorizer), the contributors of them shall be deemed to have agreed to the CLA without individual written agreements.
+
+## About releases
+
+- Releases
+    - [![GitHub release (latest by date)](https://img.shields.io/github/v/release/yahoojapan/athenz-authorizer?style=flat-square&label=Github%20version)](https://github.com/yahoojapan/athenz-authorizer/releases/latest)
 
 ## Authors
 

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	urlutil "github.com/yahoojapan/athenz-authorizer/v3/internal/url"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
 )
 
 func TestWithAthenzURL(t *testing.T) {
@@ -91,7 +91,7 @@ func TestWithAthenzURL(t *testing.T) {
 	}
 }
 
-func TestWithRefreshDuration(t *testing.T) {
+func TestWithRefreshPeriod(t *testing.T) {
 	type args struct {
 		t string
 	}
@@ -110,13 +110,14 @@ func TestWithRefreshDuration(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.refreshDuration != time.Hour {
+				if pol.refreshPeriod != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -149,15 +150,15 @@ func TestWithRefreshDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithRefreshDuration(tt.args.t)
+			got := WithRefreshPeriod(tt.args.t)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithRefreshDuration() error = %v", err)
+				t.Errorf("WithRefreshPeriod() error = %v", err)
 			}
 		})
 	}
 }
 
-func TestWithErrRetryInterval(t *testing.T) {
+func TestWithRetryDelay(t *testing.T) {
 	type args struct {
 		i string
 	}
@@ -176,13 +177,14 @@ func TestWithErrRetryInterval(t *testing.T) {
 				if err := opt(pol); err != nil {
 					return err
 				}
-				if pol.errRetryInterval != time.Hour {
+				if pol.retryDelay != time.Hour {
 					return fmt.Errorf("Error")
 				}
 
 				return nil
 			},
-		}, {
+		},
+		{
 			name: "invalid format",
 			args: args{
 				"dummy",
@@ -215,9 +217,9 @@ func TestWithErrRetryInterval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WithErrRetryInterval(tt.args.i)
+			got := WithRetryDelay(tt.args.i)
 			if err := tt.checkFunc(got); err != nil {
-				t.Errorf("WithErrRetryInterval() error= %v", err)
+				t.Errorf("WithRetryDelay() error= %v", err)
 			}
 		})
 	}
