@@ -465,9 +465,9 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		roles = ac.Scope
 		p = &oAuthAccessToken{
 			principal: principal{
-				name:       ac.BaseClaim.Subject,
+				name:       ac.Subject,
 				roles:      ac.Scope,
-				domain:     ac.BaseClaim.Audience,
+				domain:     ac.Audience,
 				issueTime:  ac.IssuedAt,
 				expiryTime: ac.ExpiresAt,
 			},
