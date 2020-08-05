@@ -16,7 +16,7 @@ limitations under the License.
 
 package authorizerd
 
-// A Principal is an authenticated entity
+// Principal is an authenticated entity
 type Principal interface {
 	Name() string
 	Roles() []string
