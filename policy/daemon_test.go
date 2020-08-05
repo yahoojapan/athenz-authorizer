@@ -938,6 +938,219 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("policy deny: Access Check was explicitly denied"),
 		},
+		{
+			name: "check can't use regexp on action",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							// Regexp that allow dummyAct1 or dummyAct2 for action.
+							a, _ := NewAssertion("dummyAct1|dummyAct2", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct1",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check can't use regexp on resource",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							// Regexp that allow dummyResX for resource.
+							a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes.*", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct",
+				resource: "dummyRes1234",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check can't use regexp on action and resource",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							// Regexp that allow dummyResX for resource.
+							a, _ := NewAssertion("dummyAct1|dummyAct2", "dummyDom:.*Res", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct1",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check can use wildcard on action",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("*Act?", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct1",
+				resource: "dummyRes",
+			},
+			want: nil,
+		},
+		{
+			name: "check can use wildcard on action, deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("*Act?", "dummyDom:dummyRes", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:    context.Background(),
+				domain: "dummyDom",
+				roles:  []string{"dummyRole", "dummyRole1"},
+				// It doesn't match.
+				action:   "dummyAct1234",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check can use wildcard on resource",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:*Res?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct",
+				resource: "dummyRes1",
+			},
+			want: nil,
+		},
+		{
+			name: "check can use wildcard on resource, deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("dummyAct", "dummyDom:*Res?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:    context.Background(),
+				domain: "dummyDom",
+				roles:  []string{"dummyRole", "dummyRole1"},
+				// It doesn't match.
+				action:   "dummyAct",
+				resource: "dummyRes",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
+		{
+			name: "check can use wildcard on action and resource",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("*Act?", "dummyDom:*Res?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "dummyAct1",
+				resource: "dummyRes1",
+			},
+			want: nil,
+		},
+		{
+			name: "check can use wildcard on action and resource, deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("*Act?", "dummyDom:*Res?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:    context.Background(),
+				domain: "dummyDom",
+				roles:  []string{"dummyRole", "dummyRole1"},
+				action: "dummyAct1",
+				// It doesn't match.
+				resource: "dummyRes1234",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
