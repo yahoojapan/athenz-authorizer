@@ -43,7 +43,7 @@ type oAuthAccessToken struct {
 	clientID string
 }
 
-// Return the principal's name
+// Name returns the principal's name
 func (p *principal) Name() string {
 	return p.name
 }
