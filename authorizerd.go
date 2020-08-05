@@ -339,7 +339,7 @@ func (a *authority) VerifyRoleToken(ctx context.Context, tok, act, res string) e
 	return err
 }
 
-// AuthorizeRoleToken verifies the role token for specific resource and return the result of verifying and verification error.
+// AuthorizeRoleToken verifies the role token for specific resource and returns the result of verifying or verification error if unauthorized.
 func (a *authority) AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error) {
 	return a.authorize(ctx, roleToken, tok, act, res, nil)
 }
