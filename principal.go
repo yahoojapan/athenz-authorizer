@@ -25,7 +25,7 @@ type Principal interface {
 	ExpiryTime() int64
 }
 
-// A OAuthAccessToken is an interface for a principal that has a OAuthAccessToken
+// OAuthAccessToken is an interface for a principal that has a OAuthAccessToken
 type OAuthAccessToken interface {
 	ClientID() string
 }
