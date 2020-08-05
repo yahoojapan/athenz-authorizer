@@ -356,7 +356,7 @@ func (a *authority) VerifyAccessToken(ctx context.Context, tok, act, res string,
 	return err
 }
 
-// AuthorizeAccessToken verifies the access token on the specific (action, resource) pair and returns the result of verifying and verification error if unauthorized.
+// AuthorizeAccessToken verifies the access token on the specific (action, resource) pair and returns the result of verifying or verification error if unauthorized.
 func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error) {
 	return a.authorize(ctx, accessToken, tok, act, res, cert)
 }
