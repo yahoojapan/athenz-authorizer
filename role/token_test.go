@@ -95,7 +95,7 @@ func TestToken_SetParams(t *testing.T) {
 			},
 			checkFunc: func(got *Token) error {
 				expected := &Token{
-					IntTimeStamp: 1595809891,
+					TimeStamp: time.Unix(1595809891, 0),
 				}
 
 				if !reflect.DeepEqual(got, expected) {
