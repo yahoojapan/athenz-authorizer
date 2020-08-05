@@ -446,7 +446,7 @@ func (a *authority) Verify(r *http.Request, act, res string) error {
 	return ErrInvalidCredentials
 }
 
-// Authorize returns the result of verifying and error of verification.
+// Authorize returns the principal or an error if unauthorized. Returns the principal with nil error if ANY authorizer succeeds (OR logic).
 func (a *authority) Authorize(r *http.Request, act, res string) (Principal, error) {
 	for _, verifier := range a.authorizers {
 		// OR logic on multiple credentials
