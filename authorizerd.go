@@ -496,7 +496,7 @@ func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certif
 	return errors.Wrap(err, "role certificates unauthorized")
 }
 
-// AuthorizeRoleCert verifies the role certificate for specific resource and return and verification error.
+// AuthorizeRoleCert verifies the role certificate for specific resource and returns the result of verifying or verification error if unauthorized. (unimplemented)
 func (a *authority) AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error) {
 	// TODO VerifyRoleCert has not yet been implemented to return a Principal
 	return nil, errors.New("AuthorizeRoleCert has not yet been implemented")
