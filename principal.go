@@ -48,22 +48,22 @@ func (p *principal) Name() string {
 	return p.name
 }
 
-// Return the principal's roles
+// Roles return the principal's roles
 func (p *principal) Roles() []string {
 	return p.roles
 }
 
-// Return the principal's domain
+// Domain return the principal's domain
 func (p *principal) Domain() string {
 	return p.domain
 }
 
-// Return the principal's issuetime
+// IssueTime return the principal's issuetime
 func (p *principal) IssueTime() int64 {
 	return p.issueTime
 }
 
-// Return the principal's expiryTime
+// ExpiryTime return the principal's expiryTime
 func (p *principal) ExpiryTime() int64 {
 	return p.expiryTime
 }

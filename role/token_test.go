@@ -30,9 +30,8 @@ func TestToken_SetParams(t *testing.T) {
 		Principal     string
 		Domain        string
 		Roles         []string
-		IntTimeStamp  int64
+		TimeStamp     time.Time
 		ExpiryTime    time.Time
-		IntExpiryTime int64
 		KeyID         string
 		Signature     string
 		UnsignedToken string
@@ -95,7 +94,10 @@ func TestToken_SetParams(t *testing.T) {
 			},
 			checkFunc: func(got *Token) error {
 				expected := &Token{
-					TimeStamp: time.Unix(1595809891, 0),
+					TimeStamp: func() time.Time {
+						t, _ := strconv.ParseInt("1595809891", 10, 64)
+						return time.Unix(t, 0)
+					}(),
 				}
 
 				if !reflect.DeepEqual(got, expected) {
@@ -104,6 +106,32 @@ func TestToken_SetParams(t *testing.T) {
 
 				return nil
 			},
+		},
+		{
+			name:   "set param t correct",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "1550643321",
+			},
+			checkFunc: func(got *Token) error {
+				// 2019-02-20 06:15:21 +0000 UTC
+				expected := time.Date(2019, 2, 20, 6, 15, 21, 0, time.UTC)
+				if !expected.Equal(got.TimeStamp) {
+					return fmt.Errorf("got: %v, expected: %v", got.TimeStamp, expected)
+				}
+
+				return nil
+			},
+		},
+		{
+			name:   "set param t fail",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "abcde",
+			},
+			wantErr: true,
 		},
 		{
 			name:   "set param e success",
@@ -217,6 +245,7 @@ func TestToken_SetParams(t *testing.T) {
 				Domain:        tt.fields.Domain,
 				Roles:         tt.fields.Roles,
 				ExpiryTime:    tt.fields.ExpiryTime,
+				TimeStamp:     tt.fields.TimeStamp,
 				KeyID:         tt.fields.KeyID,
 				Signature:     tt.fields.Signature,
 				UnsignedToken: tt.fields.UnsignedToken,

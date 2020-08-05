@@ -652,7 +652,7 @@ func Test_authorizer_Start(t *testing.T) {
 	}
 }
 
-func Test_authorizer_VerifyRoleToken_AuthorizeRoleToken(t *testing.T) {
+func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		tok string
@@ -1465,7 +1465,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 	}
 }
 
-func Test_authorizer_Verify_Authorize(t *testing.T) {
+func Test_authorizer_Authorize(t *testing.T) {
 	type fields struct {
 		authorizers []authorizer
 	}
@@ -1553,7 +1553,7 @@ func Test_authorizer_Verify_Authorize(t *testing.T) {
 	}
 }
 
-func Test_authorizer_VerifyAccessToken_AuthorizeAccessToken(t *testing.T) {
+func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 	type fields struct {
 		policyd         policy.Daemon
 		accessProcessor access.Processor
