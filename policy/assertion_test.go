@@ -101,13 +101,23 @@ func TestNewAssertion(t *testing.T) {
 			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 		{
-			name: "invalid regex",
+			name: "invalid regex, but not return error",
 			args: args{
 				resource: "dom:res(",
 				action:   "act",
 				effect:   "deny",
 			},
-			wantErr: errors.New("assertion format not correct: error parsing regexp: missing closing ): `^act-res($`"),
+			want: &Assertion{
+				Action:         "act",
+				Resource:       "dom:res(",
+				ResourceDomain: "dom",
+				Reg: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act-dom:res\\($")
+					return r
+				}(),
+				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
+				RegexString: "^act-dom:res\\($",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -211,13 +221,19 @@ func Test_patternFromGlob(t *testing.T) {
 		want string
 	}{
 		{
-			name: "check escape regex meta character",
+			name: "check to escape regular expression meta characters",
 			args: args{
 				glob: "^$.|[+\\(){",
 			},
 			want: "^\\^\\$\\.\\|\\[\\+\\\\\\(\\)\\{$",
 		},
-		// need wildcard test case
+		{
+			name: "check to convert wildcards",
+			args: args{
+				glob: ".*wild?card?-*test*",
+			},
+			want: "^\\..*wild.card.-.*test.*$",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
