@@ -68,7 +68,7 @@ func (p *principal) ExpiryTime() int64 {
 	return p.expiryTime
 }
 
-// Return the principal's clientid
+// ClientID returns the access token's client ID
 func (c *oAuthAccessToken) ClientID() string {
 	return c.clientID
 }
