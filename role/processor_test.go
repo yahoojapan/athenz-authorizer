@@ -105,6 +105,8 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				KeyID:         "0",
 				Roles:         []string{"users"},
 				Signature:     "dummysignature",
+				Principal:     "takumats.tenant.test",
+				TimeStamp:     time.Unix(1550463321, 0),
 			},
 		},
 		{
@@ -151,6 +153,8 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				KeyID:         "0",
 				Roles:         []string{"users"},
 				Signature:     "dummysignature;d=dummy1;r=users2",
+				Principal:     "takumats.tenant.test",
+				TimeStamp:     time.Unix(1550463321, 0),
 			},
 		},
 		{
@@ -174,6 +178,8 @@ func Test_rtp_ParseAndValidateRoleToken(t *testing.T) {
 				KeyID:         "0",
 				Roles:         []string{"users"},
 				Signature:     "dummysignature;s=dummysignature2",
+				Principal:     "takumats.tenant.test",
+				TimeStamp:     time.Unix(1550463321, 0),
 			},
 		},
 	}
@@ -220,6 +226,8 @@ func Test_rtp_parseToken(t *testing.T) {
 				KeyID:         "0",
 				Roles:         []string{"users"},
 				Signature:     "dummysignature",
+				Principal:     "takumats.tenant.test",
+				TimeStamp:     time.Unix(1550463321, 0),
 			},
 		},
 		{

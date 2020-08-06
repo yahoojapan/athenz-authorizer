@@ -34,7 +34,7 @@ func TestWithEnablePubkeyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -63,7 +63,7 @@ func TestWithDisablePubkeyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -99,7 +99,7 @@ func TestWithPubkeyRefreshPeriod(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -135,7 +135,7 @@ func TestWithPubkeyRetryDelay(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -163,7 +163,7 @@ func TestWithAthenzURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *authorizer
+		want    *authority
 		wantErr error
 	}{
 		{
@@ -171,7 +171,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"",
 			},
-			want:    &authorizer{athenzURL: ""},
+			want:    &authority{athenzURL: ""},
 			wantErr: nil,
 		},
 		{
@@ -179,7 +179,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"dummy.com",
 			},
-			want:    &authorizer{athenzURL: "dummy.com"},
+			want:    &authority{athenzURL: "dummy.com"},
 			wantErr: nil,
 		},
 		{
@@ -187,7 +187,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &authorizer{athenzURL: "dummy.com"},
+			want:    &authority{athenzURL: "dummy.com"},
 			wantErr: nil,
 		},
 		{
@@ -195,7 +195,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &authorizer{athenzURL: "dummy.com"},
+			want:    &authority{athenzURL: "dummy.com"},
 			wantErr: nil,
 		},
 		{
@@ -203,13 +203,13 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"ftp://dummy.com",
 			},
-			want:    &authorizer{athenzURL: ""},
+			want:    &authority{athenzURL: ""},
 			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := &authorizer{}
+			got := &authority{}
 			err := WithAthenzURL(tt.args.url)(got)
 			if err != tt.wantErr {
 				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
@@ -237,7 +237,7 @@ func TestWithAthenzDomains(t *testing.T) {
 				t: []string{"dummy1", "dummy2"},
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -273,7 +273,7 @@ func TestWithPubkeySysAuthDomain(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -309,7 +309,7 @@ func TestWithPubkeyETagExpiry(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -345,7 +345,7 @@ func TestWithPubkeyETagPurgePeriod(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -374,7 +374,7 @@ func TestWithEnablePolicyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -403,7 +403,7 @@ func TestWithDisablePolicyd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -439,7 +439,7 @@ func TestWithPolicyExpiryMargin(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -475,7 +475,7 @@ func TestWithPolicyRefreshPeriod(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -511,7 +511,7 @@ func TestWithPolicyPurgePeriod(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -547,7 +547,7 @@ func TestWithPolicyRetryDelay(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -583,7 +583,7 @@ func TestWithPolicyRetryAttempts(t *testing.T) {
 				c: 2,
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -619,7 +619,7 @@ func TestWithCacheExp(t *testing.T) {
 				d: time.Duration(time.Hour * 2),
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{
+				authz := &authority{
 					cache: gache.New(),
 				}
 				if err := opt(authz); err != nil {
@@ -657,7 +657,7 @@ func TestWithRoleCertURIPrefix(t *testing.T) {
 				p: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -693,7 +693,7 @@ func TestWithHTTPClient(t *testing.T) {
 				c: http.DefaultClient,
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -709,7 +709,7 @@ func TestWithHTTPClient(t *testing.T) {
 				c: nil,
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -741,7 +741,7 @@ func TestWithEnableJwkd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -770,7 +770,7 @@ func TestWithDisableJwkd(t *testing.T) {
 		{
 			name: "set success",
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -806,7 +806,7 @@ func TestWithJwkRefreshPeriod(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -841,7 +841,7 @@ func TestWithJwkRetryDelay(t *testing.T) {
 				t: "dummy",
 			},
 			checkFunc: func(opt Option) error {
-				authz := &authorizer{}
+				authz := &authority{}
 				if err := opt(authz); err != nil {
 					return err
 				}
@@ -930,7 +930,7 @@ func TestWithAccessTokenParams(t *testing.T) {
 					accessTokenParam: accessTokenParam,
 				},
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
@@ -962,7 +962,7 @@ func TestWithEnableRoleToken(t *testing.T) {
 			return test{
 				name: "set success",
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
@@ -994,7 +994,7 @@ func TestWithDisableRoleToken(t *testing.T) {
 			return test{
 				name: "set success",
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
@@ -1034,7 +1034,7 @@ func TestWithRoleAuthHeader(t *testing.T) {
 					h: header,
 				},
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
@@ -1066,7 +1066,7 @@ func TestWithEnableRoleCert(t *testing.T) {
 			return test{
 				name: "set success",
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
@@ -1098,7 +1098,7 @@ func TestWithDisableRoleCert(t *testing.T) {
 			return test{
 				name: "set success",
 				checkFunc: func(opt Option) error {
-					authz := &authorizer{}
+					authz := &authority{}
 					if err := opt(authz); err != nil {
 						return err
 					}
