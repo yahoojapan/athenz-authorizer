@@ -107,15 +107,10 @@ type RoleProcessorMock struct {
 	role.Processor
 	wantErr error
 	rt      *role.Token
-	rjc     *role.RoleJWTClaim
 }
 
 func (rpm *RoleProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token, error) {
 	return rpm.rt, rpm.wantErr
-}
-
-func (rpm *RoleProcessorMock) ParseAndValidateRoleJWT(cred string) (*role.RoleJWTClaim, error) {
-	return rpm.rjc, rpm.wantErr
 }
 
 type AccessProcessorMock struct {

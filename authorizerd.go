@@ -46,7 +46,6 @@ type Authorizerd interface {
 	AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error)
 	VerifyRoleToken(ctx context.Context, tok, act, res string) error
 	AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error)
-	VerifyRoleJWT(ctx context.Context, tok, act, res string) error
 	VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error
 	AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) (Principal, error)
 	GetPolicyCache(ctx context.Context) map[string]interface{}
@@ -111,7 +110,6 @@ type mode uint8
 
 const (
 	roleToken mode = iota
-	roleJWT
 	accessToken
 )
 
@@ -344,12 +342,6 @@ func (a *authority) AuthorizeRoleToken(ctx context.Context, tok, act, res string
 	return a.authorize(ctx, roleToken, tok, act, res, nil)
 }
 
-// VerifyRoleJWT verifies the role jwt for specific resource and return and verification error.
-func (a *authority) VerifyRoleJWT(ctx context.Context, tok, act, res string) error {
-	_, err := a.authorize(ctx, roleJWT, tok, act, res, nil)
-	return err
-}
-
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authority) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
 	_, err := a.authorize(ctx, accessToken, tok, act, res, cert)
@@ -395,15 +387,6 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 			issueTime:  rt.TimeStamp.Unix(),
 			expiryTime: rt.ExpiryTime.Unix(),
 		}
-	case roleJWT:
-		rc, err := a.roleProcessor.ParseAndValidateRoleJWT(tok)
-		if err != nil {
-			glg.Debugf("error parse and validate role jwt, err: %v", err)
-			return nil, errors.Wrap(err, "error authorize role jwt")
-		}
-		domain = rc.Domain
-		roles = strings.Split(strings.TrimSpace(rc.Role), ",")
-		p = nil
 	case accessToken:
 		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 		if err != nil {
