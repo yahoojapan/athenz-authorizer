@@ -28,12 +28,12 @@ import (
 // Token represents role token data.
 type Token struct {
 	// Version    string   // required
-	Domain string   // required
-	Roles  []string // required
-	// Principal  string   // required
+	Domain    string   // required
+	Roles     []string // required
+	Principal string   // required
 	// Host       string
 	// Salt       string    // required
-	// TimeStamp  time.Time // required
+	TimeStamp  time.Time // required
 	ExpiryTime time.Time // required
 	KeyID      string    // required
 	// IP         string
@@ -62,18 +62,18 @@ func (r *Token) SetParams(key, value string) error {
 	// r.IP = value
 	case "k":
 		r.KeyID = value
-	// case "p":
-	// r.Principal = value
+	case "p":
+		r.Principal = value
 	case "r":
 		r.Roles = strings.Split(value, ",")
 	case "s":
 		r.Signature = value
-		// case "t":
-		// i, err := strconv.ParseInt(value, 10, 64)
-		// if err != nil {
-		// return err
-		// }
-		// r.TimeStamp = time.Unix(i, 0)
+	case "t":
+		i, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return errors.Wrap(err, "invalid timestamp")
+		}
+		r.TimeStamp = time.Unix(i, 0)
 		// case "proxy":
 		// r.ProxyUser = value
 		// case "v":

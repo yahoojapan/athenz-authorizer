@@ -27,8 +27,10 @@ import (
 
 func TestToken_SetParams(t *testing.T) {
 	type fields struct {
+		Principal     string
 		Domain        string
 		Roles         []string
+		TimeStamp     time.Time
 		ExpiryTime    time.Time
 		KeyID         string
 		Signature     string
@@ -45,6 +47,25 @@ func TestToken_SetParams(t *testing.T) {
 		checkFunc func(got *Token) error
 		wantErr   bool
 	}{
+		{
+			name:   "set param p success",
+			fields: fields{},
+			args: args{
+				key:   "p",
+				value: "dummyp",
+			},
+			checkFunc: func(got *Token) error {
+				expected := &Token{
+					Principal: "dummyp",
+				}
+
+				if !reflect.DeepEqual(got, expected) {
+					return fmt.Errorf("error")
+				}
+
+				return nil
+			},
+		},
 		{
 			name:   "set param d success",
 			fields: fields{},
@@ -63,6 +84,54 @@ func TestToken_SetParams(t *testing.T) {
 
 				return nil
 			},
+		},
+		{
+			name:   "set param t success",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "1595809891",
+			},
+			checkFunc: func(got *Token) error {
+				expected := &Token{
+					TimeStamp: func() time.Time {
+						t, _ := strconv.ParseInt("1595809891", 10, 64)
+						return time.Unix(t, 0)
+					}(),
+				}
+
+				if !reflect.DeepEqual(got, expected) {
+					return fmt.Errorf("error")
+				}
+
+				return nil
+			},
+		},
+		{
+			name:   "set param t correct",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "1550643321",
+			},
+			checkFunc: func(got *Token) error {
+				// 2019-02-20 06:15:21 +0000 UTC
+				expected := time.Date(2019, 2, 20, 6, 15, 21, 0, time.UTC)
+				if !expected.Equal(got.TimeStamp) {
+					return fmt.Errorf("got: %v, expected: %v", got.TimeStamp, expected)
+				}
+
+				return nil
+			},
+		},
+		{
+			name:   "set param t fail",
+			fields: fields{},
+			args: args{
+				key:   "t",
+				value: "abcde",
+			},
+			wantErr: true,
 		},
 		{
 			name:   "set param e success",
@@ -176,6 +245,7 @@ func TestToken_SetParams(t *testing.T) {
 				Domain:        tt.fields.Domain,
 				Roles:         tt.fields.Roles,
 				ExpiryTime:    tt.fields.ExpiryTime,
+				TimeStamp:     tt.fields.TimeStamp,
 				KeyID:         tt.fields.KeyID,
 				Signature:     tt.fields.Signature,
 				UnsignedToken: tt.fields.UnsignedToken,

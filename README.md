@@ -62,6 +62,12 @@ go func() {
 if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
     // token not authorized
 }
+
+// Verified results are returned
+principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
+if err != nil {
+    name := principal.GetName()
+}
 ```
 
 ## How it works

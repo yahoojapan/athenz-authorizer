@@ -28,7 +28,6 @@ import (
 // Processor represents the role token parser interface.
 type Processor interface {
 	ParseAndValidateRoleToken(tok string) (*Token, error)
-	ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error)
 }
 
 type rtp struct {
@@ -82,19 +81,6 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 	}
 
 	return rt, nil
-}
-
-func (r *rtp) ParseAndValidateRoleJWT(cred string) (*RoleJWTClaim, error) {
-	tok, err := jwt.ParseWithClaims(cred, &RoleJWTClaim{}, r.keyFunc)
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := tok.Claims.(*RoleJWTClaim); ok && tok.Valid {
-		return claims, nil
-	}
-
-	return nil, errors.New("error invalid jwt token")
 }
 
 func (r *rtp) validate(rt *Token) error {
