@@ -1028,6 +1028,51 @@ func Test_authorizer_authorize(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test not cached with the wrong key",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: true,
+					roleProcessor:  rpm,
+				},
+				args: args{
+					m:   roleToken,
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					if ok {
+						return errors.New("cached with the wrong key")
+					}
+					return nil
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
