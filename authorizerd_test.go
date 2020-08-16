@@ -1003,7 +1003,7 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr: nil,
 			}
 			return test{
-				name: "test correct cache key",
+				name: "test cache key when disablePolicyd is true",
 				fields: fields{
 					cache:          c,
 					policyd:        pdm,
@@ -1048,11 +1048,11 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr: nil,
 			}
 			return test{
-				name: "test not cached with the wrong key",
+				name: "test cache key when disablePolicyd is false",
 				fields: fields{
 					cache:          c,
 					policyd:        pdm,
-					disablePolicyd: true,
+					disablePolicyd: false,
 					roleProcessor:  rpm,
 				},
 				args: args{
@@ -1066,8 +1066,8 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
 					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
-					if ok {
-						return errors.New("cached with the wrong key")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
 					}
 					return nil
 				},
