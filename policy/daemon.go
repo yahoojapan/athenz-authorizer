@@ -227,7 +227,9 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 							return
 						default:
 							// deny policies come first in rolePolicies, so it will return first before allow policies is checked
-							if strings.EqualFold(ass.ResourceDomain, domain) && ass.Reg.MatchString(strings.ToLower(action+"-"+resource)) {
+							if strings.EqualFold(ass.ResourceDomain, domain) &&
+								ass.ActionRegexp.MatchString(strings.ToLower(action)) &&
+								ass.ResourceRegexp.MatchString(strings.ToLower(resource)) {
 								ch <- ass.Effect
 								return
 							}
