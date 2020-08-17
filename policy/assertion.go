@@ -49,23 +49,30 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	dom := domres[0]
 	res := domres[1]
 
-	reg, err := regexp.Compile(patternFromGlob(strings.ToLower(action + "-" + res)))
+	ar, err := regexp.Compile(patternFromGlob(strings.ToLower(action)))
+	if err != nil {
+		return nil, errors.Wrap(err, "assertion format not correct")
+	}
+
+	rr, err := regexp.Compile(patternFromGlob(strings.ToLower(res)))
 	if err != nil {
 		return nil, errors.Wrap(err, "assertion format not correct")
 	}
 
 	return &Assertion{
 		ResourceDomain: dom,
-		Reg:            reg,
+		ActionRegexp:   ar,
+		ResourceRegexp: rr,
 		Effect: func() error {
 			if strings.EqualFold("deny", effect) {
 				return errors.Wrap(ErrDenyByPolicy, "policy deny")
 			}
 			return nil
 		}(),
-		Action:      action,
-		Resource:    res,
-		RegexString: reg.String(),
+		Action:               action,
+		Resource:             res,
+		ActionRegexpString:   ar.String(),
+		ResourceRegexpString: rr.String(),
 	}, nil
 }
 
