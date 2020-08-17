@@ -94,7 +94,7 @@ func TestNewAssertion(t *testing.T) {
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
 					!reflect.DeepEqual(got.ActionRegexp, want.ActionRegexp) ||
-					!reflect.DeepEqual(got.ResourceRegexp, want.ActionRegexp) ||
+					!reflect.DeepEqual(got.ResourceRegexp, want.ResourceRegexp) ||
 					got.Effect.Error() != want.Effect.Error() {
 					return fmt.Errorf("got: %v, want: %v", got, want)
 				}
@@ -137,7 +137,7 @@ func TestNewAssertion(t *testing.T) {
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
 					!reflect.DeepEqual(got.ActionRegexp, want.ActionRegexp) ||
-					!reflect.DeepEqual(got.ResourceRegexp, want.ActionRegexp) ||
+					!reflect.DeepEqual(got.ResourceRegexp, want.ResourceRegexp) ||
 					got.Effect.Error() != want.Effect.Error() {
 					return fmt.Errorf("got: %v, want: %v", got, want)
 				}
