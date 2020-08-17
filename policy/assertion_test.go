@@ -103,6 +103,37 @@ func TestNewAssertion(t *testing.T) {
 			},
 		},
 		{
+			name: "create assertion with wildcard",
+			args: args{
+				resource: "dom:*[res]?",
+				action:   "*[act]?",
+				effect:   "allow",
+			},
+			want: &Assertion{
+				Action:         "*[act]?",
+				Resource:       "*[res]?",
+				ResourceDomain: "dom",
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^.*\\[act].$")
+					return r
+				}(),
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^.*\\[res].$")
+					return r
+				}(),
+				Effect:               nil,
+				ActionRegexpString:   "^.*\\[act].$",
+				ResourceRegexpString: "^.*\\[res].$",
+			},
+			checkFunc: func(got, want *Assertion) error {
+				if !reflect.DeepEqual(got, want) {
+					return fmt.Errorf("got: %v, want: %v", got, want)
+				}
+
+				return nil
+			},
+		},
+		{
 			name: "resource domain not valid",
 			args: args{
 				resource: "domres",
