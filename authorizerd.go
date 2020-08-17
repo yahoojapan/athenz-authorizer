@@ -354,14 +354,21 @@ func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res stri
 }
 
 func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
-	if act == "" || res == "" {
-		return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
+	var key string
+
+	if a.disablePolicyd {
+		key = tok
+	} else {
+		if act == "" || res == "" {
+			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
+		}
+		key = tok + act + res
 	}
 
 	// check if exists in verification success cache
-	cached, ok := a.cache.Get(tok + act + res)
+	cached, ok := a.cache.Get(key)
 	if ok {
-		glg.Debugf("use cached result. tok: %s, act: %s, res: %s", tok, act, res)
+		glg.Debugf("use cached result. tok: %s, key: %s", tok, key)
 		return cached.(Principal), nil
 	}
 
@@ -407,12 +414,14 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		}
 	}
 
-	if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
-		glg.Debugf("error check, err: %v", err)
-		return nil, errors.Wrap(err, "token unauthorized")
+	if !a.disablePolicyd {
+		if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
+			glg.Debugf("error check, err: %v", err)
+			return nil, errors.Wrap(err, "token unauthorized")
+		}
 	}
-	glg.Debugf("set roletoken result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(tok+act+res, p, a.cacheExp)
+	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
+	a.cache.SetWithExpire(key, p, a.cacheExp)
 	return p, nil
 }
 

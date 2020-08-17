@@ -900,7 +900,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 	}
 }
 
-func Test_authorizer_verify(t *testing.T) {
+func Test_authorizer_authorize(t *testing.T) {
 	type fields struct {
 		pubkeyd               pubkey.Daemon
 		policyd               policy.Daemon
@@ -918,6 +918,7 @@ func Test_authorizer_verify(t *testing.T) {
 		policyExpiryMargin    string
 		athenzDomains         []string
 		policyRefreshPeriod   string
+		disablePolicyd        bool
 	}
 	type args struct {
 		ctx  context.Context
@@ -927,18 +928,155 @@ func Test_authorizer_verify(t *testing.T) {
 		res  string
 		cert *x509.Certificate
 	}
-	tests := []struct {
+	type test struct {
 		name       string
 		fields     fields
 		args       args
 		wantErr    bool
 		wantResult Principal
-	}{
-		// TODO: Add test cases.
+		checkFunc  func(prov *authority) error
+	}
+	tests := []test{
+		func() test {
+			c := gache.New()
+			var count int
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					count++
+					return nil
+				},
+			}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test disablePolicyd true",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: true,
+					roleProcessor:  rpm,
+				},
+				args: args{
+					m:   roleToken,
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					if count != 0 {
+						return errors.New("CheckPolicy must not be called")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test cache key when disablePolicyd is true",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: true,
+					roleProcessor:  rpm,
+				},
+				args: args{
+					m:   roleToken,
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTok")
+					if !ok {
+						return errors.New("cannot get dummyTok from cache")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test cache key when disablePolicyd is false",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: false,
+					roleProcessor:  rpm,
+				},
+				args: args{
+					m:   roleToken,
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					if !ok {
+						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					}
+					return nil
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &authority{
+			a := &authority{
 				pubkeyd:               tt.fields.pubkeyd,
 				policyd:               tt.fields.policyd,
 				jwkd:                  tt.fields.jwkd,
@@ -955,11 +1093,23 @@ func Test_authorizer_verify(t *testing.T) {
 				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
 			}
-			if p, err := p.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert); (err != nil) != tt.wantErr {
-				t.Errorf("authority.authorize() error = %v, wantErr %v", err, tt.wantErr)
-				if reflect.DeepEqual(p, tt.wantResult) {
+			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("authority.authorize() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+			} else {
+				if !reflect.DeepEqual(p, tt.wantResult) {
 					t.Errorf("authority.authorize() results don't match. result %v, wantResult %v", p, tt.wantResult)
+					return
+				}
+			}
+			if tt.checkFunc != nil {
+				if err := tt.checkFunc(a); err != nil {
+					t.Errorf("authority.authorize() error: %v", err)
 				}
 			}
 		})
