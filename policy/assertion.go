@@ -30,12 +30,14 @@ var (
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
 	ResourceDomain string         `json:"resource_domain"`
-	Reg            *regexp.Regexp `json:"-"`
+	ActionRegexp   *regexp.Regexp `json:"-"`
+	ResourceRegexp *regexp.Regexp `json:"-"`
 	Effect         error          `json:"effect"`
 
-	Action      string `json:"action"`
-	Resource    string `json:"resource"`
-	RegexString string `json:"regex_string"`
+	Action               string `json:"action"`
+	Resource             string `json:"resource"`
+	ActionRegexpString   string `json:"action_regexp_string"`
+	ResourceRegexpString string `json:"resource_regexp_string"`
 }
 
 // NewAssertion returns the Assertion object or error

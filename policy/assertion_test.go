@@ -48,12 +48,17 @@ func TestNewAssertion(t *testing.T) {
 				Action:         "act",
 				Resource:       "res",
 				ResourceDomain: "dom",
-				Reg: func() *regexp.Regexp {
-					r, _ := regexp.Compile("^act-res$")
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
 					return r
 				}(),
-				Effect:      nil,
-				RegexString: "^act-res$",
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res$")
+					return r
+				}(),
+				Effect:               nil,
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if !reflect.DeepEqual(got, want) {
@@ -74,16 +79,22 @@ func TestNewAssertion(t *testing.T) {
 				Action:         "act",
 				Resource:       "res",
 				ResourceDomain: "dom",
-				Reg: func() *regexp.Regexp {
-					r, _ := regexp.Compile("^act-res$")
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
 					return r
 				}(),
-				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
-				RegexString: "^act-res$",
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res$")
+					return r
+				}(),
+				Effect:               errors.New("policy deny: Access Check was explicitly denied"),
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
-					!reflect.DeepEqual(got.Reg, want.Reg) ||
+					!reflect.DeepEqual(got.ActionRegexp, want.ActionRegexp) ||
+					!reflect.DeepEqual(got.ResourceRegexp, want.ActionRegexp) ||
 					got.Effect.Error() != want.Effect.Error() {
 					return fmt.Errorf("got: %v, want: %v", got, want)
 				}
@@ -111,12 +122,17 @@ func TestNewAssertion(t *testing.T) {
 				Action:         "act",
 				Resource:       "dom:res(",
 				ResourceDomain: "dom",
-				Reg: func() *regexp.Regexp {
-					r, _ := regexp.Compile("^act-dom:res\\($")
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
 					return r
 				}(),
-				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
-				RegexString: "^act-dom:res\\($",
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res\\($")
+					return r
+				}(),
+				Effect:               errors.New("policy deny: Access Check was explicitly denied"),
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res\\($",
 			},
 		},
 	}
