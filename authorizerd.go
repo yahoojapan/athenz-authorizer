@@ -356,13 +356,17 @@ func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res stri
 func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
 	var key string
 
+	if cert != nil {
+		key = cert.Issuer.CommonName + ":" + cert.Subject.CommonName
+	}
+
 	if a.disablePolicyd {
-		key = tok
+		key = key + tok
 	} else {
 		if act == "" || res == "" {
 			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 		}
-		key = tok + act + res
+		key = key + tok + act + res
 	}
 
 	// check if exists in verification success cache
