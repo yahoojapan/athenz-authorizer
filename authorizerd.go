@@ -354,25 +354,30 @@ func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res stri
 }
 
 func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
-	var key string
+	var key strings.Builder
+	key.WriteString(tok)
 
 	if cert != nil {
-		key = cert.Issuer.CommonName + ":" + cert.Subject.CommonName
+		key.WriteRune(':')
+		key.WriteString(cert.Issuer.CommonName)
+		key.WriteRune(':')
+		key.WriteString(cert.Subject.CommonName)
 	}
 
-	if a.disablePolicyd {
-		key = key + tok
-	} else {
+	if !a.disablePolicyd {
 		if act == "" || res == "" {
 			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 		}
-		key = key + tok + act + res
+		key.WriteRune(':')
+		key.WriteString(act)
+		key.WriteRune(':')
+		key.WriteString(res)
 	}
 
 	// check if exists in verification success cache
-	cached, ok := a.cache.Get(key)
+	cached, ok := a.cache.Get(key.String())
 	if ok {
-		glg.Debugf("use cached result. tok: %s, key: %s", tok, key)
+		glg.Debugf("use cached result. tok: %s, key: %s", tok, key.String())
 		return cached.(Principal), nil
 	}
 
@@ -425,7 +430,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		}
 	}
 	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(key, p, a.cacheExp)
+	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
 }
 

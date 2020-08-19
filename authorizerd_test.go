@@ -707,9 +707,9 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					return nil
 				},
@@ -725,7 +725,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 				issueTime:  rt.TimeStamp.Unix(),
 				expiryTime: rt.ExpiryTime.Unix(),
 			}
-			c.Set("dummyTokdummyActdummyRes", p)
+			c.Set("dummyTok:dummyAct:dummyRes", p)
 			rpm := &RoleProcessorMock{
 				rt:      rt,
 				wantErr: nil,
@@ -751,7 +751,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -776,7 +776,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -1066,9 +1066,9 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr:    false,
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					return nil
 				},
@@ -1546,9 +1546,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1617,9 +1617,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("issuer cn:subject cndummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:issuer cn:subject cn:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get issuer cn:subject cndummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get issuer dummyTok:issuer cn:subject cn:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1643,7 +1643,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				},
 				clientID: at.ClientID,
 			}
-			c.SetWithExpire("dummyTokdummyActdummyRes", p, time.Minute)
+			c.SetWithExpire("dummyTok:dummyAct:dummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
 				atc:     at,
 				wantErr: nil,
@@ -1673,9 +1673,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1707,7 +1707,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				},
 				clientID: at.ClientID,
 			}
-			c.SetWithExpire(cert.Issuer.CommonName+":"+cert.Subject.CommonName+"dummyTokdummyActdummyRes", p, time.Minute)
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
 				atc:     at,
 				wantErr: nil,
@@ -1738,9 +1738,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("issuer cn:subject cndummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:issuer cn:subject cn:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get issuer cn:subject cndummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get issuer dummyTok:issuer cn:subject cn:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1752,7 +1752,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			apm := &AccessProcessorMock{
 				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
@@ -1777,7 +1777,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			apm := &AccessProcessorMock{
 				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
@@ -1879,7 +1879,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				},
 				clientID: at.ClientID,
 			}
-			c.SetWithExpire(cert.Issuer.CommonName+":"+cert.Subject.CommonName+"dummyTokdummyActdummyRes", p, time.Minute)
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
 				atc:     at,
 				wantErr: nil,
@@ -1910,9 +1910,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
 					if !ok && prov.cache.Len() != 2 {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1943,7 +1943,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				},
 				clientID: at.ClientID,
 			}
-			c.SetWithExpire(cert.Issuer.CommonName+":"+cert.Subject.CommonName+"dummyTokdummyActdummyRes", p, time.Minute)
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
 				atc:     at,
 				wantErr: errors.New("error mTLS client certificate is nil"),
