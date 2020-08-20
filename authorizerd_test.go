@@ -1674,7 +1674,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
-					if !ok {
+					if !ok || prov.cache.Len() != 1 {
 						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
@@ -1739,7 +1739,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
 					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:issuer cn:subject cn:dummyAct:dummyRes")
-					if !ok {
+					if !ok || prov.cache.Len() != 1 {
 						return errors.New("cannot get issuer dummyTok:issuer cn:subject cn:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
