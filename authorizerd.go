@@ -109,7 +109,8 @@ type authority struct {
 type mode uint8
 
 const (
-	roleToken mode = iota
+	cacheKeyDelimiter      = ':'
+	roleToken         mode = iota
 	accessToken
 )
 
@@ -358,9 +359,9 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 	key.WriteString(tok)
 
 	if cert != nil {
-		key.WriteRune(':')
+		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(cert.Issuer.CommonName)
-		key.WriteRune(':')
+		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(cert.Subject.CommonName)
 	}
 
@@ -368,9 +369,9 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		if act == "" || res == "" {
 			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 		}
-		key.WriteRune(':')
+		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(act)
-		key.WriteRune(':')
+		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(res)
 	}
 
