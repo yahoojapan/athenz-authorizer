@@ -1134,6 +1134,7 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		policyExpiryMargin    string
 		athenzDomains         []string
 		policyRefreshPeriod   string
+		disablePolicyd        bool
 	}
 	type args struct {
 		ctx       context.Context
@@ -1285,6 +1286,40 @@ bu80CwTnWhmdBo36Ig==
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			crt := `-----BEGIN CERTIFICATE-----
+MIICGTCCAcOgAwIBAgIJALLML3PdJAZ1MA0GCSqGSIb3DQEBCwUAMFwxCzAJBgNV
+BAYTAlVTMQswCQYDVQQIEwJDQTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5U
+ZXN0aW5nIERvbWFpbjEWMBQGA1UEAxMNYXRoZW56LnN5bmNlcjAeFw0xOTA0Mjcw
+MjQ2MjNaFw0yOTA0MjQwMjQ2MjNaMFwxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJD
+QTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5UZXN0aW5nIERvbWFpbjEWMBQG
+A1UEAxMNYXRoZW56LnN5bmNlcjBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvv27a
+SNAnK0vcN8fqqQgMHwb0EhfVWMwoRTBQFrCmA9mH/84QgI/0kR3ZI+DlDNBCgDHd
+rEJZVPyX2V41VOX3AgMBAAGjaDBmMGQGA1UdEQRdMFuGGXNwaWZmZTovL2F0aGVu
+ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
+ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
+Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
+bu80CwTnWhmdBo36Ig==
+-----END CERTIFICATE-----`
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			return test{
+				name: "cannot verify if policyd is disable",
+				fields: fields{
+					disablePolicyd: true,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+					act: "abc",
+					res: "def",
+				},
+				wantErr: true,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1305,6 +1340,7 @@ bu80CwTnWhmdBo36Ig==
 				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authority.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -1336,6 +1372,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		policyExpiryMargin    string
 		athenzDomains         []string
 		policyRefreshPeriod   string
+		disablePolicyd        bool
 	}
 	type args struct {
 		ctx context.Context
@@ -1355,6 +1392,16 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				ctx: context.Background(),
 			},
 			want: nil,
+		},
+		{
+			name: "GetPolicyCache success disable policyd",
+			fields: fields{
+				disablePolicyd: true,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: make(map[string]interface{}),
 		},
 	}
 	for _, tt := range tests {
@@ -1376,6 +1423,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authority.GetPolicyCache() = %v, want %v", got, tt.want)

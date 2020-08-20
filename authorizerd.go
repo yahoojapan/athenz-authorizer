@@ -453,6 +453,10 @@ func (a *authority) Authorize(r *http.Request, act, res string) (Principal, erro
 
 // VerifyRoleCert verifies the role certificate for specific resource and return and verification error.
 func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
+	if a.disablePolicyd {
+		return errors.New("cannot verify if policyd is disable")
+	}
+
 	var dr []string
 	drcheck := make(map[string]struct{})
 	domainRoles := make(map[string][]string)
@@ -496,5 +500,9 @@ func (a *authority) AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Cer
 
 // GetPolicyCache returns the cached policy data
 func (a *authority) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return a.policyd.GetPolicyCache(ctx)
+	if !a.disablePolicyd {
+		return a.policyd.GetPolicyCache(ctx)
+	} else {
+		return make(map[string]interface{})
+	}
 }
