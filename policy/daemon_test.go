@@ -1180,6 +1180,52 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 			},
 			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
 		},
+		{
+			name: "check can not use wildcard escaping, allow",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("\\*Act\\?", "dummyDom:\\*Res\\?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "\\dummyAct\\1",
+				resource: "\\dummyRes\\1",
+			},
+			want: nil,
+		},
+		{
+			name: "check can not use wildcard escaping, deny",
+			fields: fields{
+				rolePolicies: func() gache.Gache {
+					g := gache.New()
+					g.Set("dummyDom:role.dummyRole", []*Assertion{
+						func() *Assertion {
+							a, _ := NewAssertion("\\*Act\\?", "dummyDom:\\*Res\\?", "allow")
+							return a
+						}(),
+					})
+					return g
+				}(),
+			},
+			args: args{
+				ctx:      context.Background(),
+				domain:   "dummyDom",
+				roles:    []string{"dummyRole", "dummyRole1"},
+				action:   "*Act?",
+				resource: "*Res?",
+			},
+			want: errors.New("no match: Access denied due to no match to any of the assertions defined in domain policy file"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
