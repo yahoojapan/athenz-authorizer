@@ -291,6 +291,13 @@ func Test_patternFromGlob(t *testing.T) {
 			},
 			want: "^\\..*wild.card.-.*test.*$",
 		},
+		{
+			name: "check to no support wildcard escape",
+			args: args{
+				glob: "\\*test\\?",
+			},
+			want: "^\\\\.*test\\\\.$",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
