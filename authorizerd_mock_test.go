@@ -116,11 +116,11 @@ func (rpm *RoleProcessorMock) ParseAndValidateRoleToken(tok string) (*role.Token
 type AccessProcessorMock struct {
 	access.Processor
 	wantErr error
-	act     *access.OAuth2AccessTokenClaim
+	atc     *access.OAuth2AccessTokenClaim
 }
 
 func (apm *AccessProcessorMock) ParseAndValidateOAuth2AccessToken(cred string, cert *x509.Certificate) (*access.OAuth2AccessTokenClaim, error) {
-	return apm.act, apm.wantErr
+	return apm.atc, apm.wantErr
 }
 
 type JwkdMock struct {
