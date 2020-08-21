@@ -143,7 +143,7 @@ func TestNewAssertion(t *testing.T) {
 			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 		{
-			name: "invalid regex, but not return error",
+			name: "invalid regex, but valid wildcard, not return error",
 			args: args{
 				resource: "dom:res(",
 				action:   "act",
