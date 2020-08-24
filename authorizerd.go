@@ -94,6 +94,7 @@ type authority struct {
 	disableJwkd      bool
 	jwkRefreshPeriod string
 	jwkRetryDelay    string
+	jwkurls          string
 
 	// accessTokenProcessor parameters
 	accessTokenParam AccessTokenParam
