@@ -23,10 +23,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	replacer = strings.NewReplacer(".*", ".*", "*", ".*")
-)
-
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
 	ResourceDomain string         `json:"resource_domain"`
