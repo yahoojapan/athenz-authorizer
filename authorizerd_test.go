@@ -1305,7 +1305,7 @@ bu80CwTnWhmdBo36Ig==
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
 			return test{
-				name: "cannot verify if policyd is disable",
+				name: "no error if policyd is disable",
 				fields: fields{
 					disablePolicyd: true,
 				},
@@ -1314,10 +1314,8 @@ bu80CwTnWhmdBo36Ig==
 					peerCerts: []*x509.Certificate{
 						cert,
 					},
-					act: "abc",
-					res: "def",
 				},
-				wantErr: true,
+				wantErr: false,
 			}
 		}(),
 	}

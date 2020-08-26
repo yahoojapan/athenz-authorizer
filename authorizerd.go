@@ -454,7 +454,7 @@ func (a *authority) Authorize(r *http.Request, act, res string) (Principal, erro
 // VerifyRoleCert verifies the role certificate for specific resource and return and verification error.
 func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
 	if a.disablePolicyd {
-		return errors.New("cannot verify if policyd is disable")
+		return nil
 	}
 
 	var dr []string
