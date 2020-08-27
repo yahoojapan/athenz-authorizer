@@ -77,6 +77,18 @@ func WithRetryDelay(i string) Option {
 	}
 }
 
+// WithJwkUrls returns an JwkUrls functional option
+func WithJwkUrls(jwkurls string) Option {
+	return func(j *jwkd) error {
+		u := urlutil.TrimHTTPScheme(jwkurls)
+		if urlutil.HasScheme(u) {
+			return urlutil.ErrUnsupportedScheme
+		}
+		j.jwkurls = u
+		return nil
+	}
+}
+
 // WithHTTPClient returns a HTTPClient functional option
 func WithHTTPClient(cl *http.Client) Option {
 	return func(j *jwkd) error {

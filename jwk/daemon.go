@@ -37,6 +37,7 @@ type Daemon interface {
 
 type jwkd struct {
 	athenzURL string
+	jwkurls   string
 
 	refreshPeriod time.Duration
 	retryDelay    time.Duration
