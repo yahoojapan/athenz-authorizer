@@ -167,7 +167,7 @@ func New(opts ...Option) (Authorizerd, error) {
 			jwk.WithAthenzURL(prov.athenzURL),
 			jwk.WithRefreshPeriod(prov.jwkRefreshPeriod),
 			jwk.WithRetryDelay(prov.jwkRetryDelay),
-			jwk.WithJwkUrls(prov.jwkurls),
+			jwk.WithJWKURLs(prov.jwkurls),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, err

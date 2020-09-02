@@ -136,6 +136,10 @@ func (j *jwkd) getKey(keyID string) interface{} {
 		return nil
 	}
 
+	if keyID == "kid" {
+		return jwk.KeyIDKey
+	}
+
 	for _, key := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
 		var raw interface{}
 		if err := key.Raw(&raw); err != nil {
