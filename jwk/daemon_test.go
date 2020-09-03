@@ -57,6 +57,7 @@ func TestNew(t *testing.T) {
 				refreshPeriod: time.Hour * 24,
 				retryDelay:    time.Minute,
 				client:        http.DefaultClient,
+				keys:          &sync.Map{},
 			},
 		},
 		{
@@ -89,7 +90,7 @@ func Test_jwkd_Start(t *testing.T) {
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
-		keys          sync.Map
+		keys          *sync.Map
 	}
 	type args struct {
 		ctx context.Context
@@ -116,6 +117,7 @@ func Test_jwkd_Start(t *testing.T) {
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: ctx,
@@ -163,6 +165,7 @@ func Test_jwkd_Start(t *testing.T) {
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: ctx,
@@ -207,6 +210,7 @@ func Test_jwkd_Start(t *testing.T) {
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: ctx,
@@ -267,6 +271,7 @@ func Test_jwkd_Start(t *testing.T) {
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: ctx,
@@ -315,7 +320,7 @@ func Test_jwkd_Update(t *testing.T) {
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
-		keys          sync.Map
+		keys          *sync.Map
 	}
 	type args struct {
 		ctx context.Context
@@ -348,6 +353,7 @@ func Test_jwkd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
 					client:    srv.Client(),
+					keys:      &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
@@ -387,6 +393,7 @@ func Test_jwkd_Update(t *testing.T) {
 					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
 					urls:      []string{srv.URL},
 					client:    srv.Client(),
+					keys:      &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
@@ -437,6 +444,7 @@ func Test_jwkd_Update(t *testing.T) {
 				fields: fields{
 					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
 					client:    srv.Client(),
+					keys:      &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
@@ -471,6 +479,7 @@ func Test_jwkd_Update(t *testing.T) {
 					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
 					urls:      []string{srv.URL},
 					client:    srv.Client(),
+					keys:      &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
@@ -518,7 +527,7 @@ func Test_jwkd_GetProvider(t *testing.T) {
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
-		keys          sync.Map
+		keys          *sync.Map
 	}
 	tests := []struct {
 		name      string
@@ -558,7 +567,7 @@ func Test_jwkd_getKey(t *testing.T) {
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
-		keys          sync.Map
+		keys          *sync.Map
 	}
 	type args struct {
 		keyID string
@@ -597,7 +606,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key success",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -621,7 +630,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key not found",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -645,7 +654,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key id empty return nil",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -675,7 +684,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key success from multiple key",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -701,7 +710,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get EC private key success",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -729,7 +738,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get EC public key success",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{
@@ -752,7 +761,7 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get RSA public key success",
 				fields: fields{
-					keys:      key,
+					keys:      &key,
 					athenzURL: "dummy.com",
 				},
 				args: args{

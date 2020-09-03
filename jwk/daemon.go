@@ -44,7 +44,7 @@ type jwkd struct {
 
 	client *http.Client
 
-	keys sync.Map
+	keys *sync.Map
 }
 
 // Provider represent the jwk provider to retrive the json web key.
@@ -52,7 +52,9 @@ type Provider func(keyID string) interface{}
 
 // New represent the constructor of Policyd
 func New(opts ...Option) (Daemon, error) {
-	j := new(jwkd)
+	j := &jwkd{
+		keys: &sync.Map{},
+	}
 	for _, opt := range append(defaultOptions, opts...) {
 		err := opt(j)
 		if err != nil {
