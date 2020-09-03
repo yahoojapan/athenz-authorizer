@@ -119,21 +119,29 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 }
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
+	glg.Info("Fetching JWK Set")
 	athenzJWKURL := fmt.Sprintf("https://%s/oauth2/keys", j.athenzURL)
+	glg.Debugf("Fetching JWK Set from %s", athenzJWKURL)
 	keys, err := jwk.FetchHTTP(athenzJWKURL, jwk.WithHTTPClient(j.client))
 	if err != nil {
+		glg.Errorf("Fetch JWK Set error: %v", err)
 		return err
 	}
 	j.keys.Store(j.athenzURL, keys)
+	glg.Debugf("Fetch JWK Set from %s success", athenzJWKURL)
 
 	for _, url := range j.urls {
+		glg.Debugf("Fetching JWK Set from %s", url)
 		keys, err := jwk.FetchHTTP(url, jwk.WithHTTPClient(j.client))
 		if err != nil {
+			glg.Errorf("Fetch JWK Set error: %v", err)
 			return err
 		}
 		j.keys.Store(url, keys)
+		glg.Debugf("Fetch JWK Set from %s success", athenzJWKURL)
 	}
 
+	glg.Info("Fetch JWK Set success")
 	return nil
 }
 
