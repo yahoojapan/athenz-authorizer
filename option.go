@@ -254,6 +254,14 @@ func WithJwkRetryDelay(i string) Option {
 	}
 }
 
+// WithJwkURLs returns a JwkURLs functional option
+func WithJwkURLs(urls []string) Option {
+	return func(authz *authority) error {
+		authz.jwkURLs = urls
+		return nil
+	}
+}
+
 /*
 	access token parameters
 */
