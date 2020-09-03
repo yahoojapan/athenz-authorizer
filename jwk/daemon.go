@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/kpango/glg"
@@ -44,7 +44,7 @@ type jwkd struct {
 
 	client *http.Client
 
-	keys atomic.Value
+	keys sync.Map
 }
 
 // Provider represent the jwk provider to retrive the json web key.
@@ -117,13 +117,21 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 }
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
-	url := fmt.Sprintf("https://%s/oauth2/keys", j.athenzURL)
-	keys, err := jwk.FetchHTTP(url, jwk.WithHTTPClient(j.client))
+	athenzJWKURL := fmt.Sprintf("https://%s/oauth2/keys", j.athenzURL)
+	keys, err := jwk.FetchHTTP(athenzJWKURL, jwk.WithHTTPClient(j.client))
 	if err != nil {
 		return err
 	}
+	j.keys.Store(j.athenzURL, keys)
 
-	j.keys.Store(keys)
+	for _, url := range j.urls {
+		keys, err := jwk.FetchHTTP(url, jwk.WithHTTPClient(j.client))
+		if err != nil {
+			return err
+		}
+		j.keys.Store(url, keys)
+	}
+
 	return nil
 }
 
@@ -136,11 +144,9 @@ func (j *jwkd) getKey(keyID string) interface{} {
 		return nil
 	}
 
-	if keyID == "kid" {
-		return jwk.KeyIDKey
-	}
+	keys, _ := j.keys.Load(j.athenzURL)
 
-	for _, key := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
+	for _, key := range keys.(*jwk.Set).LookupKeyID(keyID) {
 		var raw interface{}
 		if err := key.Raw(&raw); err != nil {
 			glg.Warnf("jwkd.getKey: %s", err.Error())
