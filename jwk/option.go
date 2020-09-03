@@ -77,14 +77,18 @@ func WithRetryDelay(i string) Option {
 	}
 }
 
-// WithJWKURLs returns an JwkUrls functional option
-func WithJWKURLs(jwkurls string) Option {
+// WithURLs returns an JwkUrls functional option
+func WithURLs(urls []string) Option {
 	return func(j *jwkd) error {
-		u := urlutil.TrimHTTPScheme(jwkurls)
-		if urlutil.HasScheme(u) {
-			return urlutil.ErrUnsupportedScheme
+		us := make([]string, len(urls), len(urls))
+		for i, url := range urls {
+			u := urlutil.TrimHTTPScheme(url)
+			if urlutil.HasScheme(u) {
+				return urlutil.ErrUnsupportedScheme
+			}
+			us[i] = u
 		}
-		j.jwkurls = u
+		j.urls = us
 		return nil
 	}
 }
