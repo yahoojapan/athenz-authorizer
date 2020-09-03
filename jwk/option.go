@@ -18,6 +18,7 @@ package jwk
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -81,12 +82,16 @@ func WithRetryDelay(i string) Option {
 func WithURLs(urls []string) Option {
 	return func(j *jwkd) error {
 		us := make([]string, len(urls), len(urls))
-		for i, url := range urls {
-			u := urlutil.TrimHTTPScheme(url)
-			if urlutil.HasScheme(u) {
+		for i, targetURL := range urls {
+			u, err := url.ParseRequestURI(targetURL)
+			if err != nil {
+				return err
+			}
+			if u.Scheme != "http" && u.Scheme != "https" {
 				return urlutil.ErrUnsupportedScheme
 			}
-			us[i] = u
+			// Unlike WithAthenzURL, keep url with scheme.
+			us[i] = targetURL
 		}
 		j.urls = us
 		return nil

@@ -290,55 +290,55 @@ func TestWithURLs(t *testing.T) {
 		name    string
 		args    args
 		want    *jwkd
-		wantErr error
+		wantErr string
 	}{
 		{
 			name: "empty string",
 			args: args{
 				urls: []string{""},
 			},
-			want:    &jwkd{urls: []string{""}},
-			wantErr: nil,
+			want:    &jwkd{urls: nil},
+			wantErr: "parse \"\": empty url",
 		},
 		{
 			name: "no scheme",
 			args: args{
 				urls: []string{"dummy.com"},
 			},
-			want:    &jwkd{urls: []string{"dummy.com"}},
-			wantErr: nil,
+			want:    &jwkd{urls: nil},
+			wantErr: "parse \"dummy.com\": invalid URI for request",
 		},
 		{
 			name: "http scheme",
 			args: args{
 				urls: []string{"http://dummy.com"},
 			},
-			want:    &jwkd{urls: []string{"dummy.com"}},
-			wantErr: nil,
+			want:    &jwkd{urls: []string{"http://dummy.com"}},
+			wantErr: "",
 		},
 		{
 			name: "https scheme",
 			args: args{
 				urls: []string{"https://dummy.com"},
 			},
-			want:    &jwkd{urls: []string{"dummy.com"}},
-			wantErr: nil,
+			want:    &jwkd{urls: []string{"https://dummy.com"}},
+			wantErr: "",
 		},
 		{
 			name: "http scheme with path",
 			args: args{
 				urls: []string{"http://dummy.com/path/to/resource"},
 			},
-			want:    &jwkd{urls: []string{"dummy.com/path/to/resource"}},
-			wantErr: nil,
+			want:    &jwkd{urls: []string{"http://dummy.com/path/to/resource"}},
+			wantErr: "",
 		},
 		{
 			name: "https scheme with path",
 			args: args{
 				urls: []string{"https://dummy.com/path/to/resource"},
 			},
-			want:    &jwkd{urls: []string{"dummy.com/path/to/resource"}},
-			wantErr: nil,
+			want:    &jwkd{urls: []string{"https://dummy.com/path/to/resource"}},
+			wantErr: "",
 		},
 		{
 			name: "unsupported scheme",
@@ -346,16 +346,18 @@ func TestWithURLs(t *testing.T) {
 				urls: []string{"ftp://dummy.com"},
 			},
 			want:    &jwkd{},
-			wantErr: urlutil.ErrUnsupportedScheme,
+			wantErr: urlutil.ErrUnsupportedScheme.Error(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := &jwkd{}
 			err := WithURLs(tt.args.urls)(got)
-			if err != tt.wantErr {
-				t.Errorf("WithURLs() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("WithURLs() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("WithURLs() = %v, want %v", got, tt.want)
