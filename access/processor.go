@@ -174,11 +174,6 @@ func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
 		return nil, errors.New("kid not written in header")
 	}
 
-	keyID, ok = token.Header["jku"]
-	if !ok {
-		return nil, errors.New("jku not exists in header")
-	}
-
 	key := a.jwkp(keyID.(string))
 	if key == nil {
 		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
