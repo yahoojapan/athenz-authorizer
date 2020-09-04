@@ -570,7 +570,8 @@ func Test_jwkd_getKey(t *testing.T) {
 		keys          *sync.Map
 	}
 	type args struct {
-		keyID string
+		keyID     string
+		jwkSetURL string
 	}
 	type test struct {
 		name   string
@@ -780,7 +781,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				client:        tt.fields.client,
 				keys:          tt.fields.keys,
 			}
-			if got := j.getKey(tt.args.keyID); !reflect.DeepEqual(got, tt.want) {
+			if got := j.getKey(tt.args.keyID, tt.args.jwkSetURL); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("jwkd.getKey() = %#v, want %#v", got, tt.want)
 			}
 		})
