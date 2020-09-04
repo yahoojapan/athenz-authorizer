@@ -174,9 +174,17 @@ func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
 		return nil, errors.New("kid not written in header")
 	}
 
-	key := a.jwkp(keyID.(string))
+	jwkSetURL, ok := token.Header["jku"]
+	var jku string
+	if ok {
+		jku = jwkSetURL.(string)
+	} else {
+		jku = ""
+	}
+	key := a.jwkp(keyID.(string), jku)
+
 	if key == nil {
-		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
+		return nil, errors.Errorf("key cannot be found, keyID: %s jwkSetURL: %s", keyID, jku)
 	}
 
 	return key, nil

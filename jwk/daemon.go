@@ -48,7 +48,7 @@ type jwkd struct {
 }
 
 // Provider represent the jwk provider to retrive the json web key.
-type Provider func(keyID string) interface{}
+type Provider func(keyID string, jwkSetURL string) interface{}
 
 // New represent the constructor of Policyd
 func New(opts ...Option) (Daemon, error) {
@@ -138,7 +138,7 @@ func (j *jwkd) Update(ctx context.Context) (err error) {
 			return err
 		}
 		j.keys.Store(url, keys)
-		glg.Debugf("Fetch JWK Set from %s success", athenzJWKURL)
+		glg.Debugf("Fetch JWK Set from %s success", url)
 	}
 
 	glg.Info("Fetch JWK Set success")
@@ -149,12 +149,23 @@ func (j *jwkd) GetProvider() Provider {
 	return j.getKey
 }
 
-func (j *jwkd) getKey(keyID string) interface{} {
+func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 	if keyID == "" {
 		return nil
 	}
 
-	keys, _ := j.keys.Load(j.athenzURL)
+	var keys interface{}
+	var ok bool
+	if jwkSetURL == "" {
+		keys, ok = j.keys.Load(j.athenzURL)
+	} else {
+		keys, ok = j.keys.Load(jwkSetURL)
+	}
+
+	// Either jku specified in the token is not set in jwkd.urls or key cache is failing.
+	if !ok {
+		return nil
+	}
 
 	for _, key := range keys.(*jwk.Set).LookupKeyID(keyID) {
 		var raw interface{}
@@ -164,5 +175,6 @@ func (j *jwkd) getKey(keyID string) interface{} {
 			return raw
 		}
 	}
+	// Either key for the kid specified in the token was not found or invalid key
 	return nil
 }
