@@ -19,9 +19,7 @@ package role
 import (
 	"strings"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
-	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
@@ -31,8 +29,7 @@ type Processor interface {
 }
 
 type rtp struct {
-	pkp  pubkey.Provider
-	jwkp jwk.Provider
+	pkp pubkey.Provider
 }
 
 // New returns the Role instance.
@@ -92,19 +89,4 @@ func (r *rtp) validate(rt *Token) error {
 		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
-}
-
-// keyFunc extract the key id from the token, and return corresponding key
-func (r *rtp) keyFunc(token *jwt.Token) (interface{}, error) {
-	keyID, ok := token.Header["kid"]
-	if !ok {
-		return nil, errors.New("kid not written in header")
-	}
-
-	key := r.jwkp(keyID.(string))
-	if key == nil {
-		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
-	}
-
-	return key, nil
 }

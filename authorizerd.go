@@ -178,7 +178,6 @@ func New(opts ...Option) (Authorizerd, error) {
 	if prov.enableRoleToken {
 		if prov.roleProcessor, err = role.New(
 			role.WithPubkeyProvider(pkPro),
-			role.WithJWKProvider(jwkPro),
 		); err != nil {
 			return nil, err
 		}
