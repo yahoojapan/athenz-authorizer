@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -53,7 +52,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			want: &jwkd{
-				athenzURL:     "www.dummy.com",
+				athenzURL:     "https://www.dummy.com/oauth2/keys",
 				refreshPeriod: time.Hour * 24,
 				retryDelay:    time.Minute,
 				client:        http.DefaultClient,
@@ -113,7 +112,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "canceled context",
 				fields: fields{
-					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL:     srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -161,7 +160,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start success",
 				fields: fields{
-					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL:     srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -206,7 +205,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start can update",
 				fields: fields{
-					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL:     srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -267,7 +266,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start retry update",
 				fields: fields{
-					athenzURL:     strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL:     srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -351,7 +350,7 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update success without urls",
 				fields: fields{
-					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL: srv.URL,
 					client:    srv.Client(),
 					keys:      &sync.Map{},
 				},
@@ -390,7 +389,7 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update success with urls",
 				fields: fields{
-					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL: srv.URL,
 					urls:      []string{srv.URL},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
@@ -442,7 +441,7 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail without urls",
 				fields: fields{
-					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL: srv.URL,
 					client:    srv.Client(),
 					keys:      &sync.Map{},
 				},
@@ -490,8 +489,8 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key success, urls key fail",
 				fields: fields{
-					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
-					urls:      []string{srv.URL},
+					athenzURL: srv.URL,
+					urls:      []string{srv.URL + "/invalid"},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
 				},
@@ -535,7 +534,7 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key fail, then urls key empty",
 				fields: fields{
-					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					athenzURL: srv.URL,
 					urls:      []string{srv.URL},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
