@@ -94,7 +94,7 @@ func WithURLs(urls []string) Option {
 			if u.Scheme != "http" && u.Scheme != "https" {
 				return urlutil.ErrUnsupportedScheme
 			}
-			// Unlike WithAthenzURL, keep url with scheme.
+			// keep url with scheme.
 			us[i] = targetURL
 		}
 		j.urls = us
