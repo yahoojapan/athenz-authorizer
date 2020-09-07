@@ -17,6 +17,7 @@ limitations under the License.
 package jwk
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -36,14 +37,17 @@ var (
 // Option represents a functional option
 type Option func(*jwkd) error
 
-// WithAthenzURL returns an AthenzURL functional option
+// WithAthenzURL returns an Athenz JWK URL path functional option
 func WithAthenzURL(url string) Option {
 	return func(j *jwkd) error {
+		if url == "" {
+			return urlutil.ErrEmptyAthenzURL
+		}
 		u := urlutil.TrimHTTPScheme(url)
 		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzURL = u
+		j.athenzURL = fmt.Sprintf("https://%s/oauth2/keys", u)
 		return nil
 	}
 }

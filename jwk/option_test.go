@@ -41,14 +41,14 @@ func TestWithAthenzURL(t *testing.T) {
 				"",
 			},
 			want:    &jwkd{athenzURL: ""},
-			wantErr: nil,
+			wantErr: urlutil.ErrEmptyAthenzURL,
 		},
 		{
 			name: "no scheme",
 			args: args{
 				"dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -56,7 +56,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -64,7 +64,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
