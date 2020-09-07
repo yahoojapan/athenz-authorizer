@@ -459,6 +459,65 @@ func Test_jwkd_Update(t *testing.T) {
 			}
 		}(),
 		func() test {
+			validKey := `{
+"e":"AQAB",
+"kty":"RSA",
+"n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+}`
+			invalidKey := `{
+"e":"AQAB",
+"kty":"dummy",
+"n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+}`
+			// frag for distinguish between the keys to be output.
+			isFirst := true
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				var err error
+				// Only the first time returns a valid key.
+				if isFirst {
+					_, err = w.Write([]byte(validKey))
+				} else {
+					_, err = w.Write([]byte(invalidKey))
+				}
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				isFirst = false
+			}))
+
+			return test{
+				name: "Update fail with urls, athenz key success, urls key fail",
+				fields: fields{
+					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
+					urls:      []string{srv.URL},
+					client:    srv.Client(),
+					keys:      &sync.Map{},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(j *jwkd) error {
+					// key from athenz, expect success
+					val, ok := j.keys.Load(j.athenzURL)
+					if !ok {
+						return errors.New("athenz keys is empty")
+					}
+					got := val.(*jwk.Set).Keys[0].KeyType()
+					if got != jwa.RSA {
+						return errors.Errorf("Unexpected key type from athenz: %v", got)
+					}
+					// key from urls, expect fail
+					if _, ok := j.keys.Load(j.urls[0]); ok {
+						return errors.Errorf("ok from urls expecetd false")
+					}
+					return nil
+				},
+				wantErr: true,
+			}
+		}(),
+		func() test {
 			k := `{
 "e":"AQAB",
 "kty":"dummy",
@@ -474,7 +533,7 @@ func Test_jwkd_Update(t *testing.T) {
 			}))
 
 			return test{
-				name: "Update fail with urls",
+				name: "Update fail with urls, athenz key fail, then urls key empty",
 				fields: fields{
 					athenzURL: strings.Replace(srv.URL, "https://", "", 1),
 					urls:      []string{srv.URL},
@@ -485,11 +544,11 @@ func Test_jwkd_Update(t *testing.T) {
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
-					// key from athenz
+					// key from athenz, expect fail
 					if _, ok := j.keys.Load(j.athenzURL); ok {
 						return errors.Errorf("ok from athenz expecetd false")
 					}
-					// key from urls
+					// key from urls, expect fail
 					if _, ok := j.keys.Load(j.urls[0]); ok {
 						return errors.Errorf("ok from urls expecetd false")
 					}
@@ -611,7 +670,8 @@ func Test_jwkd_getKey(t *testing.T) {
 					athenzURL: "dummy.com",
 				},
 				args: args{
-					keyID: "dummyID",
+					keyID:     "dummyID",
+					jwkSetURL: "",
 				},
 				want: rsaKey,
 			}
@@ -635,7 +695,8 @@ func Test_jwkd_getKey(t *testing.T) {
 					athenzURL: "dummy.com",
 				},
 				args: args{
-					keyID: "not exists",
+					keyID:     "not exists",
+					jwkSetURL: "",
 				},
 				want: nil,
 			}
@@ -659,7 +720,33 @@ func Test_jwkd_getKey(t *testing.T) {
 					athenzURL: "dummy.com",
 				},
 				args: args{
-					keyID: "",
+					keyID:     "",
+					jwkSetURL: "",
+				},
+				want: nil,
+			}
+		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+
+			key := sync.Map{}
+			key.Store("dummy.com", set)
+
+			return test{
+				name: "get key id empty, but jwkSetURL is not empty, return nil",
+				fields: fields{
+					keys:      &key,
+					athenzURL: "dummy.com",
+				},
+				args: args{
+					keyID:     "",
+					jwkSetURL: "dummy2.com",
 				},
 				want: nil,
 			}
@@ -689,7 +776,8 @@ func Test_jwkd_getKey(t *testing.T) {
 					athenzURL: "dummy.com",
 				},
 				args: args{
-					keyID: "dummyID2",
+					keyID:     "dummyID2",
+					jwkSetURL: "",
 				},
 				want: rsaKey2,
 			}
@@ -715,7 +803,8 @@ func Test_jwkd_getKey(t *testing.T) {
 					athenzURL: "dummy.com",
 				},
 				args: args{
-					keyID: "ecKeyID",
+					keyID:     "ecKeyID",
+					jwkSetURL: "",
 				},
 				want: ecKey,
 			}
@@ -769,6 +858,86 @@ func Test_jwkd_getKey(t *testing.T) {
 					keyID: "rsaPubKeyID",
 				},
 				want: rsaPubKey,
+			}
+		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "dummyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := sync.Map{}
+			key.Store("dummy2.com", set)
+
+			return test{
+				name: "get key success jwkSetURL",
+				fields: fields{
+					keys:      &key,
+					athenzURL: "dummy.com",
+				},
+				args: args{
+					keyID:     "dummyID",
+					jwkSetURL: "dummy2.com",
+				},
+				want: rsaKey,
+			}
+		}(),
+		func() test {
+			rsaKey1 := genKey()
+			k1 := newKey(rsaKey1, "dummyID")
+			set1 := &jwk.Set{
+				Keys: []jwk.Key{
+					k1,
+				},
+			}
+			rsaKey2 := genKey()
+			k2 := newKey(rsaKey2, "dummyID")
+			set2 := &jwk.Set{
+				Keys: []jwk.Key{
+					k2,
+				},
+			}
+			key := sync.Map{}
+			key.Store("dummy1.com", set1)
+			key.Store("dummy2.com", set2)
+
+			return test{
+				name: "get key fail, no exist jwkSetURL",
+				fields: fields{
+					keys:      &key,
+					athenzURL: "dummy1.com",
+				},
+				args: args{
+					keyID:     "dummyID",
+					jwkSetURL: "dummy-not-found.com",
+				},
+				want: nil,
+			}
+		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "dummyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := sync.Map{}
+			key.Store("dummy2.com", set)
+
+			return test{
+				name: "get key not found in jwkSetURL",
+				fields: fields{
+					keys:      &key,
+					athenzURL: "dummy1.com",
+				},
+				args: args{
+					keyID:     "not exists",
+					jwkSetURL: "dummy2.com",
+				},
+				want: nil,
 			}
 		}(),
 	}
