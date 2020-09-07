@@ -137,6 +137,26 @@ func Test_rtp_keyFunc(t *testing.T) {
 			want: "key",
 		},
 		{
+			name: "key return success with jku",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if jku == "dummy" && kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+						"jku": "dummy",
+					},
+				},
+			},
+			want: "key",
+		},
+		{
 			name: "key header not found",
 			fields: fields{
 				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
@@ -149,6 +169,25 @@ func Test_rtp_keyFunc(t *testing.T) {
 			args: args{
 				token: &jwt.Token{
 					Header: map[string]interface{}{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "key header not found with jwk set header",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"jku": "dummy",
+					},
 				},
 			},
 			wantErr: true,
