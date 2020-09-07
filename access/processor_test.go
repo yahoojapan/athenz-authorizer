@@ -120,7 +120,7 @@ func Test_rtp_keyFunc(t *testing.T) {
 		{
 			name: "key return success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return "key"
 					}
@@ -139,7 +139,7 @@ func Test_rtp_keyFunc(t *testing.T) {
 		{
 			name: "key header not found",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return "key"
 					}
@@ -156,7 +156,7 @@ func Test_rtp_keyFunc(t *testing.T) {
 		{
 			name: "key not found",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return nil
 					}
@@ -242,7 +242,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token success",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -275,7 +275,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token success, verify client_id",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyClientID: true,
@@ -317,7 +317,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token success",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -355,7 +355,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, unauthorized client_id",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyClientID: true,
@@ -375,7 +375,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, no expiration defined",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -389,7 +389,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, expired jwt",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -403,7 +403,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, invalid signature",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -417,7 +417,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, invalid jwt format",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -431,7 +431,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, no cert",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -447,7 +447,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (\"cnf\": \"\")",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -465,7 +465,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (cnf: \"cnf\": {\"x5t#S256\": {}})",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -483,7 +483,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (\"cnf\": {})",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -500,7 +500,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound access token success, verify client_id fail, verify thumbprint success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
@@ -521,7 +521,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound access token success, verify client_id success, verify thumbprint fail",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
