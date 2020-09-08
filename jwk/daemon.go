@@ -46,7 +46,7 @@ type jwkd struct {
 	keys *sync.Map
 }
 
-// Provider represent the jwk provider to retrive the json web key.
+// Provider represent the jwk provider to retrieve the json web key.
 type Provider func(keyID string, jwkSetURL string) interface{}
 
 // New represent the constructor of Policyd
