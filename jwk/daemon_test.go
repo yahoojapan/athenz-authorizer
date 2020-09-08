@@ -325,11 +325,12 @@ func Test_jwkd_Update(t *testing.T) {
 		ctx context.Context
 	}
 	type test struct {
-		name      string
-		fields    fields
-		args      args
-		checkFunc func(*jwkd) error
-		wantErr   bool
+		name       string
+		fields     fields
+		args       args
+		checkFunc  func(*jwkd) error
+		wantErr    bool
+		wantErrStr string
 	}
 	tests := []test{
 		func() test {
@@ -390,7 +391,7 @@ func Test_jwkd_Update(t *testing.T) {
 				name: "Update success with urls",
 				fields: fields{
 					athenzURL: srv.URL,
-					urls:      []string{srv.URL},
+					urls:      []string{srv.URL + "/urls"},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
 				},
@@ -454,7 +455,8 @@ func Test_jwkd_Update(t *testing.T) {
 					}
 					return nil
 				},
-				wantErr: true,
+				wantErr:    true,
+				wantErrStr: fmt.Sprintf("Failed to fetch the JWK Set from these URLs: %s", []string{srv.URL}),
 			}
 		}(),
 		func() test {
@@ -489,7 +491,7 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key success, urls key fail",
 				fields: fields{
-					athenzURL: srv.URL,
+					athenzURL: srv.URL + "/success",
 					urls:      []string{srv.URL + "/invalid"},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
@@ -513,7 +515,77 @@ func Test_jwkd_Update(t *testing.T) {
 					}
 					return nil
 				},
-				wantErr: true,
+				wantErr:    true,
+				wantErrStr: fmt.Sprintf("Failed to fetch the JWK Set from these URLs: %s", []string{srv.URL + "/invalid"}),
+			}
+		}(),
+		func() test {
+			validKey := `{
+"e":"AQAB",
+"kty":"RSA",
+"n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+}`
+			invalidKey := `{
+"e":"AQAB",
+"kty":"dummy",
+"n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+}`
+			// frag for distinguish between the keys to be output.
+			isFirst := true
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				var err error
+				// Only the first time returns a invalid key.
+				if isFirst {
+					_, err = w.Write([]byte(invalidKey))
+				} else {
+					_, err = w.Write([]byte(validKey))
+				}
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				isFirst = false
+			}))
+
+			return test{
+				name: "Update fail with urls, athenz key fail, urls key success",
+				fields: fields{
+					athenzURL: srv.URL + "/invalid",
+					urls:      []string{srv.URL + "/success1", srv.URL + "/success2"},
+					client:    srv.Client(),
+					keys:      &sync.Map{},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(j *jwkd) error {
+					// key from athenz(/invalid), expect fail
+					if _, ok := j.keys.Load(j.athenzURL); ok {
+						return errors.Errorf("ok from athenz expecetd false")
+					}
+					// key from urls (/success1), expect success
+					val1, ok := j.keys.Load(j.urls[0])
+					if !ok {
+						return errors.New("athenz keys is empty")
+					}
+					got1 := val1.(*jwk.Set).Keys[0].KeyType()
+					if got1 != jwa.RSA {
+						return errors.Errorf("Unexpected key type from urls: %v", got1)
+					}
+					// key from urls (/success2), expect success
+					val2, ok := j.keys.Load(j.urls[1])
+					if !ok {
+						return errors.New("athenz keys is empty")
+					}
+					got2 := val2.(*jwk.Set).Keys[0].KeyType()
+					if got2 != jwa.RSA {
+						return errors.Errorf("Unexpected key type from urls: %v", got2)
+					}
+					return nil
+				},
+				wantErr:    true,
+				wantErrStr: fmt.Sprintf("Failed to fetch the JWK Set from these URLs: %s", []string{srv.URL + "/invalid"}),
 			}
 		}(),
 		func() test {
@@ -532,10 +604,10 @@ func Test_jwkd_Update(t *testing.T) {
 			}))
 
 			return test{
-				name: "Update fail with urls, athenz key fail, then urls key empty",
+				name: "Update fail with urls, athenz key fail, urls key fail",
 				fields: fields{
-					athenzURL: srv.URL,
-					urls:      []string{srv.URL},
+					athenzURL: srv.URL + "/invalid1",
+					urls:      []string{srv.URL + "/invalid2", srv.URL + "/invalid3"},
 					client:    srv.Client(),
 					keys:      &sync.Map{},
 				},
@@ -543,17 +615,22 @@ func Test_jwkd_Update(t *testing.T) {
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
-					// key from athenz, expect fail
+					// key from athenz(/invalid), expect fail
 					if _, ok := j.keys.Load(j.athenzURL); ok {
 						return errors.Errorf("ok from athenz expecetd false")
 					}
-					// key from urls, expect fail
+					// key from urls (/success1), expect success
 					if _, ok := j.keys.Load(j.urls[0]); ok {
-						return errors.Errorf("ok from urls expecetd false")
+						return errors.Errorf("ok from athenz expecetd false")
+					}
+					// key from urls (/success2), expect success
+					if _, ok := j.keys.Load(j.urls[1]); ok {
+						return errors.Errorf("ok from athenz expecetd false")
 					}
 					return nil
 				},
-				wantErr: true,
+				wantErr:    true,
+				wantErrStr: fmt.Sprintf("Failed to fetch the JWK Set from these URLs: %s", []string{srv.URL + "/invalid1", srv.URL + "/invalid2", srv.URL + "/invalid3"}),
 			}
 		}(),
 	}
@@ -567,8 +644,11 @@ func Test_jwkd_Update(t *testing.T) {
 				client:        tt.fields.client,
 				keys:          tt.fields.keys,
 			}
-			if err := j.Update(tt.args.ctx); (err != nil) != tt.wantErr {
-				t.Errorf("jwkd.Update() error = %v, wantErr %v", err, tt.wantErr)
+			err := j.Update(tt.args.ctx)
+			if tt.wantErr {
+				if err.Error() != tt.wantErrStr {
+					t.Errorf("jwkd.Update() error = %v, wantErrStr %v", err, tt.wantErrStr)
+				}
 			}
 			if tt.checkFunc != nil {
 				if err := tt.checkFunc(j); err != nil {

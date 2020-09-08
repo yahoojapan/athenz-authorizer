@@ -121,15 +121,21 @@ func (j *jwkd) Update(ctx context.Context) (err error) {
 	glg.Info("Fetching JWK Set")
 	targets := append([]string{j.athenzURL}, j.urls...)
 
+	var failedTargets []string
 	for _, target := range targets {
 		glg.Debugf("Fetching JWK Set from %s", target)
 		keys, err := jwk.FetchHTTP(target, jwk.WithHTTPClient(j.client))
 		if err != nil {
 			glg.Errorf("Fetch JWK Set error: %v", err)
-			return err
+			failedTargets = append(failedTargets, target)
+			continue
 		}
 		j.keys.Store(target, keys)
 		glg.Debugf("Fetch JWK Set from %s success", target)
+	}
+
+	if len(failedTargets) > 0 {
+		return errors.Errorf("Failed to fetch the JWK Set from these URLs: %s", failedTargets)
 	}
 
 	glg.Info("Fetch JWK Set success")
