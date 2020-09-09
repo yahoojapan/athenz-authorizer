@@ -37,17 +37,17 @@ var (
 // Option represents a functional option
 type Option func(*jwkd) error
 
-// WithAthenzURL returns an Athenz JWK URL path functional option
-func WithAthenzURL(url string) Option {
+// WithAthenzJwksURL returns an Athenz JWK URL path functional option
+func WithAthenzJwksURL(url string) Option {
 	return func(j *jwkd) error {
 		if url == "" {
-			return urlutil.ErrEmptyAthenzURL
+			return urlutil.ErrEmptyAthenzJwksURL
 		}
 		u := urlutil.TrimHTTPScheme(url)
 		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzURL = fmt.Sprintf("https://%s/oauth2/keys", u)
+		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys", u)
 		return nil
 	}
 }

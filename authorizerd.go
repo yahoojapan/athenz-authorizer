@@ -164,7 +164,7 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	if !prov.disableJwkd {
 		if prov.jwkd, err = jwk.New(
-			jwk.WithAthenzURL(prov.athenzURL),
+			jwk.WithAthenzJwksURL(prov.athenzURL),
 			jwk.WithRefreshPeriod(prov.jwkRefreshPeriod),
 			jwk.WithRetryDelay(prov.jwkRetryDelay),
 			jwk.WithURLs(prov.jwkURLs),

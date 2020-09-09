@@ -25,7 +25,7 @@ import (
 	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
 )
 
-func TestWithAthenzURL(t *testing.T) {
+func TestWithAthenzJwksURL(t *testing.T) {
 	type args struct {
 		url string
 	}
@@ -40,15 +40,15 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"",
 			},
-			want:    &jwkd{athenzURL: ""},
-			wantErr: urlutil.ErrEmptyAthenzURL,
+			want:    &jwkd{athenzJwksURL: ""},
+			wantErr: urlutil.ErrEmptyAthenzJwksURL,
 		},
 		{
 			name: "no scheme",
 			args: args{
 				"dummy.com",
 			},
-			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -56,7 +56,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -64,7 +64,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -72,20 +72,20 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"ftp://dummy.com",
 			},
-			want:    &jwkd{athenzURL: ""},
+			want:    &jwkd{athenzJwksURL: ""},
 			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := &jwkd{}
-			err := WithAthenzURL(tt.args.url)(got)
+			err := WithAthenzJwksURL(tt.args.url)(got)
 			if err != tt.wantErr {
-				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("WithathenzJwksURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("WithAthenzURL() = %v, want %v", got, tt.want)
+				t.Errorf("WithathenzJwksURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}

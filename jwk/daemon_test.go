@@ -48,11 +48,11 @@ func TestNew(t *testing.T) {
 			name: "New daemon success",
 			args: args{
 				opts: []Option{
-					WithAthenzURL("www.dummy.com"),
+					WithAthenzJwksURL("www.dummy.com"),
 				},
 			},
 			want: &jwkd{
-				athenzURL:     "https://www.dummy.com/oauth2/keys",
+				athenzJwksURL: "https://www.dummy.com/oauth2/keys",
 				refreshPeriod: time.Hour * 24,
 				retryDelay:    time.Minute,
 				client:        http.DefaultClient,
@@ -85,7 +85,7 @@ func TestNew(t *testing.T) {
 
 func Test_jwkd_Start(t *testing.T) {
 	type fields struct {
-		athenzURL     string
+		athenzJwksURL string
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
@@ -112,7 +112,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "canceled context",
 				fields: fields{
-					athenzURL:     srv.URL,
+					athenzJwksURL: srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -133,7 +133,7 @@ func Test_jwkd_Start(t *testing.T) {
 						}
 					}
 
-					if k, _ := j.keys.Load(j.athenzURL); k != nil {
+					if k, _ := j.keys.Load(j.athenzJwksURL); k != nil {
 						return errors.New("keys updated")
 					}
 
@@ -160,7 +160,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start success",
 				fields: fields{
-					athenzURL:     srv.URL,
+					athenzJwksURL: srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -172,7 +172,7 @@ func Test_jwkd_Start(t *testing.T) {
 				checkFunc: func(j *jwkd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
-					if k, _ := j.keys.Load(j.athenzURL); k == nil {
+					if k, _ := j.keys.Load(j.athenzJwksURL); k == nil {
 						return errors.New("cannot update keys")
 					}
 
@@ -205,7 +205,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start can update",
 				fields: fields{
-					athenzURL:     srv.URL,
+					athenzJwksURL: srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -216,7 +216,7 @@ func Test_jwkd_Start(t *testing.T) {
 				},
 				checkFunc: func(j *jwkd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
-					k1, _ := j.keys.Load(j.athenzURL)
+					k1, _ := j.keys.Load(j.athenzJwksURL)
 					if k1 == nil {
 						return errors.New("cannot update keys")
 					}
@@ -224,7 +224,7 @@ func Test_jwkd_Start(t *testing.T) {
 					time.Sleep(time.Millisecond * 30)
 					cancel()
 
-					k2, _ := j.keys.Load(j.athenzURL)
+					k2, _ := j.keys.Load(j.athenzJwksURL)
 					if k2 == nil {
 						return errors.New("cannot update keys")
 					}
@@ -266,7 +266,7 @@ func Test_jwkd_Start(t *testing.T) {
 			return test{
 				name: "Start retry update",
 				fields: fields{
-					athenzURL:     srv.URL,
+					athenzJwksURL: srv.URL,
 					refreshPeriod: time.Millisecond * 10,
 					retryDelay:    time.Millisecond,
 					client:        srv.Client(),
@@ -278,7 +278,7 @@ func Test_jwkd_Start(t *testing.T) {
 				checkFunc: func(j *jwkd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
-					if k, _ := j.keys.Load(j.athenzURL); k == nil {
+					if k, _ := j.keys.Load(j.athenzJwksURL); k == nil {
 						return errors.New("cannot update keys")
 					}
 
@@ -296,7 +296,7 @@ func Test_jwkd_Start(t *testing.T) {
 				defer tt.afterFunc()
 			}
 			j := &jwkd{
-				athenzURL:     tt.fields.athenzURL,
+				athenzJwksURL: tt.fields.athenzJwksURL,
 				refreshPeriod: tt.fields.refreshPeriod,
 				retryDelay:    tt.fields.retryDelay,
 				client:        tt.fields.client,
@@ -314,7 +314,7 @@ func Test_jwkd_Start(t *testing.T) {
 
 func Test_jwkd_Update(t *testing.T) {
 	type fields struct {
-		athenzURL     string
+		athenzJwksURL string
 		urls          []string
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
@@ -351,15 +351,15 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update success without urls",
 				fields: fields{
-					athenzURL: srv.URL,
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL,
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
-					val, _ := j.keys.Load(j.athenzURL)
+					val, _ := j.keys.Load(j.athenzJwksURL)
 					if val == nil {
 						return errors.New("keys is empty")
 					}
@@ -390,17 +390,17 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update success with urls",
 				fields: fields{
-					athenzURL: srv.URL,
-					urls:      []string{srv.URL + "/urls"},
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL,
+					urls:          []string{srv.URL + "/urls"},
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
-					// key from athenzURL
-					val, ok := j.keys.Load(j.athenzURL)
+					// key from athenzJwksURL
+					val, ok := j.keys.Load(j.athenzJwksURL)
 					if !ok {
 						return errors.New("athenz keys is empty")
 					}
@@ -442,15 +442,15 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail without urls",
 				fields: fields{
-					athenzURL: srv.URL,
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL,
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
-					if _, ok := j.keys.Load(j.athenzURL); ok {
+					if _, ok := j.keys.Load(j.athenzJwksURL); ok {
 						return errors.Errorf("ok expecetd false")
 					}
 					return nil
@@ -491,17 +491,17 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key success, urls key fail",
 				fields: fields{
-					athenzURL: srv.URL + "/success",
-					urls:      []string{srv.URL + "/invalid"},
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL + "/success",
+					urls:          []string{srv.URL + "/invalid"},
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
 					// key from athenz, expect success
-					val, ok := j.keys.Load(j.athenzURL)
+					val, ok := j.keys.Load(j.athenzJwksURL)
 					if !ok {
 						return errors.New("athenz keys is empty")
 					}
@@ -551,17 +551,17 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key fail, urls key success",
 				fields: fields{
-					athenzURL: srv.URL + "/invalid",
-					urls:      []string{srv.URL + "/success1", srv.URL + "/success2"},
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL + "/invalid",
+					urls:          []string{srv.URL + "/success1", srv.URL + "/success2"},
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
 					// key from athenz(/invalid), expect fail
-					if _, ok := j.keys.Load(j.athenzURL); ok {
+					if _, ok := j.keys.Load(j.athenzJwksURL); ok {
 						return errors.Errorf("ok from athenz expecetd false")
 					}
 					// key from urls (/success1), expect success
@@ -606,17 +606,17 @@ func Test_jwkd_Update(t *testing.T) {
 			return test{
 				name: "Update fail with urls, athenz key fail, urls key fail",
 				fields: fields{
-					athenzURL: srv.URL + "/invalid1",
-					urls:      []string{srv.URL + "/invalid2", srv.URL + "/invalid3"},
-					client:    srv.Client(),
-					keys:      &sync.Map{},
+					athenzJwksURL: srv.URL + "/invalid1",
+					urls:          []string{srv.URL + "/invalid2", srv.URL + "/invalid3"},
+					client:        srv.Client(),
+					keys:          &sync.Map{},
 				},
 				args: args{
 					ctx: context.Background(),
 				},
 				checkFunc: func(j *jwkd) error {
 					// key from athenz(/invalid), expect fail
-					if _, ok := j.keys.Load(j.athenzURL); ok {
+					if _, ok := j.keys.Load(j.athenzJwksURL); ok {
 						return errors.Errorf("ok from athenz expecetd false")
 					}
 					// key from urls (/success1), expect success
@@ -637,7 +637,7 @@ func Test_jwkd_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:     tt.fields.athenzURL,
+				athenzJwksURL: tt.fields.athenzJwksURL,
 				urls:          tt.fields.urls,
 				refreshPeriod: tt.fields.refreshPeriod,
 				retryDelay:    tt.fields.retryDelay,
@@ -661,7 +661,7 @@ func Test_jwkd_Update(t *testing.T) {
 
 func Test_jwkd_GetProvider(t *testing.T) {
 	type fields struct {
-		athenzURL     string
+		athenzJwksURL string
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
@@ -685,7 +685,7 @@ func Test_jwkd_GetProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:     tt.fields.athenzURL,
+				athenzJwksURL: tt.fields.athenzJwksURL,
 				refreshPeriod: tt.fields.refreshPeriod,
 				retryDelay:    tt.fields.retryDelay,
 				client:        tt.fields.client,
@@ -701,7 +701,7 @@ func Test_jwkd_GetProvider(t *testing.T) {
 
 func Test_jwkd_getKey(t *testing.T) {
 	type fields struct {
-		athenzURL     string
+		athenzJwksURL string
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
@@ -745,8 +745,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key success",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "dummyID",
@@ -770,8 +770,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key not found",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "not exists",
@@ -795,8 +795,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key id empty return nil",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "",
@@ -820,8 +820,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key id empty, but jwkSetURL is not empty, return nil",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "",
@@ -851,8 +851,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key success from multiple key",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "dummyID2",
@@ -878,8 +878,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get EC private key success",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "ecKeyID",
@@ -907,8 +907,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get EC public key success",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID: "ecPubKeyID",
@@ -930,8 +930,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get RSA public key success",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID: "rsaPubKeyID",
@@ -953,8 +953,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key success jwkSetURL",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy.com",
+					keys:          &key,
+					athenzJwksURL: "dummy.com",
 				},
 				args: args{
 					keyID:     "dummyID",
@@ -985,8 +985,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key fail, no exist jwkSetURL",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy1.com",
+					keys:          &key,
+					athenzJwksURL: "dummy1.com",
 				},
 				args: args{
 					keyID:     "dummyID",
@@ -1009,8 +1009,8 @@ func Test_jwkd_getKey(t *testing.T) {
 			return test{
 				name: "get key not found in jwkSetURL",
 				fields: fields{
-					keys:      &key,
-					athenzURL: "dummy1.com",
+					keys:          &key,
+					athenzJwksURL: "dummy1.com",
 				},
 				args: args{
 					keyID:     "not exists",
@@ -1023,7 +1023,7 @@ func Test_jwkd_getKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
-				athenzURL:     tt.fields.athenzURL,
+				athenzJwksURL: tt.fields.athenzJwksURL,
 				refreshPeriod: tt.fields.refreshPeriod,
 				retryDelay:    tt.fields.retryDelay,
 				client:        tt.fields.client,

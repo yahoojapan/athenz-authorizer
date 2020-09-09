@@ -35,8 +35,8 @@ type Daemon interface {
 }
 
 type jwkd struct {
-	athenzURL string
-	urls      []string
+	athenzJwksURL string
+	urls          []string
 
 	refreshPeriod time.Duration
 	retryDelay    time.Duration
@@ -119,7 +119,7 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
 	glg.Info("Fetching JWK Set")
-	targets := append([]string{j.athenzURL}, j.urls...)
+	targets := append([]string{j.athenzJwksURL}, j.urls...)
 
 	var failedTargets []string
 	for _, target := range targets {
@@ -154,7 +154,7 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 	var keys interface{}
 	var ok bool
 	if jwkSetURL == "" {
-		keys, ok = j.keys.Load(j.athenzURL)
+		keys, ok = j.keys.Load(j.athenzJwksURL)
 	} else {
 		keys, ok = j.keys.Load(jwkSetURL)
 	}
