@@ -85,8 +85,7 @@ func WithRetryDelay(i string) Option {
 // WithURLs returns an JwkUrls functional option
 func WithURLs(urls []string) Option {
 	return func(j *jwkd) error {
-		us := make([]string, len(urls), len(urls))
-		for i, targetURL := range urls {
+		for _, targetURL := range urls {
 			u, err := url.ParseRequestURI(targetURL)
 			if err != nil {
 				return err
@@ -94,10 +93,8 @@ func WithURLs(urls []string) Option {
 			if u.Scheme != "http" && u.Scheme != "https" {
 				return urlutil.ErrUnsupportedScheme
 			}
-			// keep url with scheme.
-			us[i] = targetURL
 		}
-		j.urls = us
+		j.urls = urls
 		return nil
 	}
 }
