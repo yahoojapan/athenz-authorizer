@@ -26,9 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
 
@@ -206,6 +205,26 @@ func Test_rtp_keyFunc(t *testing.T) {
 				token: &jwt.Token{
 					Header: map[string]interface{}{
 						"kid": "1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "header value not string",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if kid == "1" {
+						return nil
+					}
+					return "key"
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+						"jku": []string{"dummy1", "dumm2"},
 					},
 				},
 			},
@@ -1207,6 +1226,104 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 			}
 			if err := r.validateCertPrincipal(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
 				t.Errorf("atp.validateCertPrincipal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_atp_getAsStringFromHeader(t *testing.T) {
+	type fields struct {
+		jwkp                                  jwk.Provider
+		enableMTLSCertificateBoundAccessToken bool
+		clientCertificateGoBackSeconds        int64
+		clientCertificateOffsetSeconds        int64
+		enableVerifyClientID                  bool
+		authorizedClientIDs                   map[string][]string
+	}
+	type args struct {
+		header *map[string]interface{}
+		key    string
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		want       string
+		wantErrStr string
+	}{
+		{
+			name: "get success",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": "dummy kid",
+					"jku": "dummy jku",
+				},
+				key: "kid",
+			},
+			want: "dummy kid",
+		},
+		{
+			name: "nil header pointer",
+			args: args{
+				header: nil,
+				key:    "dummy",
+			},
+			want:       "",
+			wantErrStr: errNilHeader.Error(),
+		},
+		{
+			name: "nil header",
+			args: args{
+				header: &map[string]interface{}{},
+				key:    "kid",
+			},
+			want:       "",
+			wantErrStr: errKeyNotFoundInHeader.Error(),
+		},
+		{
+			name: "key not found",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": "dummy kid",
+					"jku": "dummy jku",
+				},
+				key: "dummy",
+			},
+			want:       "",
+			wantErrStr: errKeyNotFoundInHeader.Error(),
+		},
+		{
+			name: "header value not string",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": []string{"dummy kid 1", "dummy kid 2"},
+					"jku": "dummy jku",
+				},
+				key: "kid",
+			},
+			want:       "",
+			wantErrStr: errHeaderValueNotString.Error(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &atp{
+				jwkp:                                  tt.fields.jwkp,
+				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
+				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
+				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
+				enableVerifyClientID:                  tt.fields.enableVerifyClientID,
+				authorizedClientIDs:                   tt.fields.authorizedClientIDs,
+			}
+			got, err := a.getAsStringFromHeader(tt.args.header, tt.args.key)
+			if err != nil {
+				if err.Error() != tt.wantErrStr {
+					t.Errorf("atp.getAsStringFromHeader() error = %v, wantErr %v", err, tt.wantErrStr)
+					return
+				}
+			}
+			if got != tt.want {
+				t.Errorf("atp.getAsStringFromHeader() = %v, want %v", got, tt.want)
 			}
 		})
 	}
