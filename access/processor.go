@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
@@ -178,17 +179,17 @@ func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2Access
 
 // keyFunc extract the key id from the token, and return corresponding key
 func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
-	keyID, err := a.getAsStringFromHeader(&token.Header, "kid")
+	keyID, err := a.getAsStringFromHeader(&token.Header, jws.KeyIDKey)
 	// kid is required and will return if an error occurs
 	if err != nil {
-		return nil, errors.New(err.Error() + ": kid")
+		return nil, errors.New(err.Error() + ":" + jws.KeyIDKey)
 	}
 
-	jwkSetURL, err := a.getAsStringFromHeader(&token.Header, "jku")
+	jwkSetURL, err := a.getAsStringFromHeader(&token.Header, jws.JWKSetURLKey)
 	// return not string error or nil header error.
 	// If not found error, assume it is an athenz token and continue.
 	if err == errHeaderValueNotString || err == errNilHeader {
-		return nil, errors.New(err.Error() + ": jku")
+		return nil, errors.New(err.Error() + ":" + jws.JWKSetURLKey)
 	}
 
 	key := a.jwkp(keyID, jwkSetURL)
