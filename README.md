@@ -88,38 +88,38 @@ Athenz policy daemon (policyd) is responsible for periodically update the policy
 
 The authorizer uses functional options pattern to initialize the instance. All the options are defined [here](./option.go).
 
-| Option name                      | Description                                                                                  | Default Value                                        | Required | Example                |
-|----------------------------------|----------------------------------------------------------------------------------------------|------------------------------------------------------|----------|------------------------|
-| AthenzURL                        | The Athenz server URL                                                                        | athenz\.io/zts/v1                                    | Yes      | "athenz\.io/zts/v1"    |
-| AthenzDomains                    | Athenz domain names that contain the RBAC policies                                           | \[\]                                                 | Yes      | "domName1", "domName2" |
-| HTTPClient                       | The HTTP client for connecting to Athenz server                                              | http\.Client\{ Timeout: 30 \* time\.Second \}        | No       | http\.DefaultClient    |
-| CacheExp                         | The TTL of the success cache                                                                 | 1 Minute                                             | No       | 1 \* time\.Minute      |
-| Enable/DisablePubkeyd            | Run public key daemon or not                                                                 | true                                                 | No       |                        |
-| PubkeySysAuthDomain              | System authority domain name to retrieve Athenz public key data                              | sys\.auth                                            | No       | "sys.auth"             |
-| PubkeyRefreshPeriod              | Period to refresh the Athenz public key data                                                 | 24 Hours                                             | No       | "24h"                  |
-| PubkeyETagExpiry                 | ETag cache TTL of Athenz public key data                                                     | 168 Hours \(1 Week\)                                 | No       | "168h"                 |
-| PubkeyETagPurgePeriod            | ETag cache purge duration                                                                    | 84 Hours                                             | No       | "84h"                  |
-| PubkeyRetryDelay                 | Delay of next retry on request failed                                                        | 1 Minute                                             | No       | "1m"                   |
-| Enable/DisablePolicyd            | Run policy daemon or not                                                                     | true                                                 | No       |                        |
-| PolicyExpiryMargin               | Update the policy by a margin duration before the policy actually expires                    | 3 Hours                                              | No       | "3h"                   |
-| PolicyRefreshPeriod              | Period to refresh the Athenz policies                                                        | 30 Minutes                                           | No       | "30m"                  |
-| PolicyPurgePeriod                | Policy cache purge duration                                                                  | 1 Hours                                              | No       | "1h"                   |
-| PolicyRetryDelay                 | Delay of next retry on request fail                                                          | 1 Minute                                             | No       | "1m"                   |
-| PolicyRetryAttempts              | Maximum retry attempts on request fail                                                       | 2                                                    | No       | 2                      |
-| Enable/DisableJwkd               | Run JWK daemon or not                                                                        | true                                                 | No       |                        |
-| JwkRefreshPeriod                 | Period to refresh the Athenz JWK                                                             | 24 Hours                                             | No       | "24h"                  |
-| JwkRetryDelay                    | Delay of next retry on request fail                                                          | 1 Minute                                             | No       | "1m"                   |
-| jwkURLs | URL to get jwk other than  AthenzURL | [] | No | "http://domain1/jwks", "http://domain2/jwks" |
-| AccessTokenParam                 | Use access token verification, details: [AccessTokenParam](#accesstokenparam)                | Same as [AccessTokenParam](#accesstokenparam)        | No       | \{\}                   |
-| Enable/DisableRoleToken          | Use role token verification or not                                                           | true                                                 | No       |                        |
-| RoleAuthHeader                   | The HTTP header to extract role token                                                        | Athenz\-Role\-Auth                                   | No       | "Athenz\-Role\-Auth"   |
-| Enable/DisableRoleCert           | Use role certificate verification or not                                                     | true                                                 | No       |                        |
-| RoleCertURIPrefix                | Extract role from role certificate                                                           | athenz://role/                                       | No       | "athenz://role/"       |
+| Option name             | Description                                                                   | Default Value                                 | Required | Example                                      |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------------- | -------- | -------------------------------------------- |
+| AthenzURL               | The Athenz server URL                                                         | athenz\.io/zts/v1                             | Yes      | "athenz\.io/zts/v1"                          |
+| AthenzDomains           | Athenz domain names that contain the RBAC policies                            | \[\]                                          | Yes      | "domName1", "domName2"                       |
+| HTTPClient              | The HTTP client for connecting to Athenz server                               | http\.Client\{ Timeout: 30 \* time\.Second \} | No       | http\.DefaultClient                          |
+| CacheExp                | The TTL of the success cache                                                  | 1 Minute                                      | No       | 1 \* time\.Minute                            |
+| Enable/DisablePubkeyd   | Run public key daemon or not                                                  | true                                          | No       |                                              |
+| PubkeySysAuthDomain     | System authority domain name to retrieve Athenz public key data               | sys\.auth                                     | No       | "sys.auth"                                   |
+| PubkeyRefreshPeriod     | Period to refresh the Athenz public key data                                  | 24 Hours                                      | No       | "24h"                                        |
+| PubkeyETagExpiry        | ETag cache TTL of Athenz public key data                                      | 168 Hours \(1 Week\)                          | No       | "168h"                                       |
+| PubkeyETagPurgePeriod   | ETag cache purge duration                                                     | 84 Hours                                      | No       | "84h"                                        |
+| PubkeyRetryDelay        | Delay of next retry on request failed                                         | 1 Minute                                      | No       | "1m"                                         |
+| Enable/DisablePolicyd   | Run policy daemon or not                                                      | true                                          | No       |                                              |
+| PolicyExpiryMargin      | Update the policy by a margin duration before the policy actually expires     | 3 Hours                                       | No       | "3h"                                         |
+| PolicyRefreshPeriod     | Period to refresh the Athenz policies                                         | 30 Minutes                                    | No       | "30m"                                        |
+| PolicyPurgePeriod       | Policy cache purge duration                                                   | 1 Hours                                       | No       | "1h"                                         |
+| PolicyRetryDelay        | Delay of next retry on request fail                                           | 1 Minute                                      | No       | "1m"                                         |
+| PolicyRetryAttempts     | Maximum retry attempts on request fail                                        | 2                                             | No       | 2                                            |
+| Enable/DisableJwkd      | Run JWK daemon or not                                                         | true                                          | No       |                                              |
+| JwkRefreshPeriod        | Period to refresh the Athenz JWK                                              | 24 Hours                                      | No       | "24h"                                        |
+| JwkRetryDelay           | Delay of next retry on request fail                                           | 1 Minute                                      | No       | "1m"                                         |
+| jwkURLs                 | URL to get jwk other than  AthenzURL                                          | []                                            | No       | "http://domain1/jwks", "http://domain2/jwks" |
+| AccessTokenParam        | Use access token verification, details: [AccessTokenParam](#accesstokenparam) | Same as [AccessTokenParam](#accesstokenparam) | No       | \{\}                                         |
+| Enable/DisableRoleToken | Use role token verification or not                                            | true                                          | No       |                                              |
+| RoleAuthHeader          | The HTTP header to extract role token                                         | Athenz\-Role\-Auth                            | No       | "Athenz\-Role\-Auth"                         |
+| Enable/DisableRoleCert  | Use role certificate verification or not                                      | true                                          | No       |                                              |
+| RoleCertURIPrefix       | Extract role from role certificate                                            | athenz://role/                                | No       | "athenz://role/"                             |
 
 ### AccessTokenParam
 
 | **Option name**      | **Description**                                                                | **Default Value** | **Required** | **Example**                                    |
-|----------------------|--------------------------------------------------------------------------------|-------------------|--------------|------------------------------------------------|
+| -------------------- | ------------------------------------------------------------------------------ | ----------------- | ------------ | ---------------------------------------------- |
 | enable               | Use access token verification or not                                           | true              | No           | true                                           |
 | verifyCertThumbprint | Use certificate bound access token verification                                | true              | No           | true                                           |
 | certBackdateDur      | Backdate duration of the issue time of the certificate                         | 1 Hour            | No           | "1h"                                           |
