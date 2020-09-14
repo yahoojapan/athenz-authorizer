@@ -633,6 +633,77 @@ func Test_jwkd_Update(t *testing.T) {
 				wantErrStr: fmt.Sprintf("Failed to fetch the JWK Set from these URLs: %s", []string{srv.URL + "/invalid1", srv.URL + "/invalid2", srv.URL + "/invalid3"}),
 			}
 		}(),
+		func() test {
+			k := `{
+"e":"AQAB",
+"kty":"RSA",
+"n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+}`
+			var callCount int
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(k))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				callCount++
+			}))
+
+			return test{
+				name: "Remove duplicate ahtenz url",
+				fields: fields{
+					// athenz * 2, other * 1
+					athenzJwksURL: srv.URL + "/athenz",
+					urls:          []string{srv.URL + "/athenz", srv.URL + "/other"},
+					client:        srv.Client(),
+					keys:          &sync.Map{},
+				},
+				args: args{
+					ctx: context.Background(),
+				},
+				checkFunc: func(j *jwkd) error {
+					// key from athenzJwksURL
+					val, ok := j.keys.Load(j.athenzJwksURL)
+					if !ok {
+						return errors.New("athenz keys is empty")
+					}
+
+					got := val.(*jwk.Set).Keys[0].KeyType()
+					if got != jwa.RSA {
+						return errors.Errorf("Unexpected key type from athenz: %v", got)
+					}
+
+					// key from urls (/athenz)
+					val, ok = j.keys.Load(j.urls[0])
+					if !ok {
+						return errors.New("urls keys is empty")
+					}
+
+					got = val.(*jwk.Set).Keys[0].KeyType()
+					if got != jwa.RSA {
+						return errors.Errorf("Unexpected key type from urls: %v", got)
+					}
+
+					// key from urls (/other)
+					val, ok = j.keys.Load(j.urls[1])
+					if !ok {
+						return errors.New("urls keys is empty")
+					}
+
+					got = val.(*jwk.Set).Keys[0].KeyType()
+					if got != jwa.RSA {
+						return errors.Errorf("Unexpected key type from urls: %v", got)
+					}
+
+					// count check
+					if callCount != 2 {
+						return errors.Errorf("Unexpected callCount: %v", callCount)
+					}
+					return nil
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1031,6 +1102,75 @@ func Test_jwkd_getKey(t *testing.T) {
 			}
 			if got := j.getKey(tt.args.keyID, tt.args.jwkSetURL); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("jwkd.getKey() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_jwkd_isContain(t *testing.T) {
+	type fields struct {
+		athenzJwksURL string
+		urls          []string
+		refreshPeriod time.Duration
+		retryDelay    time.Duration
+		client        *http.Client
+		keys          *sync.Map
+	}
+	type args struct {
+		targets []string
+		key     string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "return true",
+			args: args{
+				targets: []string{"dummyA", "dummyB", "dummyC"},
+				key:     "dummyB",
+			},
+			want: true,
+		},
+		{
+			name: "return false",
+			args: args{
+				targets: []string{"dummyA", "dummyB", "dummyC"},
+				key:     "dummyD",
+			},
+			want: false,
+		},
+		{
+			name: "use nil in targets",
+			args: args{
+				targets: nil,
+				key:     "dummyD",
+			},
+			want: false,
+		},
+		{
+			name: "use empty in key",
+			args: args{
+				targets: []string{"dummyA", "dummyB", "dummyC"},
+				key:     "",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			j := &jwkd{
+				athenzJwksURL: tt.fields.athenzJwksURL,
+				urls:          tt.fields.urls,
+				refreshPeriod: tt.fields.refreshPeriod,
+				retryDelay:    tt.fields.retryDelay,
+				client:        tt.fields.client,
+				keys:          tt.fields.keys,
+			}
+			if got := j.isContain(tt.args.targets, tt.args.key); got != tt.want {
+				t.Errorf("jwkd.isContain() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -119,7 +119,13 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
 	glg.Info("Fetching JWK Set")
-	targets := append([]string{j.athenzJwksURL}, j.urls...)
+
+	var targets []string
+	if !j.isContain(j.urls, j.athenzJwksURL) {
+		targets = append([]string{j.athenzJwksURL}, j.urls...)
+	} else {
+		targets = j.urls
+	}
 
 	var failedTargets []string
 	for _, target := range targets {
@@ -174,4 +180,13 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 	}
 	// Either key for the kid specified in the token was not found or invalid key
 	return nil
+}
+
+func (j *jwkd) isContain(targets []string, key string) bool {
+	for _, target := range targets {
+		if target == key {
+			return true
+		}
+	}
+	return false
 }
