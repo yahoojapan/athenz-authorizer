@@ -109,6 +109,7 @@ The authorizer uses functional options pattern to initialize the instance. All t
 | Enable/DisableJwkd               | Run JWK daemon or not                                                                        | true                                                 | No       |                        |
 | JwkRefreshPeriod                 | Period to refresh the Athenz JWK                                                             | 24 Hours                                             | No       | "24h"                  |
 | JwkRetryDelay                    | Delay of next retry on request fail                                                          | 1 Minute                                             | No       | "1m"                   |
+| jwkURLs | URL to get jwk other than  AthenzURL | [] | No | "http://domain1/jwks", "http://domain2/jwks" |
 | AccessTokenParam                 | Use access token verification, details: [AccessTokenParam](#accesstokenparam)                | Same as [AccessTokenParam](#accesstokenparam)        | No       | \{\}                   |
 | Enable/DisableRoleToken          | Use role token verification or not                                                           | true                                                 | No       |                        |
 | RoleAuthHeader                   | The HTTP header to extract role token                                                        | Athenz\-Role\-Auth                                   | No       | "Athenz\-Role\-Auth"   |
