@@ -179,13 +179,13 @@ func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2Access
 
 // keyFunc extract the key id from the token, and return corresponding key
 func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
-	keyID, err := a.getAsStringFromHeader(&token.Header, jws.KeyIDKey)
+	keyID, err := getAsStringFromHeader(&token.Header, jws.KeyIDKey)
 	// kid is required and will return if an error occurs
 	if err != nil {
 		return nil, errors.New(err.Error() + ":" + jws.KeyIDKey)
 	}
 
-	jwkSetURL, err := a.getAsStringFromHeader(&token.Header, jws.JWKSetURLKey)
+	jwkSetURL, err := getAsStringFromHeader(&token.Header, jws.JWKSetURLKey)
 	// return not string error or nil header error.
 	// If not found error, assume it is an athenz token and continue.
 	if err == errHeaderValueNotString || err == errNilHeader {
@@ -203,7 +203,7 @@ func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
 
 // getAsStringFromHeader return string header value and error.
 // return error is not found or not string cases.
-func (a *atp) getAsStringFromHeader(header *map[string]interface{}, key string) (string, error) {
+func getAsStringFromHeader(header *map[string]interface{}, key string) (string, error) {
 	var ok bool
 
 	if header == nil {

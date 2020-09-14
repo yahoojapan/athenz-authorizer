@@ -1232,21 +1232,12 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 }
 
 func Test_atp_getAsStringFromHeader(t *testing.T) {
-	type fields struct {
-		jwkp                                  jwk.Provider
-		enableMTLSCertificateBoundAccessToken bool
-		clientCertificateGoBackSeconds        int64
-		clientCertificateOffsetSeconds        int64
-		enableVerifyClientID                  bool
-		authorizedClientIDs                   map[string][]string
-	}
 	type args struct {
 		header *map[string]interface{}
 		key    string
 	}
 	tests := []struct {
 		name       string
-		fields     fields
 		args       args
 		want       string
 		wantErrStr string
@@ -1307,15 +1298,7 @@ func Test_atp_getAsStringFromHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &atp{
-				jwkp:                                  tt.fields.jwkp,
-				enableMTLSCertificateBoundAccessToken: tt.fields.enableMTLSCertificateBoundAccessToken,
-				clientCertificateGoBackSeconds:        tt.fields.clientCertificateGoBackSeconds,
-				clientCertificateOffsetSeconds:        tt.fields.clientCertificateOffsetSeconds,
-				enableVerifyClientID:                  tt.fields.enableVerifyClientID,
-				authorizedClientIDs:                   tt.fields.authorizedClientIDs,
-			}
-			got, err := a.getAsStringFromHeader(tt.args.header, tt.args.key)
+			got, err := getAsStringFromHeader(tt.args.header, tt.args.key)
 			if err != nil {
 				if err.Error() != tt.wantErrStr {
 					t.Errorf("atp.getAsStringFromHeader() error = %v, wantErr %v", err, tt.wantErrStr)

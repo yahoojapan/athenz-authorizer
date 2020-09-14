@@ -121,7 +121,7 @@ func (j *jwkd) Update(ctx context.Context) (err error) {
 	glg.Info("Fetching JWK Set")
 
 	var targets []string
-	if !j.isContain(j.urls, j.athenzJwksURL) {
+	if !isContain(j.urls, j.athenzJwksURL) {
 		targets = append([]string{j.athenzJwksURL}, j.urls...)
 	} else {
 		targets = j.urls
@@ -182,7 +182,7 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 	return nil
 }
 
-func (j *jwkd) isContain(targets []string, key string) bool {
+func isContain(targets []string, key string) bool {
 	for _, target := range targets {
 		if target == key {
 			return true

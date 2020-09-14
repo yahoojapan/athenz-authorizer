@@ -1108,23 +1108,14 @@ func Test_jwkd_getKey(t *testing.T) {
 }
 
 func Test_jwkd_isContain(t *testing.T) {
-	type fields struct {
-		athenzJwksURL string
-		urls          []string
-		refreshPeriod time.Duration
-		retryDelay    time.Duration
-		client        *http.Client
-		keys          *sync.Map
-	}
 	type args struct {
 		targets []string
 		key     string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
+		name string
+		args args
+		want bool
 	}{
 		{
 			name: "return true",
@@ -1161,15 +1152,7 @@ func Test_jwkd_isContain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			j := &jwkd{
-				athenzJwksURL: tt.fields.athenzJwksURL,
-				urls:          tt.fields.urls,
-				refreshPeriod: tt.fields.refreshPeriod,
-				retryDelay:    tt.fields.retryDelay,
-				client:        tt.fields.client,
-				keys:          tt.fields.keys,
-			}
-			if got := j.isContain(tt.args.targets, tt.args.key); got != tt.want {
+			if got := isContain(tt.args.targets, tt.args.key); got != tt.want {
 				t.Errorf("jwkd.isContain() = %v, want %v", got, tt.want)
 			}
 		})
