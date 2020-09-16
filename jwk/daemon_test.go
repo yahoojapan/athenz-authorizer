@@ -773,6 +773,7 @@ func Test_jwkd_GetProvider(t *testing.T) {
 func Test_jwkd_getKey(t *testing.T) {
 	type fields struct {
 		athenzJwksURL string
+		urls          []string
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		client        *http.Client
@@ -893,6 +894,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				fields: fields{
 					keys:          &key,
 					athenzJwksURL: "dummy.com",
+					urls:          []string{"dummy2.com"},
 				},
 				args: args{
 					keyID:     "",
@@ -1025,6 +1027,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				name: "get key success jwkSetURL",
 				fields: fields{
 					keys:          &key,
+					urls:          []string{"dummy2.com"},
 					athenzJwksURL: "dummy.com",
 				},
 				args: args{
@@ -1058,6 +1061,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				fields: fields{
 					keys:          &key,
 					athenzJwksURL: "dummy1.com",
+					urls:          []string{"dummy2.com"},
 				},
 				args: args{
 					keyID:     "dummyID",
@@ -1081,6 +1085,7 @@ func Test_jwkd_getKey(t *testing.T) {
 				name: "get key not found in jwkSetURL",
 				fields: fields{
 					keys:          &key,
+					urls:          []string{"dummy2.com"},
 					athenzJwksURL: "dummy1.com",
 				},
 				args: args{
@@ -1090,11 +1095,37 @@ func Test_jwkd_getKey(t *testing.T) {
 				want: nil,
 			}
 		}(),
+		func() test {
+			rsaKey := genKey()
+			k := newKey(rsaKey, "dummyID")
+			set := &jwk.Set{
+				Keys: []jwk.Key{
+					k,
+				},
+			}
+			key := sync.Map{}
+			key.Store("dummy1.com", set)
+
+			return test{
+				name: "if j.urls is not set, use j.athenzJwksURL even if jwkSetURL is not \"\".",
+				fields: fields{
+					keys:          &key,
+					urls:          []string{},
+					athenzJwksURL: "dummy1.com",
+				},
+				args: args{
+					keyID:     "dummyID",
+					jwkSetURL: "dummy2.com",
+				},
+				want: rsaKey,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &jwkd{
 				athenzJwksURL: tt.fields.athenzJwksURL,
+				urls:          tt.fields.urls,
 				refreshPeriod: tt.fields.refreshPeriod,
 				retryDelay:    tt.fields.retryDelay,
 				client:        tt.fields.client,
