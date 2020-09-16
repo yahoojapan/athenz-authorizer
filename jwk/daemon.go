@@ -159,8 +159,7 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 
 	var keys interface{}
 	var ok bool
-	// For backward compatibility, use j.athenzJwksURL if j.urls is not set
-	if jwkSetURL == "" || len(j.urls) == 0 {
+	if jwkSetURL == "" {
 		keys, ok = j.keys.Load(j.athenzJwksURL)
 	} else {
 		keys, ok = j.keys.Load(jwkSetURL)
