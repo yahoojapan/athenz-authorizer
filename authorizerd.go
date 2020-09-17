@@ -110,7 +110,8 @@ type authority struct {
 type mode uint8
 
 const (
-	roleToken mode = iota
+	cacheKeyDelimiter      = ':'
+	roleToken         mode = iota
 	accessToken
 )
 
@@ -355,21 +356,30 @@ func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res stri
 }
 
 func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
-	var key string
+	var key strings.Builder
+	key.WriteString(tok)
 
-	if a.disablePolicyd {
-		key = tok
-	} else {
+	if cert != nil {
+		key.WriteRune(cacheKeyDelimiter)
+		key.WriteString(cert.Issuer.CommonName)
+		key.WriteRune(cacheKeyDelimiter)
+		key.WriteString(cert.Subject.CommonName)
+	}
+
+	if !a.disablePolicyd {
 		if act == "" || res == "" {
 			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 		}
-		key = tok + act + res
+		key.WriteRune(cacheKeyDelimiter)
+		key.WriteString(act)
+		key.WriteRune(cacheKeyDelimiter)
+		key.WriteString(res)
 	}
 
 	// check if exists in verification success cache
-	cached, ok := a.cache.Get(key)
+	cached, ok := a.cache.Get(key.String())
 	if ok {
-		glg.Debugf("use cached result. tok: %s, key: %s", tok, key)
+		glg.Debugf("use cached result. tok: %s, key: %s", tok, key.String())
 		return cached.(Principal), nil
 	}
 
@@ -422,7 +432,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		}
 	}
 	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
-	a.cache.SetWithExpire(key, p, a.cacheExp)
+	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
 }
 
@@ -454,6 +464,10 @@ func (a *authority) Authorize(r *http.Request, act, res string) (Principal, erro
 
 // VerifyRoleCert verifies the role certificate for specific resource and return and verification error.
 func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certificate, act, res string) error {
+	if a.disablePolicyd {
+		return nil
+	}
+
 	var dr []string
 	drcheck := make(map[string]struct{})
 	domainRoles := make(map[string][]string)
@@ -497,5 +511,9 @@ func (a *authority) AuthorizeRoleCert(ctx context.Context, peerCerts []*x509.Cer
 
 // GetPolicyCache returns the cached policy data
 func (a *authority) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return a.policyd.GetPolicyCache(ctx)
+	if !a.disablePolicyd {
+		return a.policyd.GetPolicyCache(ctx)
+	} else {
+		return make(map[string]interface{})
+	}
 }

@@ -23,19 +23,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	replacer = strings.NewReplacer(".*", ".*", "*", ".*")
-)
-
 // Assertion represents the refined assertion data use in policy checking
 type Assertion struct {
 	ResourceDomain string         `json:"resource_domain"`
-	Reg            *regexp.Regexp `json:"-"`
+	ActionRegexp   *regexp.Regexp `json:"-"`
+	ResourceRegexp *regexp.Regexp `json:"-"`
 	Effect         error          `json:"effect"`
 
-	Action      string `json:"action"`
-	Resource    string `json:"resource"`
-	RegexString string `json:"regex_string"`
+	Action               string `json:"action"`
+	Resource             string `json:"resource"`
+	ActionRegexpString   string `json:"action_regexp_string"`
+	ResourceRegexpString string `json:"resource_regexp_string"`
 }
 
 // NewAssertion returns the Assertion object or error
@@ -47,22 +45,66 @@ func NewAssertion(action, resource, effect string) (*Assertion, error) {
 	dom := domres[0]
 	res := domres[1]
 
-	reg, err := regexp.Compile("^" + replacer.Replace(strings.ToLower(action+"-"+res)) + "$")
+	ar, err := regexp.Compile(patternFromGlob(strings.ToLower(action)))
+	if err != nil {
+		return nil, errors.Wrap(err, "assertion format not correct")
+	}
+
+	rr, err := regexp.Compile(patternFromGlob(strings.ToLower(res)))
 	if err != nil {
 		return nil, errors.Wrap(err, "assertion format not correct")
 	}
 
 	return &Assertion{
 		ResourceDomain: dom,
-		Reg:            reg,
+		ActionRegexp:   ar,
+		ResourceRegexp: rr,
 		Effect: func() error {
 			if strings.EqualFold("deny", effect) {
 				return errors.Wrap(ErrDenyByPolicy, "policy deny")
 			}
 			return nil
 		}(),
-		Action:      action,
-		Resource:    res,
-		RegexString: reg.String(),
+		Action:               action,
+		Resource:             res,
+		ActionRegexpString:   ar.String(),
+		ResourceRegexpString: rr.String(),
 	}, nil
+}
+
+func isRegexMetaCharacter(target rune) bool {
+	switch target {
+	case '^':
+	case '$':
+	case '.':
+	case '|':
+	case '[':
+	case '+':
+	case '\\':
+	case '(':
+	case ')':
+	case '{':
+	default:
+		return false
+	}
+	return true
+}
+
+func patternFromGlob(glob string) string {
+	var sb strings.Builder
+	sb.WriteString("^")
+	for _, c := range glob {
+		if c == '*' {
+			sb.WriteString(".*")
+		} else if c == '?' {
+			sb.WriteString(".")
+		} else {
+			if isRegexMetaCharacter(c) {
+				sb.WriteString("\\")
+			}
+			sb.WriteRune(c)
+		}
+	}
+	sb.WriteString("$")
+	return sb.String()
 }

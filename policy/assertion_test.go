@@ -48,12 +48,17 @@ func TestNewAssertion(t *testing.T) {
 				Action:         "act",
 				Resource:       "res",
 				ResourceDomain: "dom",
-				Reg: func() *regexp.Regexp {
-					r, _ := regexp.Compile("^act-res$")
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
 					return r
 				}(),
-				Effect:      nil,
-				RegexString: "^act-res$",
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res$")
+					return r
+				}(),
+				Effect:               nil,
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if !reflect.DeepEqual(got, want) {
@@ -74,17 +79,54 @@ func TestNewAssertion(t *testing.T) {
 				Action:         "act",
 				Resource:       "res",
 				ResourceDomain: "dom",
-				Reg: func() *regexp.Regexp {
-					r, _ := regexp.Compile("^act-res$")
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
 					return r
 				}(),
-				Effect:      errors.New("policy deny: Access Check was explicitly denied"),
-				RegexString: "^act-res$",
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res$")
+					return r
+				}(),
+				Effect:               errors.New("policy deny: Access Check was explicitly denied"),
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res$",
 			},
 			checkFunc: func(got, want *Assertion) error {
 				if got.ResourceDomain != want.ResourceDomain ||
-					!reflect.DeepEqual(got.Reg, want.Reg) ||
+					!reflect.DeepEqual(got.ActionRegexp, want.ActionRegexp) ||
+					!reflect.DeepEqual(got.ResourceRegexp, want.ResourceRegexp) ||
 					got.Effect.Error() != want.Effect.Error() {
+					return fmt.Errorf("got: %v, want: %v", got, want)
+				}
+
+				return nil
+			},
+		},
+		{
+			name: "create assertion with wildcard",
+			args: args{
+				resource: "dom:*[res]?",
+				action:   "*[act]?",
+				effect:   "allow",
+			},
+			want: &Assertion{
+				Action:         "*[act]?",
+				Resource:       "*[res]?",
+				ResourceDomain: "dom",
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^.*\\[act].$")
+					return r
+				}(),
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^.*\\[res].$")
+					return r
+				}(),
+				Effect:               nil,
+				ActionRegexpString:   "^.*\\[act].$",
+				ResourceRegexpString: "^.*\\[res].$",
+			},
+			checkFunc: func(got, want *Assertion) error {
+				if !reflect.DeepEqual(got, want) {
 					return fmt.Errorf("got: %v, want: %v", got, want)
 				}
 
@@ -101,13 +143,38 @@ func TestNewAssertion(t *testing.T) {
 			wantErr: errors.New("assertion format not correct: Access denied due to invalid/empty policy resources"),
 		},
 		{
-			name: "invalid regex",
+			name: "invalid regex, but valid wildcard, not return error",
 			args: args{
 				resource: "dom:res(",
 				action:   "act",
 				effect:   "deny",
 			},
-			wantErr: errors.New("assertion format not correct: error parsing regexp: missing closing ): `^act-res($`"),
+			want: &Assertion{
+				Action:         "act",
+				Resource:       "dom:res(",
+				ResourceDomain: "dom",
+				ActionRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^act$")
+					return r
+				}(),
+				ResourceRegexp: func() *regexp.Regexp {
+					r, _ := regexp.Compile("^res\\($")
+					return r
+				}(),
+				Effect:               errors.New("policy deny: Access Check was explicitly denied"),
+				ActionRegexpString:   "^act$",
+				ResourceRegexpString: "^res\\($",
+			},
+			checkFunc: func(got, want *Assertion) error {
+				if got.ResourceDomain != want.ResourceDomain ||
+					!reflect.DeepEqual(got.ActionRegexp, want.ActionRegexp) ||
+					!reflect.DeepEqual(got.ResourceRegexp, want.ResourceRegexp) ||
+					got.Effect.Error() != want.Effect.Error() {
+					return fmt.Errorf("got: %v, want: %v", got, want)
+				}
+
+				return nil
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -128,6 +195,118 @@ func TestNewAssertion(t *testing.T) {
 				} else if err.Error() != tt.wantErr.Error() {
 					t.Errorf("NewAssertion error = %v, wantErr %v", err, tt.wantErr)
 				}
+			}
+		})
+	}
+}
+
+func Test_isRegexMetaCharacter(t *testing.T) {
+	type args struct {
+		target rune
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "check '^', return true",
+			args: args{
+				target: '^',
+			},
+			want: true,
+		},
+		{
+			name: "check '$', return true",
+			args: args{
+				target: '$',
+			},
+			want: true,
+		},
+		{
+			name: "check '.', return true",
+			args: args{
+				target: '.',
+			},
+			want: true,
+		},
+		{
+			name: "check ')', return true",
+			args: args{
+				target: ')',
+			},
+			want: true,
+		},
+		{
+			name: "check '*', return false",
+			args: args{
+				target: '*',
+			},
+			want: false,
+		},
+		{
+			name: "check ']', return false",
+			args: args{
+				target: ']',
+			},
+			want: false,
+		},
+		{
+			name: "check 'a', return false",
+			args: args{
+				target: 'a',
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isRegexMetaCharacter(tt.args.target); got != tt.want {
+				t.Errorf("isRegexMetaCharacter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_patternFromGlob(t *testing.T) {
+	type args struct {
+		glob string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "check to escape regular expression meta characters",
+			args: args{
+				glob: "^$.|[+\\(){",
+			},
+			want: "^\\^\\$\\.\\|\\[\\+\\\\\\(\\)\\{$",
+		},
+		{
+			name: "check to convert wildcards",
+			args: args{
+				glob: ".*wild?card?-*test*",
+			},
+			want: "^\\..*wild.card.-.*test.*$",
+		},
+		{
+			name: "check to no support wildcard escape",
+			args: args{
+				glob: "\\*test\\?",
+			},
+			want: "^\\\\.*test\\\\.$",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := patternFromGlob(tt.args.glob)
+			if got != tt.want {
+				t.Errorf("patternFromGlob() = %v, want %v", got, tt.want)
+			}
+			if _, err := regexp.Compile(got); err != nil {
+				t.Errorf("regexp.Compile() error = %v, got %v", err, got)
 			}
 		})
 	}

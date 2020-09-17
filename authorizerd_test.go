@@ -18,6 +18,7 @@ package authorizerd
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -706,9 +707,9 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					return nil
 				},
@@ -724,7 +725,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 				issueTime:  rt.TimeStamp.Unix(),
 				expiryTime: rt.ExpiryTime.Unix(),
 			}
-			c.Set("dummyTokdummyActdummyRes", p)
+			c.Set("dummyTok:dummyAct:dummyRes", p)
 			rpm := &RoleProcessorMock{
 				rt:      rt,
 				wantErr: nil,
@@ -750,7 +751,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -775,7 +776,7 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			rpm := &RoleProcessorMock{
 				rt:      &role.Token{},
 				wantErr: nil,
@@ -1065,9 +1066,9 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr:    false,
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTokdummyActdummyRes")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
 					return nil
 				},
@@ -1134,6 +1135,7 @@ func Test_authorizer_VerifyRoleCert(t *testing.T) {
 		policyExpiryMargin    string
 		athenzDomains         []string
 		policyRefreshPeriod   string
+		disablePolicyd        bool
 	}
 	type args struct {
 		ctx       context.Context
@@ -1285,6 +1287,38 @@ bu80CwTnWhmdBo36Ig==
 				wantErr: true,
 			}
 		}(),
+		func() test {
+			crt := `-----BEGIN CERTIFICATE-----
+MIICGTCCAcOgAwIBAgIJALLML3PdJAZ1MA0GCSqGSIb3DQEBCwUAMFwxCzAJBgNV
+BAYTAlVTMQswCQYDVQQIEwJDQTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5U
+ZXN0aW5nIERvbWFpbjEWMBQGA1UEAxMNYXRoZW56LnN5bmNlcjAeFw0xOTA0Mjcw
+MjQ2MjNaFw0yOTA0MjQwMjQ2MjNaMFwxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJD
+QTEPMA0GA1UEChMGQXRoZW56MRcwFQYDVQQLEw5UZXN0aW5nIERvbWFpbjEWMBQG
+A1UEAxMNYXRoZW56LnN5bmNlcjBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvv27a
+SNAnK0vcN8fqqQgMHwb0EhfVWMwoRTBQFrCmA9mH/84QgI/0kR3ZI+DlDNBCgDHd
+rEJZVPyX2V41VOX3AgMBAAGjaDBmMGQGA1UdEQRdMFuGGXNwaWZmZTovL2F0aGVu
+ei9zYS9zeW5jZXKGHmF0aGVuejovL3JvbGUvY29yZXRlY2gvcmVhZGVyc4YeYXRo
+ZW56Oi8vcm9sZS9jb3JldGVjaC93cml0ZXJzMA0GCSqGSIb3DQEBCwUAA0EAa3Ra
+Wo7tEDFBGqSVYSVuoh0GpsWC0VBAYYi9vhAGfp+g5M2oszvRuxOHYsQmYAjYroTJ
+bu80CwTnWhmdBo36Ig==
+-----END CERTIFICATE-----`
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			return test{
+				name: "no error if policyd is disable",
+				fields: fields{
+					disablePolicyd: true,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+				},
+				wantErr: false,
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1305,6 +1339,7 @@ bu80CwTnWhmdBo36Ig==
 				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
 			}
 			if err := p.VerifyRoleCert(tt.args.ctx, tt.args.peerCerts, tt.args.act, tt.args.res); (err != nil) != tt.wantErr {
 				t.Errorf("authority.VerifyRoleCert() error = %v, wantErr %v", err, tt.wantErr)
@@ -1336,6 +1371,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 		policyExpiryMargin    string
 		athenzDomains         []string
 		policyRefreshPeriod   string
+		disablePolicyd        bool
 	}
 	type args struct {
 		ctx context.Context
@@ -1355,6 +1391,16 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				ctx: context.Background(),
 			},
 			want: nil,
+		},
+		{
+			name: "GetPolicyCache success disable policyd",
+			fields: fields{
+				disablePolicyd: true,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			want: make(map[string]interface{}),
 		},
 	}
 	for _, tt := range tests {
@@ -1376,6 +1422,7 @@ func Test_authorizer_GetPolicyCache(t *testing.T) {
 				policyExpiryMargin:    tt.fields.policyExpiryMargin,
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
+				disablePolicyd:        tt.fields.disablePolicyd,
 			}
 			if got := a.GetPolicyCache(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("authority.GetPolicyCache() = %v, want %v", got, tt.want)
@@ -1517,7 +1564,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				clientID: at.ClientID,
 			}
 			apm := &AccessProcessorMock{
-				act:     at,
+				atc:     at,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1545,9 +1592,80 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
 					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			now := fastime.Now()
+			c := gache.New()
+			at := &access.OAuth2AccessTokenClaim{
+				Scope: []string{"role"},
+				BaseClaim: access.BaseClaim{
+					StandardClaims: jwt.StandardClaims{
+						Audience: "domain",
+					},
+				},
+			}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
+			apm := &AccessProcessorMock{
+				atc:     at,
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
+			cert := &x509.Certificate{
+				Issuer: pkix.Name{
+					CommonName: "issuer cn",
+				},
+				Subject: pkix.Name{
+					CommonName: "subject cn",
+				},
+			}
+			return test{
+				name: "test verify success with cert",
+				args: args{
+					ctx:  context.Background(),
+					tok:  "dummyTok",
+					act:  "dummyAct",
+					res:  "dummyRes",
+					cert: cert,
+				},
+				fields: fields{
+					policyd:         pdm,
+					accessProcessor: apm,
+					cache:           c,
+					cacheExp:        time.Minute,
+				},
+				wantErr:    "",
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:issuer cn:subject cn:dummyAct:dummyRes")
+					if !ok {
+						return errors.New("cannot get issuer dummyTok:issuer cn:subject cn:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1571,9 +1689,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				},
 				clientID: at.ClientID,
 			}
-			c.SetWithExpire("dummyTokdummyActdummyRes", p, time.Minute)
+			c.SetWithExpire("dummyTok:dummyAct:dummyRes", p, time.Minute)
 			apm := &AccessProcessorMock{
-				act:     at,
+				atc:     at,
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
@@ -1601,9 +1719,74 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr:    "",
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, expiry, ok := prov.cache.GetWithExpire("dummyTokdummyActdummyRes")
-					if !ok {
-						return errors.New("cannot get dummyTokdummyActdummyRes from cache")
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
+					if !ok || prov.cache.Len() != 1 {
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			now := fastime.Now()
+			cert := &x509.Certificate{
+				Issuer: pkix.Name{
+					CommonName: "issuer cn",
+				},
+				Subject: pkix.Name{
+					CommonName: "subject cn",
+				},
+			}
+			c := gache.New()
+			at := &access.OAuth2AccessTokenClaim{}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
+			apm := &AccessProcessorMock{
+				atc:     at,
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
+			return test{
+				name: "test use cache success with cert",
+				args: args{
+					ctx:  context.Background(),
+					tok:  "dummyTok",
+					act:  "dummyAct",
+					res:  "dummyRes",
+					cert: cert,
+				},
+				fields: fields{
+					policyd:         pdm,
+					accessProcessor: apm,
+					cache:           c,
+					cacheExp:        time.Minute,
+				},
+				wantErr:    "",
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:issuer cn:subject cn:dummyAct:dummyRes")
+					if !ok || prov.cache.Len() != 1 {
+						return errors.New("cannot get issuer dummyTok:issuer cn:subject cn:dummyAct:dummyRes from cache")
 					}
 					wantExpiry := now.Add(time.Minute).UnixNano()
 					if wantExpiry > expiry {
@@ -1615,9 +1798,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1640,9 +1823,9 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			c.Set("dummyTokdummyActdummyRes", &principal{})
+			c.Set("dummyTok:dummyAct:dummyRes", &principal{})
 			apm := &AccessProcessorMock{
-				act:     &access.OAuth2AccessTokenClaim{},
+				atc:     &access.OAuth2AccessTokenClaim{},
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{}
@@ -1689,7 +1872,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 		func() test {
 			c := gache.New()
 			apm := &AccessProcessorMock{
-				act: &access.OAuth2AccessTokenClaim{},
+				atc: &access.OAuth2AccessTokenClaim{},
 			}
 			pdm := &PolicydMock{
 				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
@@ -1711,6 +1894,123 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					cacheExp:        time.Minute,
 				},
 				wantErr: "token unauthorized: deny",
+			}
+		}(),
+		func() test {
+			now := fastime.Now()
+			cert := &x509.Certificate{
+				Issuer: pkix.Name{
+					CommonName: "issuer cn",
+				},
+				Subject: pkix.Name{
+					CommonName: "subject cn",
+				},
+			}
+			c := gache.New()
+			at := &access.OAuth2AccessTokenClaim{
+				Scope: []string{"role"},
+				BaseClaim: access.BaseClaim{
+					StandardClaims: jwt.StandardClaims{
+						Audience: "domain",
+					},
+				},
+			}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
+			apm := &AccessProcessorMock{
+				atc:     at,
+				wantErr: nil,
+			}
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
+						return errors.New("Audience/Scope mismatch")
+					}
+					return nil
+				},
+			}
+			return test{
+				name: "test even if the cert is cached, it not used for access without cert, validate success",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+					// no cert
+				},
+				fields: fields{
+					policyd:         pdm,
+					accessProcessor: apm,
+					cache:           c,
+					cacheExp:        time.Minute,
+				},
+				wantErr:    "",
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, expiry, ok := prov.cache.GetWithExpire("dummyTok:dummyAct:dummyRes")
+					if !ok && prov.cache.Len() != 2 {
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
+					}
+					wantExpiry := now.Add(time.Minute).UnixNano()
+					if wantExpiry > expiry {
+						return fmt.Errorf("cache expiry: got = %v, want: %v", expiry, wantExpiry)
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			cert := &x509.Certificate{
+				Issuer: pkix.Name{
+					CommonName: "issuer cn",
+				},
+				Subject: pkix.Name{
+					CommonName: "subject cn",
+				},
+			}
+			c := gache.New()
+			at := &access.OAuth2AccessTokenClaim{}
+			p := &oAuthAccessToken{
+				principal: principal{
+					name:       at.BaseClaim.Subject,
+					roles:      at.Scope,
+					domain:     at.BaseClaim.Audience,
+					issueTime:  at.IssuedAt,
+					expiryTime: at.ExpiresAt,
+				},
+				clientID: at.ClientID,
+			}
+			c.SetWithExpire("dummyTok:"+cert.Issuer.CommonName+":"+cert.Subject.CommonName+":dummyAct:dummyRes", p, time.Minute)
+			apm := &AccessProcessorMock{
+				atc:     at,
+				wantErr: errors.New("error mTLS client certificate is nil"),
+			}
+			pdm := &PolicydMock{}
+			return test{
+				name: "test even if the cert is cached, it not used for access without cert, validate fail",
+				args: args{
+					ctx: context.Background(),
+					tok: "dummyTok",
+					act: "dummyAct",
+					res: "dummyRes",
+					// no cert
+				},
+				fields: fields{
+					policyd:         pdm,
+					accessProcessor: apm,
+					cache:           c,
+					cacheExp:        time.Minute,
+				},
+				wantErr: "error authorize access token: error mTLS client certificate is nil",
 			}
 		}(),
 	}
