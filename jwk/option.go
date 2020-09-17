@@ -17,7 +17,9 @@ limitations under the License.
 package jwk
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -35,14 +37,17 @@ var (
 // Option represents a functional option
 type Option func(*jwkd) error
 
-// WithAthenzURL returns an AthenzURL functional option
-func WithAthenzURL(url string) Option {
+// WithAthenzJwksURL returns an Athenz JWK URL path functional option
+func WithAthenzJwksURL(url string) Option {
 	return func(j *jwkd) error {
+		if url == "" {
+			return urlutil.ErrEmptyAthenzJwksURL
+		}
 		u := urlutil.TrimHTTPScheme(url)
 		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzURL = u
+		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys", u)
 		return nil
 	}
 }
@@ -73,6 +78,23 @@ func WithRetryDelay(i string) Option {
 			return errors.Wrap(err, "invalid retry delay")
 		}
 		j.retryDelay = ri
+		return nil
+	}
+}
+
+// WithURLs returns an JwkUrls functional option
+func WithURLs(urls []string) Option {
+	return func(j *jwkd) error {
+		for _, targetURL := range urls {
+			u, err := url.ParseRequestURI(targetURL)
+			if err != nil {
+				return err
+			}
+			if u.Scheme != "http" && u.Scheme != "https" {
+				return urlutil.ErrUnsupportedScheme
+			}
+		}
+		j.urls = urls
 		return nil
 	}
 }

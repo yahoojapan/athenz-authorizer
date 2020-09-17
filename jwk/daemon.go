@@ -18,9 +18,8 @@ package jwk
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/kpango/glg"
@@ -36,22 +35,25 @@ type Daemon interface {
 }
 
 type jwkd struct {
-	athenzURL string
+	athenzJwksURL string
+	urls          []string
 
 	refreshPeriod time.Duration
 	retryDelay    time.Duration
 
 	client *http.Client
 
-	keys atomic.Value
+	keys *sync.Map
 }
 
-// Provider represent the jwk provider to retrive the json web key.
-type Provider func(keyID string) interface{}
+// Provider represent the jwk provider to retrieve the json web key.
+type Provider func(keyID string, jwkSetURL string) interface{}
 
 // New represent the constructor of Policyd
 func New(opts ...Option) (Daemon, error) {
-	j := new(jwkd)
+	j := &jwkd{
+		keys: &sync.Map{},
+	}
 	for _, opt := range append(defaultOptions, opts...) {
 		err := opt(j)
 		if err != nil {
@@ -116,13 +118,33 @@ func (j *jwkd) Start(ctx context.Context) <-chan error {
 }
 
 func (j *jwkd) Update(ctx context.Context) (err error) {
-	url := fmt.Sprintf("https://%s/oauth2/keys", j.athenzURL)
-	keys, err := jwk.FetchHTTP(url, jwk.WithHTTPClient(j.client))
-	if err != nil {
-		return err
+	glg.Info("Fetching JWK Set")
+
+	var targets []string
+	if !isContain(j.urls, j.athenzJwksURL) {
+		targets = append([]string{j.athenzJwksURL}, j.urls...)
+	} else {
+		targets = j.urls
 	}
 
-	j.keys.Store(keys)
+	var failedTargets []string
+	for _, target := range targets {
+		glg.Debugf("Fetching JWK Set from %s", target)
+		keys, err := jwk.FetchHTTP(target, jwk.WithHTTPClient(j.client))
+		if err != nil {
+			glg.Errorf("Fetch JWK Set error: %v", err)
+			failedTargets = append(failedTargets, target)
+			continue
+		}
+		j.keys.Store(target, keys)
+		glg.Debugf("Fetch JWK Set from %s success", target)
+	}
+
+	if len(failedTargets) > 0 {
+		return errors.Errorf("Failed to fetch the JWK Set from these URLs: %s", failedTargets)
+	}
+
+	glg.Info("Fetch JWK Set success")
 	return nil
 }
 
@@ -130,12 +152,25 @@ func (j *jwkd) GetProvider() Provider {
 	return j.getKey
 }
 
-func (j *jwkd) getKey(keyID string) interface{} {
+func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 	if keyID == "" {
 		return nil
 	}
 
-	for _, key := range j.keys.Load().(*jwk.Set).LookupKeyID(keyID) {
+	var keys interface{}
+	var ok bool
+	if jwkSetURL == "" {
+		keys, ok = j.keys.Load(j.athenzJwksURL)
+	} else {
+		keys, ok = j.keys.Load(jwkSetURL)
+	}
+
+	// Either jku specified in the token is not set in jwkd.urls or key cache is failing.
+	if !ok {
+		return nil
+	}
+
+	for _, key := range keys.(*jwk.Set).LookupKeyID(keyID) {
 		var raw interface{}
 		if err := key.Raw(&raw); err != nil {
 			glg.Warnf("jwkd.getKey: %s", err.Error())
@@ -143,5 +178,15 @@ func (j *jwkd) getKey(keyID string) interface{} {
 			return raw
 		}
 	}
+	// Either key for the kid specified in the token was not found or invalid key
 	return nil
+}
+
+func isContain(targets []string, key string) bool {
+	for _, target := range targets {
+		if target == key {
+			return true
+		}
+	}
+	return false
 }

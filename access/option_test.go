@@ -34,7 +34,7 @@ func TestWithJWKProvider(t *testing.T) {
 	}
 	tests := []test{
 		func() test {
-			pkp := jwk.Provider(func(string) interface{} {
+			pkp := jwk.Provider(func(string, string) interface{} {
 				return nil
 			})
 			return test{

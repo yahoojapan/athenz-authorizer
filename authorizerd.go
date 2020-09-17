@@ -94,6 +94,7 @@ type authority struct {
 	disableJwkd      bool
 	jwkRefreshPeriod string
 	jwkRetryDelay    string
+	jwkURLs          []string
 
 	// accessTokenProcessor parameters
 	accessTokenParam AccessTokenParam
@@ -164,9 +165,10 @@ func New(opts ...Option) (Authorizerd, error) {
 
 	if !prov.disableJwkd {
 		if prov.jwkd, err = jwk.New(
-			jwk.WithAthenzURL(prov.athenzURL),
+			jwk.WithAthenzJwksURL(prov.athenzURL),
 			jwk.WithRefreshPeriod(prov.jwkRefreshPeriod),
 			jwk.WithRetryDelay(prov.jwkRetryDelay),
+			jwk.WithURLs(prov.jwkURLs),
 			jwk.WithHTTPClient(prov.client),
 		); err != nil {
 			return nil, err
@@ -177,7 +179,6 @@ func New(opts ...Option) (Authorizerd, error) {
 	if prov.enableRoleToken {
 		if prov.roleProcessor, err = role.New(
 			role.WithPubkeyProvider(pkPro),
-			role.WithJWKProvider(jwkPro),
 		); err != nil {
 			return nil, err
 		}

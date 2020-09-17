@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
@@ -29,6 +30,15 @@ import (
 const (
 	confirmMethodMember = "x5t#S256"
 )
+
+// errNilHeader is "header is nil"
+var errNilHeader = errors.New("header is nil")
+
+// errKeyNotFoundInHeader is "key not written in header"
+var errKeyNotFoundInHeader = errors.New("key not written in header")
+
+// errHeaderValueNotString is "header value not written as string"
+var errHeaderValueNotString = errors.New("header value not written as string")
 
 // Processor represents the access token parser interface.
 type Processor interface {
@@ -169,15 +179,46 @@ func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2Access
 
 // keyFunc extract the key id from the token, and return corresponding key
 func (a *atp) keyFunc(token *jwt.Token) (interface{}, error) {
-	keyID, ok := token.Header["kid"]
-	if !ok {
-		return nil, errors.New("kid not written in header")
+	keyID, err := getAsStringFromHeader(&token.Header, jws.KeyIDKey)
+	// kid is required and will return if an error occurs
+	if err != nil {
+		return nil, errors.New(err.Error() + ":" + jws.KeyIDKey)
 	}
 
-	key := a.jwkp(keyID.(string))
+	jwkSetURL, err := getAsStringFromHeader(&token.Header, jws.JWKSetURLKey)
+	// return not string error or nil header error.
+	// If not found error, assume it is an athenz token and continue.
+	if err == errHeaderValueNotString || err == errNilHeader {
+		return nil, errors.New(err.Error() + ":" + jws.JWKSetURLKey)
+	}
+
+	key := a.jwkp(keyID, jwkSetURL)
+
 	if key == nil {
-		return nil, errors.Errorf("key cannot be found, keyID: %s", keyID)
+		return nil, errors.Errorf("key cannot be found, keyID: %s jwkSetURL: %s", keyID, jwkSetURL)
 	}
 
 	return key, nil
+}
+
+// getAsStringFromHeader return string header value and error.
+// return error is not found or not string cases.
+func getAsStringFromHeader(header *map[string]interface{}, key string) (string, error) {
+	var ok bool
+
+	if header == nil {
+		return "", errNilHeader
+	}
+
+	var v interface{}
+	if v, ok = (*header)[key]; !ok {
+		return "", errKeyNotFoundInHeader
+	}
+
+	var value string
+	if value, ok = v.(string); !ok {
+		return "", errHeaderValueNotString
+	}
+
+	return value, nil
 }

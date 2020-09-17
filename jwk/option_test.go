@@ -25,7 +25,7 @@ import (
 	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
 )
 
-func TestWithAthenzURL(t *testing.T) {
+func TestWithAthenzJwksURL(t *testing.T) {
 	type args struct {
 		url string
 	}
@@ -40,15 +40,15 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"",
 			},
-			want:    &jwkd{athenzURL: ""},
-			wantErr: nil,
+			want:    &jwkd{athenzJwksURL: ""},
+			wantErr: urlutil.ErrEmptyAthenzJwksURL,
 		},
 		{
 			name: "no scheme",
 			args: args{
 				"dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -56,7 +56,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -64,7 +64,7 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &jwkd{athenzURL: "dummy.com"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
 			wantErr: nil,
 		},
 		{
@@ -72,20 +72,20 @@ func TestWithAthenzURL(t *testing.T) {
 			args: args{
 				"ftp://dummy.com",
 			},
-			want:    &jwkd{athenzURL: ""},
+			want:    &jwkd{athenzJwksURL: ""},
 			wantErr: urlutil.ErrUnsupportedScheme,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := &jwkd{}
-			err := WithAthenzURL(tt.args.url)(got)
+			err := WithAthenzJwksURL(tt.args.url)(got)
 			if err != tt.wantErr {
-				t.Errorf("WithAthenzURL() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("WithathenzJwksURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("WithAthenzURL() = %v, want %v", got, tt.want)
+				t.Errorf("WithathenzJwksURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -277,6 +277,90 @@ func TestWithHTTPClient(t *testing.T) {
 			got := WithHTTPClient(tt.args.cl)
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithHTTPClient() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestWithURLs(t *testing.T) {
+	type args struct {
+		urls []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *jwkd
+		wantErr string
+	}{
+		{
+			name: "empty string",
+			args: args{
+				urls: []string{""},
+			},
+			want:    &jwkd{urls: nil},
+			wantErr: "parse \"\": empty url",
+		},
+		{
+			name: "no scheme",
+			args: args{
+				urls: []string{"dummy.com"},
+			},
+			want:    &jwkd{urls: nil},
+			wantErr: "parse \"dummy.com\": invalid URI for request",
+		},
+		{
+			name: "http scheme",
+			args: args{
+				urls: []string{"http://dummy.com"},
+			},
+			want:    &jwkd{urls: []string{"http://dummy.com"}},
+			wantErr: "",
+		},
+		{
+			name: "https scheme",
+			args: args{
+				urls: []string{"https://dummy.com"},
+			},
+			want:    &jwkd{urls: []string{"https://dummy.com"}},
+			wantErr: "",
+		},
+		{
+			name: "http scheme with path",
+			args: args{
+				urls: []string{"http://dummy.com/path/to/resource"},
+			},
+			want:    &jwkd{urls: []string{"http://dummy.com/path/to/resource"}},
+			wantErr: "",
+		},
+		{
+			name: "https scheme with path",
+			args: args{
+				urls: []string{"https://dummy.com/path/to/resource"},
+			},
+			want:    &jwkd{urls: []string{"https://dummy.com/path/to/resource"}},
+			wantErr: "",
+		},
+		{
+			name: "unsupported scheme",
+			args: args{
+				urls: []string{"ftp://dummy.com"},
+			},
+			want:    &jwkd{},
+			wantErr: urlutil.ErrUnsupportedScheme.Error(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := &jwkd{}
+			err := WithURLs(tt.args.urls)(got)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("WithURLs() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithURLs() = %v, want %v", got, tt.want)
 			}
 		})
 	}

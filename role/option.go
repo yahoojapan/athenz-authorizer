@@ -17,7 +17,6 @@ limitations under the License.
 package role
 
 import (
-	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
 )
 
@@ -32,14 +31,6 @@ type Option func(*rtp) error
 func WithPubkeyProvider(pkp pubkey.Provider) Option {
 	return func(r *rtp) error {
 		r.pkp = pkp
-		return nil
-	}
-}
-
-// WithJWKProvider represents set pubkey provider functional option
-func WithJWKProvider(jwkp jwk.Provider) Option {
-	return func(r *rtp) error {
-		r.jwkp = jwkp
 		return nil
 	}
 }

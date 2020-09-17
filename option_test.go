@@ -1119,3 +1119,39 @@ func TestWithDisableRoleCert(t *testing.T) {
 		})
 	}
 }
+
+func TestWithJwkURLs(t *testing.T) {
+	type args struct {
+		urls []string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				urls: []string{"url1", "url2"},
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authority{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(authz.jwkURLs, []string{"url1", "url2"}) {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithJwkURLs(tt.args.urls)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("WithJwkURLs() = %v, error %v", got, err)
+			}
+		})
+	}
+}

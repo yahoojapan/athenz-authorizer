@@ -26,9 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v4/jwk"
 )
 
@@ -120,7 +119,7 @@ func Test_rtp_keyFunc(t *testing.T) {
 		{
 			name: "key return success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return "key"
 					}
@@ -137,9 +136,29 @@ func Test_rtp_keyFunc(t *testing.T) {
 			want: "key",
 		},
 		{
+			name: "key return success with jku",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if jku == "dummy" && kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+						"jku": "dummy",
+					},
+				},
+			},
+			want: "key",
+		},
+		{
 			name: "key header not found",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return "key"
 					}
@@ -154,9 +173,28 @@ func Test_rtp_keyFunc(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "key header not found with jwk set header",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if kid == "1" {
+						return "key"
+					}
+					return nil
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"jku": "dummy",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "key not found",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					if kid == "1" {
 						return nil
 					}
@@ -167,6 +205,26 @@ func Test_rtp_keyFunc(t *testing.T) {
 				token: &jwt.Token{
 					Header: map[string]interface{}{
 						"kid": "1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "header value not string",
+			fields: fields{
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
+					if kid == "1" {
+						return nil
+					}
+					return "key"
+				}),
+			},
+			args: args{
+				token: &jwt.Token{
+					Header: map[string]interface{}{
+						"kid": "1",
+						"jku": []string{"dummy1", "dumm2"},
 					},
 				},
 			},
@@ -242,7 +300,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token success",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -275,7 +333,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token success, verify client_id",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyClientID: true,
@@ -317,7 +375,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token success",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -355,7 +413,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, unauthorized client_id",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableVerifyClientID: true,
@@ -375,7 +433,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, no expiration defined",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -389,7 +447,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, expired jwt",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -403,7 +461,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, invalid signature",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -417,7 +475,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify access token fail, invalid jwt format",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 				},
@@ -431,7 +489,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, no cert",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -447,7 +505,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (\"cnf\": \"\")",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -465,7 +523,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (cnf: \"cnf\": {\"x5t#S256\": {}})",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -483,7 +541,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 			return test{
 				name: "verify certificate bound access token fail, empty cnf (\"cnf\": {})",
 				fields: fields{
-					jwkp: jwk.Provider(func(kid string) interface{} {
+					jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 						return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 					}),
 					enableMTLSCertificateBoundAccessToken: true,
@@ -500,7 +558,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound access token success, verify client_id fail, verify thumbprint success",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
@@ -521,7 +579,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 		{
 			name: "verify certificate bound access token success, verify client_id success, verify thumbprint fail",
 			fields: fields{
-				jwkp: jwk.Provider(func(kid string) interface{} {
+				jwkp: jwk.Provider(func(kid string, jku string) interface{} {
 					return LoadRSAPublicKeyFromDisk("./asserts/public.pem")
 				}),
 				enableMTLSCertificateBoundAccessToken: true,
@@ -1168,6 +1226,87 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 			}
 			if err := r.validateCertPrincipal(tt.args.cert, tt.args.claims); (err != nil) != tt.wantErr {
 				t.Errorf("atp.validateCertPrincipal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_atp_getAsStringFromHeader(t *testing.T) {
+	type args struct {
+		header *map[string]interface{}
+		key    string
+	}
+	tests := []struct {
+		name       string
+		args       args
+		want       string
+		wantErrStr string
+	}{
+		{
+			name: "get success",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": "dummy kid",
+					"jku": "dummy jku",
+				},
+				key: "kid",
+			},
+			want: "dummy kid",
+		},
+		{
+			name: "nil header pointer",
+			args: args{
+				header: nil,
+				key:    "dummy",
+			},
+			want:       "",
+			wantErrStr: errNilHeader.Error(),
+		},
+		{
+			name: "nil header",
+			args: args{
+				header: &map[string]interface{}{},
+				key:    "kid",
+			},
+			want:       "",
+			wantErrStr: errKeyNotFoundInHeader.Error(),
+		},
+		{
+			name: "key not found",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": "dummy kid",
+					"jku": "dummy jku",
+				},
+				key: "dummy",
+			},
+			want:       "",
+			wantErrStr: errKeyNotFoundInHeader.Error(),
+		},
+		{
+			name: "header value not string",
+			args: args{
+				header: &map[string]interface{}{
+					"kid": []string{"dummy kid 1", "dummy kid 2"},
+					"jku": "dummy jku",
+				},
+				key: "kid",
+			},
+			want:       "",
+			wantErrStr: errHeaderValueNotString.Error(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getAsStringFromHeader(tt.args.header, tt.args.key)
+			if err != nil {
+				if err.Error() != tt.wantErrStr {
+					t.Errorf("atp.getAsStringFromHeader() error = %v, wantErr %v", err, tt.wantErrStr)
+					return
+				}
+			}
+			if got != tt.want {
+				t.Errorf("atp.getAsStringFromHeader() = %v, want %v", got, tt.want)
 			}
 		})
 	}
