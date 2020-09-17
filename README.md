@@ -163,3 +163,4 @@ Note that only for contributions to the `athenz-authorizer` repository on the [G
 - [TakuyaMatsu](https://github.com/TakuyaMatsu)
 - [tatyano](https://github.com/tatyano)
 - [WindzCUHK](https://github.com/WindzCUHK)
+
