@@ -30,7 +30,7 @@ import (
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
 	"github.com/yahoo/athenz/utils/zpe-updater/util"
-	"github.com/yahoojapan/athenz-authorizer/v4/pubkey"
+	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 	"golang.org/x/sync/errgroup"
 )
 

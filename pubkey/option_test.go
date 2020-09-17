@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	urlutil "github.com/yahoojapan/athenz-authorizer/v4/internal/url"
+	urlutil "github.com/yahoojapan/athenz-authorizer/v5/internal/url"
 )
 
 func TestWithAthenzURL(t *testing.T) {
