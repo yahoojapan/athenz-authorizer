@@ -347,3 +347,11 @@ func WithRoleCertURIPrefix(t string) Option {
 		return nil
 	}
 }
+
+//
+func WithTranslator(t Translator) Option {
+	return func(authz *authority) error {
+		authz.translator = t
+		return nil
+	}
+}
