@@ -1096,7 +1096,7 @@ func Test_authorizer_authorize(t *testing.T) {
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 				disablePolicyd:        tt.fields.disablePolicyd,
 			}
-			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.cert)
+			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, "", tt.args.cert)
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("authority.authorize() error = %v, wantErr %v", err, tt.wantErr)
