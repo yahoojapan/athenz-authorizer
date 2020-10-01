@@ -18,6 +18,7 @@ package authorizerd
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 )
@@ -50,26 +51,40 @@ type MappingRules struct {
 	Rules map[string][]Rule
 }
 
+func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
+	if rules == nil {
+		return nil, errors.New("rules is nil")
+	}
+	mr := &MappingRules{Rules: rules}
+	if err := mr.Validate(); err != nil {
+		return nil, err
+	} else {
+		return mr, nil
+	}
+}
+
 func (mr *MappingRules) Validate() error {
 	for domain, rules := range mr.Rules {
 		if domain == "" {
-			return errors.New("k is empty or v is nil")
+			return errors.New("domain is empty")
 		}
 		if rules == nil {
-			return errors.New("")
+			return errors.New("rules is nil")
 		}
 
 		for i, rule := range rules {
 			if rule.Method == "" || rule.Path == "" || rule.Action == "" || rule.Resource == "" {
-				return errors.New("Rule is empty")
+				return fmt.Errorf("rule is empty, method:%s, path:%s, action:%s, resource:%s",
+					rule.Method, rule.Path, rule.Action, rule.Resource)
 			}
 			if !strings.HasPrefix(rule.Path, "/") {
-				return errors.New("path is not started slash")
+				return fmt.Errorf("path(%s) doesn't start with slash", rule.Path)
 			}
 			if rule.Path == "/" {
-				return errors.New("")
+				return errors.New("path is slash only")
 			}
 
+			// For example, `rule.Path` assumes a string like `/path1/path2?param=value`
 			pathQuery := strings.SplitN(rule.Path, "?", 2)
 
 			splitPaths := strings.Split(pathQuery[0], "/")
@@ -79,13 +94,14 @@ func (mr *MappingRules) Validate() error {
 					rules[i].splitPaths[j] = Validated{Placeholder: path}
 				} else {
 					if err != nil {
-						return errors.New("")
+						return err
 					}
 					rules[i].splitPaths[j] = Validated{Value: path}
 				}
 			}
 
 			rules[i].queryValueMap = make(map[string]Validated)
+			// No query parameter
 			if len(pathQuery) == 1 {
 				continue
 			}
@@ -97,13 +113,13 @@ func (mr *MappingRules) Validate() error {
 
 			for param, val := range values {
 				if len(val) != 1 {
-					return errors.New("len(val) != 1")
+					return errors.New("query multiple values is not allowed")
 				}
 				if ok, err := rules[i].isPlaceholder(val[0]); ok {
 					rules[i].queryValueMap[param] = Validated{Placeholder: val[0]}
 				} else {
 					if err != nil {
-						return errors.New("")
+						return err
 					}
 					rules[i].queryValueMap[param] = Validated{Value: val[0]}
 				}
@@ -144,6 +160,7 @@ OUTER:
 			}
 
 			for reqQuery, reqVal := range requestedQuery {
+				// query multiple values is not allowed
 				if len(reqVal) != 1 {
 					continue OUTER
 				}
@@ -177,14 +194,14 @@ func (r *Rule) isPlaceholder(s string) (bool, error) {
 		if r.splitPaths != nil {
 			for _, v := range r.splitPaths {
 				if v.Placeholder == s {
-					return false, errors.New("duplicated")
+					return false, fmt.Errorf("placeholder(%s) is duplicated", s)
 				}
 			}
 		}
 		if r.queryValueMap != nil {
 			for _, v := range r.queryValueMap {
 				if v.Placeholder == s {
-					return false, errors.New("duplicated")
+					return false, fmt.Errorf("placeholder(%s) is duplicated", s)
 				}
 			}
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package authorizerd
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -29,7 +30,7 @@ func TestMappingRules_Validate(t *testing.T) {
 		wantErrStr       string
 	}{
 		{
-			name: "success only path",
+			name: "success path only",
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -44,6 +45,10 @@ func TestMappingRules_Validate(t *testing.T) {
 				"domain": {
 					Rule{
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -79,6 +84,10 @@ func TestMappingRules_Validate(t *testing.T) {
 					Rule{
 						splitPaths: []Validated{
 							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
 								Value:       "path1",
 								Placeholder: "",
 							},
@@ -88,6 +97,10 @@ func TestMappingRules_Validate(t *testing.T) {
 							},
 							{
 								Value:       "path2",
+								Placeholder: "",
+							},
+							{
+								Value:       "",
 								Placeholder: "",
 							},
 						},
@@ -112,6 +125,10 @@ func TestMappingRules_Validate(t *testing.T) {
 				"domain": {
 					Rule{
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -146,6 +163,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
+			wantErrStr: "placeholder is empty",
 		},
 		{
 			name: "success path and query",
@@ -163,6 +181,10 @@ func TestMappingRules_Validate(t *testing.T) {
 				"domain": {
 					Rule{
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -203,6 +225,10 @@ func TestMappingRules_Validate(t *testing.T) {
 					Rule{
 						splitPaths: []Validated{
 							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
 								Value:       "path1",
 								Placeholder: "",
 							},
@@ -238,6 +264,10 @@ func TestMappingRules_Validate(t *testing.T) {
 					Rule{
 						splitPaths: []Validated{
 							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
 								Value:       "path1",
 								Placeholder: "",
 							},
@@ -272,9 +302,10 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
+			wantErrStr: "placeholder is empty",
 		},
 		{
-			name: "error query value is array",
+			name: "error query multiple values",
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -285,6 +316,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
+			wantErrStr: "query multiple values is not allowed",
 		},
 		{
 			name: "error domain is empty",
@@ -298,14 +330,14 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: "domain is empty",
 		},
 		{
 			name: "error rules is empty",
 			mappingRules: map[string][]Rule{
 				"domain": nil,
 			},
-			wantErrStr: "",
+			wantErrStr: "rules is nil",
 		},
 		{
 			name: "error method is empty",
@@ -319,7 +351,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "", "/path", "read", "resource"),
 		},
 		{
 			name: "error path is empty",
@@ -333,7 +365,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "", "read", "resource"),
 		},
 		{
 			name: "error action is empty",
@@ -347,7 +379,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "/path", "", "resource"),
 		},
 		{
 			name: "error resource is empty",
@@ -361,7 +393,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "/path", "read", ""),
 		},
 		{
 			name: "error path is slash only",
@@ -375,10 +407,10 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: "path is slash only",
 		},
 		{
-			name: "error path is no slash",
+			name: "error path has no slash",
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -389,7 +421,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("path(%s) doesn't start with slash", "path"),
 		},
 		{
 			name: "error duplicated path placeholder",
@@ -403,7 +435,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("placeholder(%s) is duplicated", "{placeholder1}"),
 		},
 		{
 			name: "error duplicated path and query placeholder",
@@ -417,7 +449,7 @@ func TestMappingRules_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: "",
+			wantErrStr: fmt.Sprintf("placeholder(%s) is duplicated", "{placeholder1}"),
 		},
 	}
 	for _, tt := range tests {
@@ -425,19 +457,32 @@ func TestMappingRules_Validate(t *testing.T) {
 			mr := MappingRules{tt.mappingRules}
 			err := mr.Validate()
 			if err != nil {
-				t.Errorf("err is %s", err.Error())
-				return
+				if tt.wantErrStr == "" {
+					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
+					return
+				} else if err.Error() != tt.wantErrStr {
+					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
+					return
+				} else {
+					return
+				}
+			} else {
+				if tt.wantErrStr != "" {
+					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
+					return
+				}
 			}
+
 			for domain, rules := range mr.Rules {
 				for i, rule := range rules {
 					wantRules, ok := tt.wantMappingRules.Rules[domain]
 					if !ok {
-						t.Errorf("err is")
+						t.Errorf("wantMappingRules doesn't have domain(%s)", domain)
 						return
 					}
 					if !reflect.DeepEqual(rule.splitPaths, wantRules[i].splitPaths) ||
 						!reflect.DeepEqual(rule.queryValueMap, wantRules[i].queryValueMap) {
-						t.Errorf("err is")
+						t.Errorf("wantMappingRules is not an expectaion")
 						return
 					}
 				}
@@ -456,10 +501,10 @@ func TestMappingRules_Translate(t *testing.T) {
 		query        string
 		wantAction   string
 		wantResource string
-		wantErr      string
+		wantErrStr   string
 	}{
 		{
-			name: "success path only",
+			name: "path matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -467,6 +512,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -488,7 +537,83 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource",
 		},
 		{
-			name: "success path with placeholder",
+			name: "domain didn't match",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
+								Value:       "path1",
+								Placeholder: "",
+							},
+							{
+								Value:       "path2",
+								Placeholder: "",
+							},
+						},
+						queryValueMap: map[string]Validated{},
+					},
+				},
+			}},
+			domain:       "domain1",
+			method:       "get",
+			path:         "/path1/path2",
+			query:        "",
+			wantAction:   "get",
+			wantResource: "/path1/path2",
+		},
+		{
+			name: "method didn't matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
+								Value:       "path1",
+								Placeholder: "",
+							},
+							{
+								Value:       "path2",
+								Placeholder: "",
+							},
+						},
+						queryValueMap: map[string]Validated{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "post",
+			path:         "/path1/path2",
+			query:        "",
+			wantAction:   "post",
+			wantResource: "/path1/path2",
+		},
+		{
+			name:         "rules is nil",
+			mappingRules: MappingRules{Rules: nil},
+			domain:       "domain",
+			method:       "get",
+			path:         "/path1/path2",
+			query:        "",
+			wantAction:   "get",
+			wantResource: "/path1/path2",
+		},
+		{
+			name: "path with placeholder matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -496,6 +621,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource.{placeholder1}",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -521,7 +650,40 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path2",
 		},
 		{
-			name: "success path with placeholder",
+			name: "path with placeholder matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource.{placeholder1}.{placeholder2}",
+						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
+								Value:       "",
+								Placeholder: "{placeholder1}",
+							},
+							{
+								Value:       "",
+								Placeholder: "{placeholder2}",
+							},
+						},
+						queryValueMap: map[string]Validated{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/path1/path2",
+			query:        "",
+			wantAction:   "read",
+			wantResource: "resource.path1.path2",
+		},
+		{
+			name: "path with placeholder matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -529,6 +691,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder1}.{placeholder1}",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -554,7 +720,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path2.path2.path2",
 		},
 		{
-			name: "success path and query with placeholder",
+			name: "path and query with placeholder matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -562,6 +728,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -592,7 +762,49 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path2.value2",
 		},
 		{
-			name: "success the length of path is not equal",
+			name: "path and query with placeholder matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource.{placeholder1}.{placeholder2}.{placeholder3}",
+						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
+								Value:       "path1",
+								Placeholder: "",
+							},
+							{
+								Value:       "",
+								Placeholder: "{placeholder1}",
+							},
+						},
+						queryValueMap: map[string]Validated{
+							"param1": {
+								Value:       "",
+								Placeholder: "{placeholder2}",
+							},
+							"param2": {
+								Value:       "",
+								Placeholder: "{placeholder3}",
+							},
+						},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/path1/path2",
+			query:        "param2=value2&param1=value1",
+			wantAction:   "read",
+			wantResource: "resource.path2.value1.value2",
+		},
+		{
+			name: "the path lengths are not equal",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -600,6 +812,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -621,7 +837,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "success path does not match",
+			name: "path didn't match",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -629,6 +845,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "",
 								Placeholder: "{placeholder1}",
@@ -650,7 +870,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1/path2",
 		},
 		{
-			name: "success the length of query is not equal",
+			name: "the query lengths are not equal",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -658,6 +878,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -684,7 +908,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "success path does not match",
+			name: "query multiple values",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -694,33 +918,8 @@ func TestMappingRules_Translate(t *testing.T) {
 						splitPaths: []Validated{
 							{
 								Value:       "",
-								Placeholder: "{placeholder1}",
-							},
-							{
-								Value:       "path3",
 								Placeholder: "",
 							},
-						},
-						queryValueMap: map[string]Validated{},
-					},
-				},
-			}},
-			domain:       "domain",
-			method:       "get",
-			path:         "/path1/path2",
-			query:        "",
-			wantAction:   "get",
-			wantResource: "/path1/path2",
-		},
-		{
-			name: "success query values is array",
-			mappingRules: MappingRules{Rules: map[string][]Rule{
-				"domain": {
-					Rule{
-						Method:   "get",
-						Action:   "read",
-						Resource: "resource",
-						splitPaths: []Validated{
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -743,7 +942,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "success query does not match",
+			name: "query didn't match",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -751,6 +950,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -773,7 +976,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "success query does not match",
+			name: "query didn't match",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -781,6 +984,10 @@ func TestMappingRules_Translate(t *testing.T) {
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []Validated{
+							{
+								Value:       "",
+								Placeholder: "",
+							},
 							{
 								Value:       "path1",
 								Placeholder: "",
@@ -803,17 +1010,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name:         "success mappingRules is nil",
-			mappingRules: MappingRules{Rules: nil},
-			domain:       "domain",
-			method:       "get",
-			path:         "/path1",
-			query:        "param1=value1",
-			wantAction:   "get",
-			wantResource: "/path1",
-		},
-		{
-			name: "success request path is empty",
+			name: "request path is empty",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -822,13 +1019,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Resource: "resource",
 						splitPaths: []Validated{
 							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
 								Value:       "path1",
 								Placeholder: "",
 							},
 						},
 						queryValueMap: map[string]Validated{
 							"param1": {
-								Value:       "value2",
+								Value:       "value1",
 								Placeholder: "",
 							},
 						},
@@ -843,7 +1044,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "",
 		},
 		{
-			name: "success request path is slash",
+			name: "request path is slash",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -852,13 +1053,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Resource: "resource",
 						splitPaths: []Validated{
 							{
+								Value:       "",
+								Placeholder: "",
+							},
+							{
 								Value:       "path1",
 								Placeholder: "",
 							},
 						},
 						queryValueMap: map[string]Validated{
 							"param1": {
-								Value:       "value2",
+								Value:       "value1",
 								Placeholder: "",
 							},
 						},
@@ -877,16 +1082,22 @@ func TestMappingRules_Translate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			action, resource, err := tt.mappingRules.Translate(tt.domain, tt.method, tt.path, tt.query)
 			if err != nil {
-				if err.Error() != tt.wantErr {
-					t.Errorf("err")
+				if tt.wantErrStr == "" {
+					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
+					return
+				} else if err.Error() != tt.wantErrStr {
+					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
+					return
+				} else {
 					return
 				}
 			} else {
-				if tt.wantErr != "" {
-					t.Errorf("err")
+				if tt.wantErrStr != "" {
+					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
 					return
 				}
 			}
+
 			if action != tt.wantAction || resource != tt.wantResource {
 				t.Errorf("action(%s) is not the expected value %s, or resource(%s) is not the expected value %s",
 					action, tt.wantAction, resource, tt.wantResource)
