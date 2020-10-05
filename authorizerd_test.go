@@ -1068,7 +1068,7 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr:    false,
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes:")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
 					if !ok {
 						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
