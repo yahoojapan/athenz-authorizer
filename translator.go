@@ -28,16 +28,19 @@ const (
 	placeholderSuffix = "}"
 )
 
+// Translator translates the information given to the argument to action and resource
 type Translator interface {
 	Translate(domain, method, path, query string) (string, string, error)
 	Validate() error
 }
 
+// Validated keeps information after it has been validated
 type Validated struct {
 	Value       string
 	Placeholder string
 }
 
+// Rule represents a rule for translation
 type Rule struct {
 	Method        string `yaml:"method"`
 	Path          string `yaml:"path"`
@@ -47,10 +50,12 @@ type Rule struct {
 	queryValueMap map[string]Validated
 }
 
+// MappingRules keeps the translation rules
 type MappingRules struct {
 	Rules map[string][]Rule
 }
 
+// NewMappingRules creates the MappingRules object
 func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
 	if rules == nil {
 		return nil, errors.New("rules is nil")
@@ -63,6 +68,7 @@ func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
 	}
 }
 
+// Validate the given rule information
 func (mr *MappingRules) Validate() error {
 	for domain, rules := range mr.Rules {
 		if domain == "" {
@@ -129,6 +135,7 @@ func (mr *MappingRules) Validate() error {
 	return nil
 }
 
+// Translates the information given to the argument to action and resource
 func (mr *MappingRules) Translate(domain, method, path, query string) (string, string, error) {
 	if mr.Rules == nil {
 		return method, path, nil
