@@ -106,7 +106,6 @@ type authority struct {
 	// roleCertificateProcessor parameters
 	enableRoleCert bool
 
-	//
 	translator Translator
 }
 
@@ -163,12 +162,6 @@ func New(opts ...Option) (Authorizerd, error) {
 			policy.WithPubKeyProvider(pkPro),
 		); err != nil {
 			return nil, err
-		}
-
-		if prov.translator != nil {
-			if err = prov.translator.Validate(); err != nil {
-				return nil, err
-			}
 		}
 	}
 

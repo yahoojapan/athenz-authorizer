@@ -22,6 +22,148 @@ import (
 	"testing"
 )
 
+func TestRule_isPlaceholder(t *testing.T) {
+	tests := []struct {
+		name       string
+		rule       Rule
+		arg        string
+		wantResult bool
+		wantErrStr string
+	}{
+		{
+			name: "success",
+			rule: Rule{
+				splitPaths:    []Validated{},
+				queryValueMap: map[string]Validated{},
+			},
+			arg:        "{placeholder}",
+			wantResult: true,
+		},
+		{
+			name: "placeholder is empty",
+			rule: Rule{
+				splitPaths:    []Validated{},
+				queryValueMap: map[string]Validated{},
+			},
+			arg:        "{}",
+			wantResult: false,
+			wantErrStr: "placeholder is empty",
+		},
+		{
+			name: "not placeholder",
+			rule: Rule{
+				splitPaths:    []Validated{},
+				queryValueMap: map[string]Validated{},
+			},
+			arg:        "{placeholder",
+			wantResult: false,
+		},
+		{
+			name: "not placeholder",
+			rule: Rule{
+				splitPaths:    []Validated{},
+				queryValueMap: map[string]Validated{},
+			},
+			arg:        "placeholder}",
+			wantResult: false,
+		},
+		{
+			name: "placeholder is duplicated",
+			rule: Rule{
+				splitPaths: []Validated{{
+					Placeholder: "{placeholder}",
+				}},
+				queryValueMap: map[string]Validated{},
+			},
+			arg:        "{placeholder}",
+			wantResult: false,
+			wantErrStr: fmt.Sprintf("placeholder(%s) is duplicated", "{placeholder}"),
+		},
+		{
+			name: "placeholder is duplicated",
+			rule: Rule{
+				splitPaths: []Validated{},
+				queryValueMap: map[string]Validated{"": {
+					Placeholder: "{placeholder}",
+				}},
+			},
+			arg:        "{placeholder}",
+			wantResult: false,
+			wantErrStr: fmt.Sprintf("placeholder(%s) is duplicated", "{placeholder}"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := tt.rule.isPlaceholder(tt.arg)
+
+			if err != nil {
+				if tt.wantErrStr == "" {
+					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
+					return
+				} else if err.Error() != tt.wantErrStr {
+					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
+					return
+				} else if r != tt.wantResult {
+					t.Errorf("Expectation was an %t, but it was actually a %t", tt.wantResult, r)
+					return
+				} else {
+					return
+				}
+			} else {
+				if tt.wantErrStr != "" {
+					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
+					return
+				} else {
+					if r != tt.wantResult {
+						t.Errorf("Expectation was an %t, but it was actually a %t", tt.wantResult, r)
+						return
+					} else {
+						return
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestNewMappingRules(t *testing.T) {
+	tests := []struct {
+		name         string
+		mappingRules map[string][]Rule
+		wantErrStr   string
+	}{
+		{
+			name:         "error rules is nil",
+			mappingRules: nil,
+			wantErrStr:   "rules is nil",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewMappingRules(tt.mappingRules)
+
+			if err != nil {
+				if tt.wantErrStr == "" {
+					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
+					return
+				} else if err.Error() != tt.wantErrStr {
+					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
+					return
+				} else {
+					return
+				}
+			} else {
+				if tt.wantErrStr != "" {
+					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
+					return
+				} else {
+					return
+				}
+			}
+		})
+	}
+}
+
 func TestMappingRules_Validate(t *testing.T) {
 	tests := []struct {
 		name             string
