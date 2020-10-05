@@ -920,14 +920,16 @@ func Test_authorizer_authorize(t *testing.T) {
 		athenzDomains         []string
 		policyRefreshPeriod   string
 		disablePolicyd        bool
+		translator            Translator
 	}
 	type args struct {
-		ctx  context.Context
-		m    mode
-		tok  string
-		act  string
-		res  string
-		cert *x509.Certificate
+		ctx   context.Context
+		m     mode
+		tok   string
+		act   string
+		res   string
+		query string
+		cert  *x509.Certificate
 	}
 	type test struct {
 		name       string
@@ -1066,7 +1068,64 @@ func Test_authorizer_authorize(t *testing.T) {
 				wantErr:    false,
 				wantResult: p,
 				checkFunc: func(prov *authority) error {
-					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes")
+					_, ok := prov.cache.Get("dummyTok:dummyAct:dummyRes:")
+					if !ok {
+						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{
+				Domain: "domain",
+			}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			mr, _ := NewMappingRules(map[string][]Rule{
+				"domain": {{
+					Method:   "get",
+					Path:     "/path?param=value",
+					Action:   "dummyAct",
+					Resource: "dummyRes",
+				}},
+			})
+			return test{
+				name: "test cache key when disablePolicyd is false and translator is not nil",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: false,
+					roleProcessor:  rpm,
+					translator:     mr,
+				},
+				args: args{
+					m:     roleToken,
+					ctx:   context.Background(),
+					tok:   "dummyTok",
+					act:   "get",
+					res:   "/path",
+					query: "param=value",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTok:get:/path:param=value")
 					if !ok {
 						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
 					}
@@ -1095,8 +1154,9 @@ func Test_authorizer_authorize(t *testing.T) {
 				athenzDomains:         tt.fields.athenzDomains,
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 				disablePolicyd:        tt.fields.disablePolicyd,
+				translator:            tt.fields.translator,
 			}
-			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, "", tt.args.cert)
+			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.query, tt.args.cert)
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("authority.authorize() error = %v, wantErr %v", err, tt.wantErr)

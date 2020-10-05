@@ -51,7 +51,7 @@ type Authorizerd interface {
 	GetPolicyCache(ctx context.Context) map[string]interface{}
 }
 
-type authorizer func(r *http.Request, method, path string) (Principal, error)
+type authorizer func(r *http.Request, act, res string) (Principal, error)
 
 type authority struct {
 	//
@@ -212,34 +212,34 @@ func (a *authority) initAuthorizers() error {
 	authorizers := make([]authorizer, 0, 3) // rolecert, access token, roletoken
 
 	if a.enableRoleCert {
-		rcVerifier := func(r *http.Request, method, path string) (Principal, error) {
+		rcVerifier := func(r *http.Request, act, res string) (Principal, error) {
 			if r.TLS != nil {
-				return a.AuthorizeRoleCert(r.Context(), r.TLS.PeerCertificates, method, path)
+				return a.AuthorizeRoleCert(r.Context(), r.TLS.PeerCertificates, act, res)
 			}
-			return a.AuthorizeRoleCert(r.Context(), nil, method, path)
+			return a.AuthorizeRoleCert(r.Context(), nil, act, res)
 		}
 		glg.Info("initAuthorizers: added role certificate authorizer")
 		authorizers = append(authorizers, rcVerifier)
 	}
 
 	if a.accessTokenParam.enable {
-		atVerifier := func(r *http.Request, method, path string) (Principal, error) {
+		atVerifier := func(r *http.Request, act, res string) (Principal, error) {
 			tokenString, err := request.AuthorizationHeaderExtractor.ExtractToken(r)
 			if err != nil {
 				return nil, err
 			}
 			if r.TLS != nil && len(r.TLS.PeerCertificates) != 0 {
-				return a.authorize(r.Context(), accessToken, tokenString, method, path, r.URL.RawQuery, r.TLS.PeerCertificates[0])
+				return a.authorize(r.Context(), accessToken, tokenString, act, res, r.URL.RawQuery, r.TLS.PeerCertificates[0])
 			}
-			return a.authorize(r.Context(), accessToken, tokenString, method, path, r.URL.RawQuery, nil)
+			return a.authorize(r.Context(), accessToken, tokenString, act, res, r.URL.RawQuery, nil)
 		}
 		glg.Infof("initAuthorizers: added access token authorizer having param: %+v", a.accessTokenParam)
 		authorizers = append(authorizers, atVerifier)
 	}
 
 	if a.enableRoleToken {
-		rtVerifier := func(r *http.Request, method, path string) (Principal, error) {
-			return a.authorize(r.Context(), roleToken, r.Header.Get(a.roleAuthHeader), method, path, r.URL.RawQuery, nil)
+		rtVerifier := func(r *http.Request, act, res string) (Principal, error) {
+			return a.authorize(r.Context(), roleToken, r.Header.Get(a.roleAuthHeader), act, res, r.URL.RawQuery, nil)
 		}
 		glg.Info("initAuthorizers: added role token authorizer")
 		authorizers = append(authorizers, rtVerifier)
@@ -357,7 +357,7 @@ func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res stri
 	return a.authorize(ctx, accessToken, tok, act, res, "", cert)
 }
 
-func (a *authority) authorize(ctx context.Context, m mode, tok, method, path, query string, cert *x509.Certificate) (Principal, error) {
+func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query string, cert *x509.Certificate) (Principal, error) {
 	var key strings.Builder
 	key.WriteString(tok)
 
@@ -369,17 +369,15 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, method, path, qu
 	}
 
 	if !a.disablePolicyd {
-		if method == "" || path == "" {
+		if act == "" || res == "" {
 			return nil, errors.Wrap(ErrInvalidParameters, "empty action / resource")
 		}
 		key.WriteRune(cacheKeyDelimiter)
-		key.WriteString(method)
+		key.WriteString(act)
 		key.WriteRune(cacheKeyDelimiter)
-		key.WriteString(path)
-		if a.translator != nil {
-			key.WriteRune(cacheKeyDelimiter)
-			key.WriteString(query)
-		}
+		key.WriteString(res)
+		key.WriteRune(cacheKeyDelimiter)
+		key.WriteString(query)
 	}
 
 	// check if exists in verification success cache
@@ -431,11 +429,10 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, method, path, qu
 		}
 	}
 
-	act, res := method, path
 	if !a.disablePolicyd {
 		if a.translator != nil {
 			var err error
-			act, res, err = a.translator.Translate(domain, method, path, query)
+			act, res, err = a.translator.Translate(domain, act, res, query)
 			if err != nil {
 				return nil, err
 			}
