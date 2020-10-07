@@ -31,13 +31,12 @@ const (
 // Translator translates the information given to the argument to action and resource
 type Translator interface {
 	Translate(domain, method, path, query string) (string, string, error)
-	Validate() error
 }
 
-// Validated keeps information after it has been validated
-type Validated struct {
-	Value       string
-	Placeholder string
+// param keeps information after it has been validated
+type param struct {
+	name          string
+	isPlaceholder bool
 }
 
 // Rule represents a rule for translation
@@ -46,8 +45,8 @@ type Rule struct {
 	Path          string `yaml:"path"`
 	Action        string `yaml:"action"`
 	Resource      string `yaml:"resource"`
-	splitPaths    []Validated
-	queryValueMap map[string]Validated
+	splitPaths    []param
+	queryValueMap map[string]param
 }
 
 // MappingRules keeps the translation rules
@@ -61,7 +60,7 @@ func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
 		return nil, errors.New("rules is nil")
 	}
 	mr := &MappingRules{Rules: rules}
-	if err := mr.Validate(); err != nil {
+	if err := mr.validate(); err != nil {
 		return nil, err
 	} else {
 		return mr, nil
@@ -69,7 +68,7 @@ func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
 }
 
 // Validate the given rule information
-func (mr *MappingRules) Validate() error {
+func (mr *MappingRules) validate() error {
 	for domain, rules := range mr.Rules {
 		if domain == "" {
 			return errors.New("domain is empty")
@@ -94,19 +93,19 @@ func (mr *MappingRules) Validate() error {
 			pathQuery := strings.SplitN(rule.Path, "?", 2)
 
 			splitPaths := strings.Split(pathQuery[0], "/")
-			rules[i].splitPaths = make([]Validated, len(splitPaths))
+			rules[i].splitPaths = make([]param, len(splitPaths))
 			for j, path := range splitPaths {
 				if ok, err := rules[i].isPlaceholder(path); ok {
-					rules[i].splitPaths[j] = Validated{Placeholder: path}
+					rules[i].splitPaths[j] = param{name: path, isPlaceholder: true}
 				} else {
 					if err != nil {
 						return err
 					}
-					rules[i].splitPaths[j] = Validated{Value: path}
+					rules[i].splitPaths[j] = param{name: path}
 				}
 			}
 
-			rules[i].queryValueMap = make(map[string]Validated)
+			rules[i].queryValueMap = make(map[string]param)
 			// No query parameter
 			if len(pathQuery) == 1 {
 				continue
@@ -117,17 +116,17 @@ func (mr *MappingRules) Validate() error {
 				return err
 			}
 
-			for param, val := range values {
+			for p, val := range values {
 				if len(val) != 1 {
 					return errors.New("query multiple values is not allowed")
 				}
 				if ok, err := rules[i].isPlaceholder(val[0]); ok {
-					rules[i].queryValueMap[param] = Validated{Placeholder: val[0]}
+					rules[i].queryValueMap[p] = param{name: val[0], isPlaceholder: true}
 				} else {
 					if err != nil {
 						return err
 					}
-					rules[i].queryValueMap[param] = Validated{Value: val[0]}
+					rules[i].queryValueMap[p] = param{name: val[0]}
 				}
 			}
 		}
@@ -159,9 +158,9 @@ OUTER:
 
 			placeholderMap := make(map[string]string)
 			for i, reqPath := range requestedPaths {
-				if rule.splitPaths[i].Placeholder != "" {
-					placeholderMap[rule.splitPaths[i].Placeholder] = reqPath
-				} else if reqPath != rule.splitPaths[i].Value {
+				if rule.splitPaths[i].isPlaceholder {
+					placeholderMap[rule.splitPaths[i].name] = reqPath
+				} else if reqPath != rule.splitPaths[i].name {
 					continue OUTER
 				}
 			}
@@ -172,9 +171,9 @@ OUTER:
 					continue OUTER
 				}
 				if v, ok := rule.queryValueMap[reqQuery]; ok {
-					if v.Placeholder != "" {
-						placeholderMap[v.Placeholder] = reqVal[0]
-					} else if reqVal[0] != v.Value {
+					if v.isPlaceholder {
+						placeholderMap[v.name] = reqVal[0]
+					} else if reqVal[0] != v.name {
 						continue OUTER
 					}
 				} else {
@@ -199,15 +198,15 @@ func (r *Rule) isPlaceholder(s string) (bool, error) {
 
 	if strings.HasPrefix(s, placeholderPrefix) && strings.HasSuffix(s, placeholderSuffix) {
 		if r.splitPaths != nil {
-			for _, v := range r.splitPaths {
-				if v.Placeholder == s {
+			for _, p := range r.splitPaths {
+				if p.isPlaceholder && p.name == s {
 					return false, fmt.Errorf("placeholder(%s) is duplicated", s)
 				}
 			}
 		}
 		if r.queryValueMap != nil {
-			for _, v := range r.queryValueMap {
-				if v.Placeholder == s {
+			for _, p := range r.queryValueMap {
+				if p.isPlaceholder && p.name == s {
 					return false, fmt.Errorf("placeholder(%s) is duplicated", s)
 				}
 			}

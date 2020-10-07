@@ -33,8 +33,8 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "success",
 			rule: Rule{
-				splitPaths:    []Validated{},
-				queryValueMap: map[string]Validated{},
+				splitPaths:    []param{},
+				queryValueMap: map[string]param{},
 			},
 			arg:        "{placeholder}",
 			wantResult: true,
@@ -42,8 +42,8 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "placeholder is empty",
 			rule: Rule{
-				splitPaths:    []Validated{},
-				queryValueMap: map[string]Validated{},
+				splitPaths:    []param{},
+				queryValueMap: map[string]param{},
 			},
 			arg:        "{}",
 			wantResult: false,
@@ -52,8 +52,8 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "not placeholder",
 			rule: Rule{
-				splitPaths:    []Validated{},
-				queryValueMap: map[string]Validated{},
+				splitPaths:    []param{},
+				queryValueMap: map[string]param{},
 			},
 			arg:        "{placeholder",
 			wantResult: false,
@@ -61,8 +61,8 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "not placeholder",
 			rule: Rule{
-				splitPaths:    []Validated{},
-				queryValueMap: map[string]Validated{},
+				splitPaths:    []param{},
+				queryValueMap: map[string]param{},
 			},
 			arg:        "placeholder}",
 			wantResult: false,
@@ -70,10 +70,11 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "placeholder is duplicated",
 			rule: Rule{
-				splitPaths: []Validated{{
-					Placeholder: "{placeholder}",
+				splitPaths: []param{{
+					name:          "{placeholder}",
+					isPlaceholder: true,
 				}},
-				queryValueMap: map[string]Validated{},
+				queryValueMap: map[string]param{},
 			},
 			arg:        "{placeholder}",
 			wantResult: false,
@@ -82,9 +83,10 @@ func TestRule_isPlaceholder(t *testing.T) {
 		{
 			name: "placeholder is duplicated",
 			rule: Rule{
-				splitPaths: []Validated{},
-				queryValueMap: map[string]Validated{"": {
-					Placeholder: "{placeholder}",
+				splitPaths: []param{},
+				queryValueMap: map[string]param{"": {
+					name:          "{placeholder}",
+					isPlaceholder: true,
 				}},
 			},
 			arg:        "{placeholder}",
@@ -164,7 +166,7 @@ func TestNewMappingRules(t *testing.T) {
 	}
 }
 
-func TestMappingRules_Validate(t *testing.T) {
+func TestMappingRules_validate(t *testing.T) {
 	tests := []struct {
 		name             string
 		mappingRules     map[string][]Rule
@@ -186,25 +188,21 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 							{
-								Value:       "path3",
-								Placeholder: "",
+								name: "path3",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -224,29 +222,24 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -266,29 +259,26 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder2}",
+								name:          "{placeholder2}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -322,28 +312,23 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 							"param2": {
-								Value:       "value2",
-								Placeholder: "",
+								name: "value2",
 							},
 						},
 					},
@@ -365,24 +350,20 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1?",
-								Placeholder: "",
+								name: "value1?",
 							},
 							"param2": {
-								Value:       "value2",
-								Placeholder: "",
+								name: "value2",
 							},
 						},
 					},
@@ -404,28 +385,25 @@ func TestMappingRules_Validate(t *testing.T) {
 			wantMappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{path2}",
+								name:          "{path2}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 							"param2": {
-								Value:       "",
-								Placeholder: "{value2}",
+								name:          "{value2}",
+								isPlaceholder: true,
 							},
 						},
 					},
@@ -597,7 +575,7 @@ func TestMappingRules_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mr := MappingRules{tt.mappingRules}
-			err := mr.Validate()
+			err := mr.validate()
 			if err != nil {
 				if tt.wantErrStr == "" {
 					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
@@ -653,21 +631,18 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -686,21 +661,18 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -719,21 +691,18 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "path2",
-								Placeholder: "",
+								name: "path2",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -762,25 +731,22 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource.{placeholder1}",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 							{
-								Value:       "path3",
-								Placeholder: "",
+								name: "path3",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -799,21 +765,20 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder2}",
+								name:          "{placeholder2}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -832,25 +797,22 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder1}.{placeholder1}",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 							{
-								Value:       "path3",
-								Placeholder: "",
+								name: "path3",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -869,28 +831,25 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 							"param2": {
-								Value:       "",
-								Placeholder: "{placeholder2}",
+								name:          "{placeholder2}",
+								isPlaceholder: true,
 							},
 						},
 					},
@@ -911,28 +870,26 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}.{placeholder3}",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "",
-								Placeholder: "{placeholder2}",
+								name:          "{placeholder2}",
+								isPlaceholder: true,
 							},
 							"param2": {
-								Value:       "",
-								Placeholder: "{placeholder3}",
+								name:          "{placeholder3}",
+								isPlaceholder: true,
 							},
 						},
 					},
@@ -953,21 +910,19 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -986,21 +941,19 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "",
-								Placeholder: "{placeholder1}",
+								name:          "{placeholder1}",
+								isPlaceholder: true,
 							},
 							{
-								Value:       "path3",
-								Placeholder: "",
+								name: "path3",
 							},
 						},
-						queryValueMap: map[string]Validated{},
+						queryValueMap: map[string]param{},
 					},
 				},
 			}},
@@ -1019,24 +972,21 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 							"param2": {
-								Value:       "",
-								Placeholder: "{placeholder2}",
+								name:          "{placeholder2}",
+								isPlaceholder: true,
 							},
 						},
 					},
@@ -1057,20 +1007,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 						},
 					},
@@ -1091,20 +1038,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param2": {
-								Value:       "value2",
-								Placeholder: "",
+								name: "value2",
 							},
 						},
 					},
@@ -1125,20 +1069,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value2",
-								Placeholder: "",
+								name: "value2",
 							},
 						},
 					},
@@ -1159,20 +1100,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 						},
 					},
@@ -1193,20 +1131,17 @@ func TestMappingRules_Translate(t *testing.T) {
 						Method:   "get",
 						Action:   "read",
 						Resource: "resource",
-						splitPaths: []Validated{
+						splitPaths: []param{
 							{
-								Value:       "",
-								Placeholder: "",
+								name: "",
 							},
 							{
-								Value:       "path1",
-								Placeholder: "",
+								name: "path1",
 							},
 						},
-						queryValueMap: map[string]Validated{
+						queryValueMap: map[string]param{
 							"param1": {
-								Value:       "value1",
-								Placeholder: "",
+								name: "value1",
 							},
 						},
 					},
