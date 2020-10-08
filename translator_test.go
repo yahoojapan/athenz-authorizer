@@ -139,6 +139,13 @@ func TestNewMappingRules(t *testing.T) {
 			mappingRules: nil,
 			wantErrStr:   "rules is nil",
 		},
+		{
+			name: "error validate function returns an error",
+			mappingRules: map[string][]Rule{
+				"": {},
+			},
+			wantErrStr: "domain is empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -200,6 +207,59 @@ func TestMappingRules_validate(t *testing.T) {
 							},
 							{
 								name: "path3",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+		},
+		{
+			name: "success path is empty",
+			mappingRules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Path:     "",
+						Action:   "read",
+						Resource: "resource",
+					},
+				},
+			},
+			wantMappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						splitPaths: []param{
+							{
+								name: "",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+		},
+		{
+			name: "success path is slash",
+			mappingRules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Path:     "/",
+						Action:   "read",
+						Resource: "resource",
+					},
+				},
+			},
+			wantMappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "",
 							},
 						},
 						queryValueMap: map[string]param{},
@@ -471,21 +531,7 @@ func TestMappingRules_validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "", "/path", "read", "resource"),
-		},
-		{
-			name: "error path is empty",
-			mappingRules: map[string][]Rule{
-				"domain": {
-					Rule{
-						Method:   "get",
-						Path:     "",
-						Action:   "read",
-						Resource: "resource",
-					},
-				},
-			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "", "read", "resource"),
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "", "read", "resource"),
 		},
 		{
 			name: "error action is empty",
@@ -499,7 +545,7 @@ func TestMappingRules_validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "/path", "", "resource"),
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "get", "", "resource"),
 		},
 		{
 			name: "error resource is empty",
@@ -513,21 +559,7 @@ func TestMappingRules_validate(t *testing.T) {
 					},
 				},
 			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, path:%s, action:%s, resource:%s", "get", "/path", "read", ""),
-		},
-		{
-			name: "error path is slash only",
-			mappingRules: map[string][]Rule{
-				"domain": {
-					Rule{
-						Method:   "get",
-						Path:     "/",
-						Action:   "read",
-						Resource: "resource",
-					},
-				},
-			},
-			wantErrStr: "path is slash only",
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "get", "read", ""),
 		},
 		{
 			name: "error path has no slash",
@@ -649,6 +681,57 @@ func TestMappingRules_Translate(t *testing.T) {
 			domain:       "domain",
 			method:       "get",
 			path:         "/path1/path2",
+			query:        "",
+			wantAction:   "read",
+			wantResource: "resource",
+		},
+		{
+			name: "slash path matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/",
+			query:        "",
+			wantAction:   "read",
+			wantResource: "resource",
+		},
+		{
+			name: "empty path matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "",
 			query:        "",
 			wantAction:   "read",
 			wantResource: "resource",

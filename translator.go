@@ -77,15 +77,12 @@ func (mr *MappingRules) validate() error {
 		}
 
 		for i, rule := range rules {
-			if rule.Method == "" || rule.Path == "" || rule.Action == "" || rule.Resource == "" {
-				return fmt.Errorf("rule is empty, method:%s, path:%s, action:%s, resource:%s",
-					rule.Method, rule.Path, rule.Action, rule.Resource)
+			if rule.Method == "" || rule.Action == "" || rule.Resource == "" {
+				return fmt.Errorf("rule is empty, method:%s, action:%s, resource:%s",
+					rule.Method, rule.Action, rule.Resource)
 			}
-			if !strings.HasPrefix(rule.Path, "/") {
+			if rule.Path != "" && !strings.HasPrefix(rule.Path, "/") {
 				return fmt.Errorf("path(%s) doesn't start with slash", rule.Path)
-			}
-			if rule.Path == "/" {
-				return errors.New("path is slash only")
 			}
 
 			// For example, `rule.Path` assumes a string like `/path1/path2?param=value`
