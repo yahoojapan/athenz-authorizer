@@ -62,9 +62,8 @@ func NewMappingRules(rules map[string][]Rule) (*MappingRules, error) {
 	mr := &MappingRules{Rules: rules}
 	if err := mr.validate(); err != nil {
 		return nil, err
-	} else {
-		return mr, nil
 	}
+	return mr, nil
 }
 
 // Validate the given rule information
@@ -101,7 +100,7 @@ func (mr *MappingRules) validate() error {
 					if err != nil {
 						return err
 					}
-					rules[i].splitPaths[j] = param{name: path}
+					rules[i].splitPaths[j] = param{name: path, isPlaceholder: false}
 				}
 			}
 
@@ -126,7 +125,7 @@ func (mr *MappingRules) validate() error {
 					if err != nil {
 						return err
 					}
-					rules[i].queryValueMap[p] = param{name: val[0]}
+					rules[i].queryValueMap[p] = param{name: val[0], isPlaceholder: false}
 				}
 			}
 		}
@@ -134,7 +133,7 @@ func (mr *MappingRules) validate() error {
 	return nil
 }
 
-// Translates the information given to the argument to action and resource
+// Translate the information given to the argument to action and resource
 func (mr *MappingRules) Translate(domain, method, path, query string) (string, string, error) {
 	if mr.Rules == nil {
 		return method, path, nil
@@ -212,7 +211,6 @@ func (r *Rule) isPlaceholder(s string) (bool, error) {
 			}
 		}
 		return true, nil
-	} else {
-		return false, nil
 	}
+	return false, nil
 }
