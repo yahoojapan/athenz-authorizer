@@ -68,6 +68,15 @@ func TestRule_isPlaceholder(t *testing.T) {
 			wantResult: false,
 		},
 		{
+			name: "not placeholder",
+			rule: Rule{
+				splitPaths:    []param{},
+				queryValueMap: map[string]param{},
+			},
+			arg:        "",
+			wantResult: false,
+		},
+		{
 			name: "placeholder is duplicated",
 			rule: Rule{
 				splitPaths: []param{{
@@ -132,8 +141,43 @@ func TestNewMappingRules(t *testing.T) {
 	tests := []struct {
 		name         string
 		mappingRules map[string][]Rule
+		want         *MappingRules
 		wantErrStr   string
 	}{
+		{
+			name: "success",
+			mappingRules: map[string][]Rule{
+				"domain": {Rule{
+					Method:   "get",
+					Path:     "/path?param=value",
+					Action:   "read",
+					Resource: "resource",
+				}},
+			},
+			want: &MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Path:     "/path?param=value",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "path",
+							},
+						},
+						queryValueMap: map[string]param{
+							"param": {
+								name: "value",
+							},
+						},
+					},
+				},
+			}},
+		},
 		{
 			name:         "error rules is nil",
 			mappingRules: nil,
@@ -149,7 +193,7 @@ func TestNewMappingRules(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewMappingRules(tt.mappingRules)
+			mr, err := NewMappingRules(tt.mappingRules)
 
 			if err != nil {
 				if tt.wantErrStr == "" {
@@ -165,9 +209,13 @@ func TestNewMappingRules(t *testing.T) {
 				if tt.wantErrStr != "" {
 					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
 					return
-				} else {
-					return
 				}
+			}
+			// {map[domain:[{get /path?param=value read resource [{ false} {path false}] map[param:{value false}]}]]}
+			//
+			if !reflect.DeepEqual(mr, tt.want) {
+				t.Errorf("expectation was %v, but it was actually %v", tt.want, mr)
+				return
 			}
 		})
 	}
@@ -653,7 +701,6 @@ func TestMappingRules_Translate(t *testing.T) {
 		query        string
 		wantAction   string
 		wantResource string
-		wantErrStr   string
 	}{
 		{
 			name: "path matches",
@@ -841,7 +888,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path2",
 		},
 		{
-			name: "path with placeholder matches",
+			name: "path with two placeholders matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -873,7 +920,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path1.path2",
 		},
 		{
-			name: "path with placeholder matches",
+			name: "multiple placeholders in a resource",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -946,7 +993,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "resource.path2.value2",
 		},
 		{
-			name: "path and query with placeholder matches",
+			name: "path and query with two placeholders matches",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -1114,7 +1161,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "query didn't match",
+			name: "query param didn't match",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -1145,7 +1192,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "/path1",
 		},
 		{
-			name: "query didn't match",
+			name: "query value didn't match",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
@@ -1207,6 +1254,35 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantResource: "",
 		},
 		{
+			name: "if request path is empty, query matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource.{placeholder}",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+						},
+						queryValueMap: map[string]param{
+							"param": {
+								name:          "{placeholder}",
+								isPlaceholder: true,
+							},
+						},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "",
+			query:        "param=value",
+			wantAction:   "read",
+			wantResource: "resource.value",
+		},
+		{
 			name: "request path is slash",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
@@ -1237,25 +1313,45 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantAction:   "get",
 			wantResource: "/",
 		},
+		{
+			name: "if request path is slash, query matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource.{placeholder}",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "",
+							},
+						},
+						queryValueMap: map[string]param{
+							"param": {
+								name:          "{placeholder}",
+								isPlaceholder: true,
+							},
+						},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/",
+			query:        "param=value",
+			wantAction:   "read",
+			wantResource: "resource.value",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			action, resource, err := tt.mappingRules.Translate(tt.domain, tt.method, tt.path, tt.query)
 			if err != nil {
-				if tt.wantErrStr == "" {
-					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
-					return
-				} else if err.Error() != tt.wantErrStr {
-					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
-					return
-				} else {
-					return
-				}
-			} else {
-				if tt.wantErrStr != "" {
-					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
-					return
-				}
+				t.Errorf("an error occurred in Translate, err is %s", err.Error())
+				return
 			}
 
 			if action != tt.wantAction || resource != tt.wantResource {
