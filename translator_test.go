@@ -701,6 +701,7 @@ func TestMappingRules_Translate(t *testing.T) {
 		query        string
 		wantAction   string
 		wantResource string
+		wantErrStr   string
 	}{
 		{
 			name: "path matches",
@@ -1345,13 +1346,51 @@ func TestMappingRules_Translate(t *testing.T) {
 			wantAction:   "read",
 			wantResource: "resource.value",
 		},
+		{
+			name: "query couldn't parse",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "path",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/path",
+			query:        "%",
+			wantErrStr:   "invalid URL escape \"%\"",
+			wantAction:   "get",
+			wantResource: "/path",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			action, resource, err := tt.mappingRules.Translate(tt.domain, tt.method, tt.path, tt.query)
 			if err != nil {
-				t.Errorf("an error occurred in Translate, err is %s", err.Error())
-				return
+				if tt.wantErrStr == "" {
+					t.Errorf("wantErrStr is empty, but err is %s", err.Error())
+					return
+				} else if err.Error() != tt.wantErrStr {
+					t.Errorf("err(%s) and wantErrStr(%s) are not the same", err.Error(), tt.wantErrStr)
+					return
+				}
+			} else {
+				if tt.wantErrStr != "" {
+					t.Errorf("err is nil, but wantErrStr is %s", tt.wantErrStr)
+					return
+				}
 			}
 
 			if action != tt.wantAction || resource != tt.wantResource {
