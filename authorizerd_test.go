@@ -1127,7 +1127,112 @@ func Test_authorizer_authorize(t *testing.T) {
 				checkFunc: func(prov *authority) error {
 					_, ok := prov.cache.Get("dummyTok:get:/path:param=value")
 					if !ok {
-						return errors.New("cannot get dummyTok:dummyAct:dummyRes from cache")
+						return errors.New("cannot get dummyTok:get:/path:param=value from cache")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{
+				Domain: "domain",
+			}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			mr, _ := NewMappingRules(map[string][]Rule{
+				"domain1": {{
+					Method:   "get",
+					Path:     "/path?param=value",
+					Action:   "dummyAct",
+					Resource: "dummyRes",
+				}},
+			})
+			return test{
+				name: "test cache key when disablePolicyd is false and translator is not nil, but didn't match",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: false,
+					roleProcessor:  rpm,
+					translator:     mr,
+				},
+				args: args{
+					m:     roleToken,
+					ctx:   context.Background(),
+					tok:   "dummyTok",
+					act:   "get",
+					res:   "/path",
+					query: "param=value",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTok:get:/path:param=value")
+					if !ok {
+						return errors.New("cannot get dummyTok:get:/path:param=value from cache")
+					}
+					return nil
+				},
+			}
+		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+					return nil
+				},
+			}
+			rt := &role.Token{
+				Domain: "domain",
+			}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test cache key when disablePolicyd is false and translator is nil",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: false,
+					roleProcessor:  rpm,
+				},
+				args: args{
+					m:     roleToken,
+					ctx:   context.Background(),
+					tok:   "dummyTok",
+					act:   "get",
+					res:   "/path",
+					query: "param=value",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					_, ok := prov.cache.Get("dummyTok:get:/path")
+					if !ok {
+						return errors.New("cannot get dummyTok:get:/path from cache")
 					}
 					return nil
 				},

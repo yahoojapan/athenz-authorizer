@@ -376,7 +376,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 		key.WriteString(act)
 		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(res)
-		if query != "" {
+		if query != "" && a.translator != nil {
 			key.WriteRune(cacheKeyDelimiter)
 			key.WriteString(query)
 		}
