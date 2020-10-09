@@ -138,7 +138,7 @@ func (mr *MappingRules) Translate(domain, method, path, query string) (string, s
 
 OUTER:
 	for _, rule := range mr.Rules[domain] {
-		if rule.Method == method {
+		if strings.ToLower(rule.Method) == strings.ToLower(method) {
 			requestedPaths := strings.Split(path, "/")
 			if len(requestedPaths) != len(rule.splitPaths) {
 				continue

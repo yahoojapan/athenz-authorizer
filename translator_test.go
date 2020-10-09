@@ -148,7 +148,7 @@ func TestNewMappingRules(t *testing.T) {
 			name: "success",
 			mappingRules: map[string][]Rule{
 				"domain": {Rule{
-					Method:   "get",
+					Method:   "GET",
 					Path:     "/path?param=value",
 					Action:   "read",
 					Resource: "resource",
@@ -157,7 +157,7 @@ func TestNewMappingRules(t *testing.T) {
 			want: &MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path?param=value",
 						Action:   "read",
 						Resource: "resource",
@@ -211,7 +211,7 @@ func TestNewMappingRules(t *testing.T) {
 					return
 				}
 			}
-			// {map[domain:[{get /path?param=value read resource [{ false} {path false}] map[param:{value false}]}]]}
+			// {map[domain:[{GET /path?param=value read resource [{ false} {path false}] map[param:{value false}]}]]}
 			//
 			if !reflect.DeepEqual(mr, tt.want) {
 				t.Errorf("expectation was %v, but it was actually %v", tt.want, mr)
@@ -233,7 +233,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/path2/path3",
 						Action:   "read",
 						Resource: "resource",
@@ -267,7 +267,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "",
 						Action:   "read",
 						Resource: "resource",
@@ -292,7 +292,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/",
 						Action:   "read",
 						Resource: "resource",
@@ -320,7 +320,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1//path2/",
 						Action:   "read",
 						Resource: "resource",
@@ -357,7 +357,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/{placeholder1}/path2/{placeholder2}",
 						Action:   "read",
 						Resource: "resource",
@@ -396,7 +396,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/{}",
 						Action:   "read",
 						Resource: "resource",
@@ -410,7 +410,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/path2?param1=value1&param2=value2",
 						Action:   "read",
 						Resource: "resource",
@@ -448,7 +448,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1?param1=value1?&param2=value2",
 						Action:   "read",
 						Resource: "resource",
@@ -483,7 +483,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/{path2}?param1=value1&param2={value2}",
 						Action:   "read",
 						Resource: "resource",
@@ -523,7 +523,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1?param1=value1&param2={}",
 						Action:   "read",
 						Resource: "resource",
@@ -537,7 +537,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1?param1=value1&param1=value2",
 						Action:   "read",
 						Resource: "resource",
@@ -586,35 +586,35 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path",
 						Action:   "",
 						Resource: "resource",
 					},
 				},
 			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "get", "", "resource"),
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "GET", "", "resource"),
 		},
 		{
 			name: "error resource is empty",
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path",
 						Action:   "read",
 						Resource: "",
 					},
 				},
 			},
-			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "get", "read", ""),
+			wantErrStr: fmt.Sprintf("rule is empty, method:%s, action:%s, resource:%s", "GET", "read", ""),
 		},
 		{
 			name: "error path has no slash",
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "path",
 						Action:   "read",
 						Resource: "resource",
@@ -628,7 +628,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/{placeholder1}/{placeholder1}",
 						Action:   "read",
 						Resource: "resource",
@@ -642,7 +642,7 @@ func TestMappingRules_validate(t *testing.T) {
 			mappingRules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Path:     "/path1/{placeholder1}?param1={placeholder1}",
 						Action:   "read",
 						Resource: "resource",
@@ -704,11 +704,65 @@ func TestMappingRules_Translate(t *testing.T) {
 		wantErrStr   string
 	}{
 		{
-			name: "path matches",
+			name: "rule method is lowercase",
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
 						Method:   "get",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "path",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "GET",
+			path:         "/path",
+			query:        "",
+			wantAction:   "read",
+			wantResource: "resource",
+		},
+		{
+			name: "requested method is lowercase",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "GET",
+						Action:   "read",
+						Resource: "resource",
+						splitPaths: []param{
+							{
+								name: "",
+							},
+							{
+								name: "path",
+							},
+						},
+						queryValueMap: map[string]param{},
+					},
+				},
+			}},
+			domain:       "domain",
+			method:       "get",
+			path:         "/path",
+			query:        "",
+			wantAction:   "read",
+			wantResource: "resource",
+		},
+		{
+			name: "path matches",
+			mappingRules: MappingRules{Rules: map[string][]Rule{
+				"domain": {
+					Rule{
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -727,7 +781,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "",
 			wantAction:   "read",
@@ -738,7 +792,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -754,7 +808,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/",
 			query:        "",
 			wantAction:   "read",
@@ -765,7 +819,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -778,7 +832,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "",
 			query:        "",
 			wantAction:   "read",
@@ -789,7 +843,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -808,10 +862,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain1",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1/path2",
 		},
 		{
@@ -819,7 +873,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -838,20 +892,20 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "post",
+			method:       "POST",
 			path:         "/path1/path2",
 			query:        "",
-			wantAction:   "post",
+			wantAction:   "POST",
 			wantResource: "/path1/path2",
 		},
 		{
 			name:         "rules is nil",
 			mappingRules: MappingRules{Rules: nil},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1/path2",
 		},
 		{
@@ -859,7 +913,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder1}",
 						splitPaths: []param{
@@ -882,7 +936,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2/path3",
 			query:        "",
 			wantAction:   "read",
@@ -893,7 +947,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}",
 						splitPaths: []param{
@@ -914,7 +968,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "",
 			wantAction:   "read",
@@ -925,7 +979,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder1}.{placeholder1}",
 						splitPaths: []param{
@@ -948,7 +1002,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2/path3",
 			query:        "",
 			wantAction:   "read",
@@ -959,7 +1013,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}",
 						splitPaths: []param{
@@ -987,7 +1041,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "param2=value2&param1=value1",
 			wantAction:   "read",
@@ -998,7 +1052,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder1}.{placeholder2}.{placeholder3}",
 						splitPaths: []param{
@@ -1027,7 +1081,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "param2=value2&param1=value1",
 			wantAction:   "read",
@@ -1038,7 +1092,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1058,10 +1112,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1",
 			query:        "",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1",
 		},
 		{
@@ -1069,7 +1123,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1089,10 +1143,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1/path2",
 			query:        "",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1/path2",
 		},
 		{
@@ -1100,7 +1154,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1124,10 +1178,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1",
 			query:        "param1=value1",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1",
 		},
 		{
@@ -1135,7 +1189,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1155,10 +1209,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1",
 			query:        "param1=value1&param1=value2",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1",
 		},
 		{
@@ -1166,7 +1220,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1186,10 +1240,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1",
 			query:        "param1=value1",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1",
 		},
 		{
@@ -1197,7 +1251,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1217,10 +1271,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path1",
 			query:        "param1=value1",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path1",
 		},
 		{
@@ -1228,7 +1282,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1248,10 +1302,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "",
 			query:        "param1=value1",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "",
 		},
 		{
@@ -1259,7 +1313,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder}",
 						splitPaths: []param{
@@ -1277,7 +1331,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "",
 			query:        "param=value",
 			wantAction:   "read",
@@ -1288,7 +1342,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1308,10 +1362,10 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/",
 			query:        "param1=value1",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/",
 		},
 		{
@@ -1319,7 +1373,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource.{placeholder}",
 						splitPaths: []param{
@@ -1340,7 +1394,7 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/",
 			query:        "param=value",
 			wantAction:   "read",
@@ -1351,7 +1405,7 @@ func TestMappingRules_Translate(t *testing.T) {
 			mappingRules: MappingRules{Rules: map[string][]Rule{
 				"domain": {
 					Rule{
-						Method:   "get",
+						Method:   "GET",
 						Action:   "read",
 						Resource: "resource",
 						splitPaths: []param{
@@ -1367,11 +1421,11 @@ func TestMappingRules_Translate(t *testing.T) {
 				},
 			}},
 			domain:       "domain",
-			method:       "get",
+			method:       "GET",
 			path:         "/path",
 			query:        "%",
 			wantErrStr:   "invalid URL escape \"%\"",
-			wantAction:   "get",
+			wantAction:   "GET",
 			wantResource: "/path",
 		},
 	}
