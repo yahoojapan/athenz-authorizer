@@ -444,7 +444,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 			return nil, errors.Wrap(err, "token unauthorized")
 		}
 	}
-	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
+	glg.Debugf("set token result. tok: %s, key: %s, act: %s, res: %s", tok, key, act, res)
 	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
 }
