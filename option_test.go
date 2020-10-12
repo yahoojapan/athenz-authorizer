@@ -1155,3 +1155,56 @@ func TestWithJwkURLs(t *testing.T) {
 		})
 	}
 }
+
+func TestWithTranslator(t *testing.T) {
+	type args struct {
+		t Translator
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				t: &MappingRules{Rules: map[string][]Rule{
+					"domain": {
+						Rule{
+							Method:   "get",
+							Action:   "read",
+							Resource: "resource",
+						},
+					},
+				}},
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authority{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if !reflect.DeepEqual(authz.translator, &MappingRules{Rules: map[string][]Rule{
+					"domain": {
+						Rule{
+							Method:   "get",
+							Action:   "read",
+							Resource: "resource",
+						},
+					}},
+				},
+				) {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithTranslator(tt.args.t)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("TestWithTranslator() = %v, error %v", got, err)
+			}
+		})
+	}
+}

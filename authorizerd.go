@@ -105,6 +105,8 @@ type authority struct {
 
 	// roleCertificateProcessor parameters
 	enableRoleCert bool
+
+	translator Translator
 }
 
 type mode uint8
@@ -227,9 +229,9 @@ func (a *authority) initAuthorizers() error {
 				return nil, err
 			}
 			if r.TLS != nil && len(r.TLS.PeerCertificates) != 0 {
-				return a.AuthorizeAccessToken(r.Context(), tokenString, act, res, r.TLS.PeerCertificates[0])
+				return a.authorize(r.Context(), accessToken, tokenString, act, res, r.URL.RawQuery, r.TLS.PeerCertificates[0])
 			}
-			return a.AuthorizeAccessToken(r.Context(), tokenString, act, res, nil)
+			return a.authorize(r.Context(), accessToken, tokenString, act, res, r.URL.RawQuery, nil)
 		}
 		glg.Infof("initAuthorizers: added access token authorizer having param: %+v", a.accessTokenParam)
 		authorizers = append(authorizers, atVerifier)
@@ -237,7 +239,7 @@ func (a *authority) initAuthorizers() error {
 
 	if a.enableRoleToken {
 		rtVerifier := func(r *http.Request, act, res string) (Principal, error) {
-			return a.AuthorizeRoleToken(r.Context(), r.Header.Get(a.roleAuthHeader), act, res)
+			return a.authorize(r.Context(), roleToken, r.Header.Get(a.roleAuthHeader), act, res, r.URL.RawQuery, nil)
 		}
 		glg.Info("initAuthorizers: added role token authorizer")
 		authorizers = append(authorizers, rtVerifier)
@@ -335,27 +337,27 @@ func (a *authority) Start(ctx context.Context) <-chan error {
 
 // VerifyRoleToken verifies the role token for specific resource and return and verification error.
 func (a *authority) VerifyRoleToken(ctx context.Context, tok, act, res string) error {
-	_, err := a.authorize(ctx, roleToken, tok, act, res, nil)
+	_, err := a.authorize(ctx, roleToken, tok, act, res, "", nil)
 	return err
 }
 
 // AuthorizeRoleToken verifies the role token for specific resource and returns the result of verifying or verification error if unauthorized.
 func (a *authority) AuthorizeRoleToken(ctx context.Context, tok, act, res string) (Principal, error) {
-	return a.authorize(ctx, roleToken, tok, act, res, nil)
+	return a.authorize(ctx, roleToken, tok, act, res, "", nil)
 }
 
 // VerifyAccessToken verifies the access token on the specific (action, resource) pair and returns verification error if unauthorized.
 func (a *authority) VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error {
-	_, err := a.authorize(ctx, accessToken, tok, act, res, cert)
+	_, err := a.authorize(ctx, accessToken, tok, act, res, "", cert)
 	return err
 }
 
 // AuthorizeAccessToken verifies the access token on the specific (action, resource) pair and returns the result of verifying or verification error if unauthorized.
 func (a *authority) AuthorizeAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) (Principal, error) {
-	return a.authorize(ctx, accessToken, tok, act, res, cert)
+	return a.authorize(ctx, accessToken, tok, act, res, "", cert)
 }
 
-func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string, cert *x509.Certificate) (Principal, error) {
+func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query string, cert *x509.Certificate) (Principal, error) {
 	var key strings.Builder
 	key.WriteString(tok)
 
@@ -374,6 +376,10 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 		key.WriteString(act)
 		key.WriteRune(cacheKeyDelimiter)
 		key.WriteString(res)
+		if query != "" && a.translator != nil {
+			key.WriteRune(cacheKeyDelimiter)
+			key.WriteString(query)
+		}
 	}
 
 	// check if exists in verification success cache
@@ -426,12 +432,19 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res string,
 	}
 
 	if !a.disablePolicyd {
+		if a.translator != nil {
+			var err error
+			act, res, err = a.translator.Translate(domain, act, res, query)
+			if err != nil {
+				return nil, err
+			}
+		}
 		if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
 			glg.Debugf("error check, err: %v", err)
 			return nil, errors.Wrap(err, "token unauthorized")
 		}
 	}
-	glg.Debugf("set token result. tok: %s, act: %s, res: %s", tok, act, res)
+	glg.Debugf("set token result. tok: %s, key: %s, act: %s, res: %s", tok, key.String(), act, res)
 	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
 }
