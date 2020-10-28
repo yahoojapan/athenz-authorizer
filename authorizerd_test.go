@@ -1484,6 +1484,60 @@ bu80CwTnWhmdBo36Ig==
 				wantErr: false,
 			}
 		}(),
+		func() test {
+			crt := `-----BEGIN CERTIFICATE-----
+MIICPzCCAagCCQDx3uSJDnRIkDANBgkqhkiG9w0BAQUFADBkMQswCQYDVQQGEwJV
+UzELMAkGA1UECAwCQ0ExDzANBgNVBAoMBkF0aGVuejEXMBUGA1UECwwOVGVzdGlu
+ZyBEb21haW4xHjAcBgNVBAMMFWNvcmV0ZWNoOnJvbGUucmVhZGVyczAeFw0yMDEw
+MjgwNTIwMThaFw0zMDEwMjYwNTIwMThaMGQxCzAJBgNVBAYTAlVTMQswCQYDVQQI
+DAJDQTEPMA0GA1UECgwGQXRoZW56MRcwFQYDVQQLDA5UZXN0aW5nIERvbWFpbjEe
+MBwGA1UEAwwVY29yZXRlY2g6cm9sZS5yZWFkZXJzMIGfMA0GCSqGSIb3DQEBAQUA
+A4GNADCBiQKBgQDEPWOhtHIFMHhKUQbCygAFwiRjLuYA1aUKqXwq+tVLZEblE7QB
+2OfyGs7ux4bSFts3O6JHlVNdYEyBGe1Ndd3mgG80SS4RTX6LngjNqT1uqnpVW8MU
+QlewG1Or7C4PBflcb19CWC8UDjyip4kZ8lxD0EUz/jvn3yfAB/36Dba7vwIDAQAB
+MA0GCSqGSIb3DQEBBQUAA4GBALcAGnH1CoYGZ0i2eoW621V7dNR9fggDqOZvgBz9
+pGGBc0pafRYPsaZhfdhzleTpZw1iQwBf3GPmEpG1YvwzN8TfPMwPZvTTDqz0gtqI
+SBg0pNnCxM0NOZaiGQ+r3+7oCpX+F3haDb4RJiagB62uFzgDlfy8cfP3tOo3Fubt
+oFI/
+-----END CERTIFICATE----- `
+			block, _ := pem.Decode([]byte(crt))
+			cert, _ := x509.ParseCertificate(block.Bytes)
+
+			pm := &PolicydMock{
+				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+					containRole := func(r string) bool {
+						for _, role := range roles {
+							if role == r {
+								return true
+							}
+						}
+						return false
+					}
+					if domain != "coretech" {
+						return errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
+					}
+					if !containRole("readers") {
+						return errors.Errorf("invalid role, got: %s", roles)
+					}
+					return nil
+				},
+			}
+
+			return test{
+				name: "parse a cert which CN indicates a role",
+				fields: fields{
+					policyd: pm,
+				},
+				args: args{
+					ctx: context.Background(),
+					peerCerts: []*x509.Certificate{
+						cert,
+					},
+					act: "abc",
+					res: "def",
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
