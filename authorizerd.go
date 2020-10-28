@@ -496,7 +496,6 @@ func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certif
 	}
 
 	for _, cert := range peerCerts {
-		// TODO: check issuer (like certIssuerMatch in AuthZpeClient.allowAccess does)
 		subj := cert.Subject.CommonName
 		dr := strings.SplitN(subj, ":role.", 2)
 		// dr will be just ignored when subj doesn't represents a role (not contains ":role.")
