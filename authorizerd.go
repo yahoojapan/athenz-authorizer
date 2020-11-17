@@ -113,6 +113,7 @@ type mode uint8
 
 const (
 	cacheKeyDelimiter      = ':'
+	roleInCNDelimiter      = ":role."
 	roleToken         mode = iota
 	accessToken
 )
@@ -481,22 +482,30 @@ func (a *authority) VerifyRoleCert(ctx context.Context, peerCerts []*x509.Certif
 		return nil
 	}
 
-	var dr []string
 	drcheck := make(map[string]struct{})
 	domainRoles := make(map[string][]string)
+	addDomainRoles := func(dr []string) {
+		if len(dr) != 2 {
+			return
+		}
+		domain, roleName := dr[0], dr[1]
+		// duplicated role check
+		if _, ok := drcheck[domain+roleName]; !ok {
+			domainRoles[domain] = append(domainRoles[domain], roleName)
+			drcheck[domain+roleName] = struct{}{}
+		}
+	}
+
 	for _, cert := range peerCerts {
+		subj := cert.Subject.CommonName
+		dr := strings.SplitN(subj, roleInCNDelimiter, 2)
+		// dr will be just ignored when subj doesn't represents a role (not contains ":role.")
+		addDomainRoles(dr)
+
 		for _, uri := range cert.URIs {
 			if strings.HasPrefix(uri.String(), a.roleCertURIPrefix) {
-				dr = strings.SplitN(strings.TrimPrefix(uri.String(), a.roleCertURIPrefix), "/", 2) // domain/role
-				if len(dr) != 2 {
-					continue
-				}
-				domain, roleName := dr[0], dr[1]
-				// duplicated role check
-				if _, ok := drcheck[domain+roleName]; !ok {
-					domainRoles[domain] = append(domainRoles[domain], roleName)
-					drcheck[domain+roleName] = struct{}{}
-				}
+				dr := strings.SplitN(strings.TrimPrefix(uri.String(), a.roleCertURIPrefix), "/", 2) // domain/role
+				addDomainRoles(dr)
 			}
 		}
 	}
