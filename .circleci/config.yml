@@ -9,7 +9,6 @@ alias:
           REPO_NAME: "yahoojapan"
           IMAGE_NAME: "athenz-authorizer"
           GITHUB_API: "https://api.github.com/"
-          DOCKER_USER: "kpango"
   setup_remote_docker: &setup_remote_docker
     version: 19.03.8
 
