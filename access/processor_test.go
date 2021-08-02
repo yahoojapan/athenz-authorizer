@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v5/jwk"
 )

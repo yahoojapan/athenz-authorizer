@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 )
 
 type BaseClaim struct {
