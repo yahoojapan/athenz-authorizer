@@ -29,7 +29,7 @@
 
 ## What is Athenz authorizer
 
-Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/yahoo/athenz) to authorizer authentication and authorization check of user request.
+Athenz authorizer is a library to cache the policies of [Athenz](https://github.com/AthenZ/athenz) to authorizer authentication and authorization check of user request.
 
 ![Overview](./docs/assets/policy_updater_overview.png)
 
@@ -72,7 +72,7 @@ if err != nil {
 
 ## How it works
 
-To do the authentication and authorization check, the user needs to specify which [domain data](https://github.com/yahoo/athenz/blob/master/docs/data_model.md#data-model) to be cache. The authorizer will periodically refresh the policies and Athenz public key data to [verify and decode](https://github.com/yahoo/athenz/blob/master/docs/zpu_policy_file.md#zts-signature-validation) the domain data. The verified domain data will cache into the memory, and use for authentication and authorization check.
+To do the authentication and authorization check, the user needs to specify which [domain data](https://github.com/AthenZ/athenz/blob/master/docs/data_model.md#data-model) to be cache. The authorizer will periodically refresh the policies and Athenz public key data to [verify and decode](https://github.com/AthenZ/athenz/blob/master/docs/zpu_policy_file.md#zts-signature-validation) the domain data. The verified domain data will cache into the memory, and use for authentication and authorization check.
 
 The authorizer contains two sub-module, Athenz public key daemon (pubkeyd) and Athenz policy daemon (policyd).
 

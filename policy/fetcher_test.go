@@ -30,11 +30,11 @@ import (
 	"time"
 	"unsafe"
 
+	authcore "github.com/AthenZ/athenz/libs/go/zmssvctoken"
+	"github.com/AthenZ/athenz/utils/zpe-updater/util"
 	"github.com/ardielle/ardielle-go/rdl"
 	"github.com/kpango/fastime"
 	"github.com/pkg/errors"
-	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
-	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 

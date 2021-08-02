@@ -26,10 +26,10 @@ import (
 	"sync"
 	"time"
 
+	authcore "github.com/AthenZ/athenz/libs/go/zmssvctoken"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
-	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"golang.org/x/sync/errgroup"
 )
 

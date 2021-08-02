@@ -27,13 +27,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AthenZ/athenz/utils/zpe-updater/util"
 	"github.com/ardielle/ardielle-go/rdl"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 

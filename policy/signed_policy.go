@@ -23,7 +23,7 @@ import (
 	"github.com/kpango/fastime"
 	"github.com/pkg/errors"
 
-	"github.com/yahoo/athenz/utils/zpe-updater/util"
+	"github.com/AthenZ/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 

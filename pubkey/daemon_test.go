@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
+	authcore "github.com/AthenZ/athenz/libs/go/zmssvctoken"
 	cmp "github.com/google/go-cmp/cmp"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 )
 
 func TestNew(t *testing.T) {

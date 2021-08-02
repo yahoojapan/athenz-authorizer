@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
+	authcore "github.com/AthenZ/athenz/libs/go/zmssvctoken"
 	"github.com/kpango/fastime"
-	authcore "github.com/yahoo/athenz/libs/go/zmssvctoken"
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 
