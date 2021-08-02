@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AthenZ/athenz v1.10.28
 	github.com/ardielle/ardielle-go v1.5.2
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/go-cmp v0.5.6
 	github.com/kpango/fastime v1.0.17
 	github.com/kpango/gache v1.2.6
