@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go/request"
+	"github.com/golang-jwt/jwt/request"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"

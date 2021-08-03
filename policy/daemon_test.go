@@ -27,13 +27,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AthenZ/athenz/utils/zpe-updater/util"
 	"github.com/ardielle/ardielle-go/rdl"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kpango/fastime"
 	"github.com/kpango/gache"
 	"github.com/pkg/errors"
-	"github.com/yahoo/athenz/utils/zpe-updater/util"
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 
@@ -652,7 +652,7 @@ func Test_policyd_Update(t *testing.T) {
 					},
 				}
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*1111) // timeout should be long enough to enter Fetch()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2222) // timeout should be long enough to enter Fetch()
 			go func() {
 				select {
 				case <-ctx.Done():
