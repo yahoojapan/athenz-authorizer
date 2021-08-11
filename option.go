@@ -33,8 +33,11 @@ var (
 		WithHTTPClient(nil),
 		WithCacheExp(time.Minute),
 		WithEnablePubkeyd(),
+		WithPrimePubkeyd(),
 		WithEnablePolicyd(),
+		WithPrimePolicyd(),
 		WithEnableJwkd(),
+		WithPrimeJwkd(),
 		WithAccessTokenParam(NewAccessTokenParam(true, true, "1h", "1h", false, nil)),
 		WithEnableRoleToken(),
 		WithRoleAuthHeader("Athenz-Role-Auth"),
@@ -118,6 +121,22 @@ func WithDisablePubkeyd() Option {
 	}
 }
 
+// WithPrimePubkeyd returns an PrimePubkeyd functional option
+func WithPrimePubkeyd() Option {
+	return func(authz *authority) error {
+		authz.primePubkeyd = true
+		return nil
+	}
+}
+
+// WithNoPrimePubkeyd returns an NoPrimePubkeyd functional option
+func WithNoPrimePubkeyd() Option {
+	return func(authz *authority) error {
+		authz.primePubkeyd = false
+		return nil
+	}
+}
+
 // WithPubkeyRefreshPeriod returns a PubkeyRefreshPeriod functional option
 func WithPubkeyRefreshPeriod(t string) Option {
 	return func(authz *authority) error {
@@ -178,6 +197,22 @@ func WithDisablePolicyd() Option {
 	}
 }
 
+// WithPrimePolicyd returns an PrimePolicyd functional option
+func WithPrimePolicyd() Option {
+	return func(authz *authority) error {
+		authz.primePolicyd = true
+		return nil
+	}
+}
+
+// WithNoPrimePolicyd returns an NoPrimePolicyd functional option
+func WithNoPrimePolicyd() Option {
+	return func(authz *authority) error {
+		authz.primePolicyd = false
+		return nil
+	}
+}
+
 // WithPolicyRefreshPeriod returns a PolicyRefreshPeriod functional option
 func WithPolicyRefreshPeriod(t string) Option {
 	return func(authz *authority) error {
@@ -234,6 +269,22 @@ func WithEnableJwkd() Option {
 func WithDisableJwkd() Option {
 	return func(authz *authority) error {
 		authz.disableJwkd = true
+		return nil
+	}
+}
+
+// WithPrimeJwkd returns a PrimeJwkd functional option
+func WithPrimeJwkd() Option {
+	return func(authz *authority) error {
+		authz.primeJwkd = true
+		return nil
+	}
+}
+
+// WithNoPrimeJwkd returns a NoPrimeJwkd functional option
+func WithNoPrimeJwkd() Option {
+	return func(authz *authority) error {
+		authz.primeJwkd = false
 		return nil
 	}
 }
