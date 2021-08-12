@@ -469,9 +469,6 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 		case *oAuthAccessToken:
 			typedP.authorizedRoles = authorizedRoles
 		}
-		if typedP, ok := p.(*principal); ok {
-			typedP.authorizedRoles = authorizedRoles
-		}
 	}
 	glg.Debugf("set token result. tok: %s, key: %s, act: %s, res: %s", tok, key.String(), act, res)
 	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
