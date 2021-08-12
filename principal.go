@@ -23,6 +23,7 @@ type Principal interface {
 	Domain() string
 	IssueTime() int64
 	ExpiryTime() int64
+	AuthorizedRoles() []string
 }
 
 // OAuthAccessToken is an interface for a principal that has a OAuthAccessToken
@@ -31,11 +32,12 @@ type OAuthAccessToken interface {
 }
 
 type principal struct {
-	name       string
-	roles      []string
-	domain     string
-	issueTime  int64
-	expiryTime int64
+	name            string
+	roles           []string
+	domain          string
+	issueTime       int64
+	expiryTime      int64
+	authorizedRoles []string
 }
 
 type oAuthAccessToken struct {
@@ -66,6 +68,11 @@ func (p *principal) IssueTime() int64 {
 // ExpiryTime return the principal's expiryTime
 func (p *principal) ExpiryTime() int64 {
 	return p.expiryTime
+}
+
+// AuthorizedRoles returns the access token's authorized role
+func (p *principal) AuthorizedRoles() []string {
+	return p.authorizedRoles
 }
 
 // ClientID returns the access token's client ID

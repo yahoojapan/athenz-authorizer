@@ -458,9 +458,19 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 				return nil, err
 			}
 		}
-		if err := a.policyd.CheckPolicy(ctx, domain, roles, act, res); err != nil {
+		authorizedRoles, err := a.policyd.CheckPolicyRoles(ctx, domain, roles, act, res)
+		if err != nil {
 			glg.Debugf("error check, err: %v", err)
 			return nil, errors.Wrap(err, "token unauthorized")
+		}
+		switch typedP := p.(type) {
+		case *principal:
+			typedP.authorizedRoles = authorizedRoles
+		case *oAuthAccessToken:
+			typedP.authorizedRoles = authorizedRoles
+		}
+		if typedP, ok := p.(*principal); ok {
+			typedP.authorizedRoles = authorizedRoles
 		}
 	}
 	glg.Debugf("set token result. tok: %s, key: %s, act: %s, res: %s", tok, key.String(), act, res)

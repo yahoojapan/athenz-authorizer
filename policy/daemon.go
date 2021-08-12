@@ -39,7 +39,13 @@ type Daemon interface {
 	Start(context.Context) <-chan error
 	Update(context.Context) error
 	CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error
+	CheckPolicyRoles(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error)
 	GetPolicyCache(context.Context) map[string]interface{}
+}
+
+type roleEffect struct {
+	Role   string
+	Effect error
 }
 
 type policyd struct {
@@ -194,7 +200,16 @@ func (p *policyd) Update(ctx context.Context) error {
 // If return is nil then the request is allowed, otherwise the request is rejected.
 // Only action and resource is supporting wildcard, domain and role is not supporting wildcard.
 func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	ech := make(chan error, len(roles))
+	_, err := p.CheckPolicyRoles(ctx, domain, roles, action, resource)
+	return err
+}
+
+// CheckPolicyRoles checks the specified request has privilege to access the resources or not returning the allowedRoles
+// and err. If err is nil then the request is allowed, otherwise the request is rejected.
+// Only action and resource is supporting wildcard, domain and role is not supporting wildcard.
+func (p *policyd) CheckPolicyRoles(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
+
+	ech := make(chan roleEffect, len(roles))
 	cctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -207,11 +222,11 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 
 		for _, role := range roles {
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
-			go func(ch chan<- error) {
+			go func(role string, ch chan<- roleEffect) {
 				defer wg.Done()
 				select {
 				case <-cctx.Done():
-					ch <- cctx.Err()
+					ch <- roleEffect{Role: role, Effect: cctx.Err()}
 					return
 				default:
 					asss, ok := rp.Get(dr)
@@ -223,39 +238,39 @@ func (p *policyd) CheckPolicy(ctx context.Context, domain string, roles []string
 						glg.Debugf("Checking policy domain: %s, role: %v, action: %s, resource: %s, assertion: %v", domain, roles, action, resource, ass)
 						select {
 						case <-cctx.Done():
-							ch <- cctx.Err()
+							ch <- roleEffect{Role: role, Effect: cctx.Err()}
 							return
 						default:
 							// deny policies come first in rolePolicies, so it will return first before allow policies is checked
 							if strings.EqualFold(ass.ResourceDomain, domain) &&
 								ass.ActionRegexp.MatchString(strings.ToLower(action)) &&
 								ass.ResourceRegexp.MatchString(strings.ToLower(resource)) {
-								ch <- ass.Effect
+								ch <- roleEffect{Role: role, Effect: ass.Effect}
 								return
 							}
 						}
 					}
 				}
-			}(ech)
+			}(role, ech)
 		}
 		wg.Wait()
 	}()
 
-	allowed := false
-	for err := range ech {
-		if err != nil { // denied assertion is prioritize, so return directly
-			glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
-			return err
+	var allowedRoles []string
+	for re := range ech {
+		if re.Effect != nil { // denied assertion is prioritize, so return directly
+			glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, re.Effect)
+			return nil, re.Effect
 		}
-		allowed = true
+		allowedRoles = append(allowedRoles, re.Role)
 	}
-	if allowed {
+	if len(allowedRoles) > 0 {
 		glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, nil)
-		return nil
+		return allowedRoles, nil
 	}
 	err := errors.Wrap(ErrNoMatch, "no match")
 	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
-	return err
+	return nil, err
 }
 
 // GetPolicyCache returns the cached role policy data
