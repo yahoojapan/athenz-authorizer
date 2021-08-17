@@ -91,6 +91,42 @@ func TestPrincipal_Roles(t *testing.T) {
 	}
 }
 
+func TestPrincipal_AuthorizedRoles(t *testing.T) {
+	tests := []struct {
+		name                string
+		p                   principal
+		wantName            string
+		wantAuthorizedRoles []string
+		wantDomain          string
+		wantIssueTime       int64
+		wantExpiryTime      int64
+	}{
+		{
+			name: "success roles",
+			p: principal{
+				name:            "principal",
+				roles:           []string{"role1", "role2", "role3"},
+				authorizedRoles: []string{"role1", "role2"},
+				domain:          "domain",
+				issueTime:       1595809911,
+				expiryTime:      1595809926,
+			},
+			wantName:            "principal",
+			wantAuthorizedRoles: []string{"role1", "role2"},
+			wantDomain:          "domain",
+			wantIssueTime:       1595809911,
+			wantExpiryTime:      1595809926,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.p.AuthorizedRoles(); !reflect.DeepEqual(got, tt.wantAuthorizedRoles) {
+				t.Errorf("Principal.AuthorizedRoles() = %v, want %v", got, tt.wantAuthorizedRoles)
+			}
+		})
+	}
+}
+
 func TestPrincipal_Domain(t *testing.T) {
 	tests := []struct {
 		name           string
