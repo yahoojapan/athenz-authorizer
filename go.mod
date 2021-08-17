@@ -1,6 +1,6 @@
 module github.com/yahoojapan/athenz-authorizer/v5
 
-go 1.14
+go 1.16
 
 require (
 	github.com/AthenZ/athenz v1.10.28
