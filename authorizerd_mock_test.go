@@ -70,7 +70,6 @@ func (pm *PubkeydMock) GetProvider() pubkey.Provider {
 
 type PolicydMock struct {
 	UpdateFunc          func(context.Context) error
-	CheckPolicyFunc     func(ctx context.Context, domain string, roles []string, action, resource string) error
 	CheckPolicyRoleFunc func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error)
 
 	policydExp  time.Duration
@@ -94,10 +93,8 @@ func (pdm *PolicydMock) Update(ctx context.Context) error {
 }
 
 func (pdm *PolicydMock) CheckPolicy(ctx context.Context, domain string, roles []string, action, resource string) error {
-	if pdm.CheckPolicyFunc != nil {
-		return pdm.CheckPolicyFunc(ctx, domain, roles, action, resource)
-	}
-	return nil
+	_, err := pdm.CheckPolicyRoles(ctx, domain, roles, action, resource)
+	return err
 }
 
 func (pdm *PolicydMock) CheckPolicyRoles(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
