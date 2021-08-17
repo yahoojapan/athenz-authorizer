@@ -16,6 +16,8 @@ version: 2
 jobs:
   test:
     <<: *default
+    environment: # environment variables for the build itself
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
     steps:
       - checkout
       - restore_cache:
@@ -23,20 +25,32 @@ jobs:
       - run:
           name: preparation
           command: |
-            go mod vendor
+            go mod download
       - run:
-          name: run tests
+          # https://circleci.com/docs/2.0/language-go/
+          name: Run unit tests
           command: |
-            rm -rf example
-            go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
-            go tool cover -html=coverage.out -o coverage.html
-            # bash <(curl -s https://codecov.io/bash)
-      - store_artifacts:
-          path: ./coverage.html
+            mkdir -p "${TEST_RESULTS}"
+            PACKAGE_NAMES="$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)"
+            gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- "${PACKAGE_NAMES}"
+      - store_artifacts: # upload test summary for display in Artifacts
+          path: /tmp/test-results
+          destination: raw-test-output
+      - store_test_results: # upload test results for display in Test Summary
+          path: /tmp/test-results
+      # - run:
+      #     name: run tests
+      #     command: |
+      #       rm -rf example
+      #       go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+      #       go tool cover -html=coverage.out -o coverage.html
+      #       # bash <(curl -s https://codecov.io/bash)
+      # - store_artifacts:
+      #     path: ./coverage.html
       - save_cache:
           key: gosum-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
-            - ./vendor
+            - "/go/pkg/mod"
   versioning:
     <<: *default
     steps:
