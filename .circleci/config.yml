@@ -25,7 +25,8 @@ jobs:
       - run:
           name: preparation
           command: |
-            go mod download
+            go get
+            cat go.mod
       - run:
           # https://circleci.com/docs/2.0/language-go/
           name: Run unit tests
