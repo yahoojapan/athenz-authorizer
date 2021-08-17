@@ -27,7 +27,7 @@ jobs:
           command: |
             cp go.mod go.mod.bak
             go get
-            diff --side-by-side go.mod go.mod.bak
+            diff -u go.mod go.mod.bak
       - run:
           # https://circleci.com/docs/2.0/language-go/
           name: Run unit tests
