@@ -32,8 +32,9 @@ jobs:
           name: Run unit tests
           command: |
             mkdir -p "${TEST_RESULTS}"
-            PACKAGE_NAMES="$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)"
-            gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- "${PACKAGE_NAMES}"
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- -coverprofile="${TEST_RESULTS}/coverage.out" $PACKAGE_NAMES
+            go tool cover -html="${TEST_RESULTS}/coverage.out" -o "${TEST_RESULTS}/coverage.html"
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/test-results
           destination: raw-test-output
@@ -46,8 +47,9 @@ jobs:
       #       go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
       #       go tool cover -html=coverage.out -o coverage.html
       #       # bash <(curl -s https://codecov.io/bash)
-      # - store_artifacts:
-      #     path: ./coverage.html
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: coverage.html
       - save_cache:
           key: gosum-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
