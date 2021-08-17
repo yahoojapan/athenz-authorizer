@@ -25,8 +25,9 @@ jobs:
       - run:
           name: preparation
           command: |
+            cp go.mod go.mod.bak
             go get
-            cat go.mod
+            diff --side-by-side go.mod go.mod.bak
       - run:
           # https://circleci.com/docs/2.0/language-go/
           name: Run unit tests
@@ -35,21 +36,12 @@ jobs:
             PACKAGE_NAMES="$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)"
             gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- -race -covermode=atomic -coverprofile="${TEST_RESULTS}/coverage.out" $PACKAGE_NAMES
             go tool cover -html="${TEST_RESULTS}/coverage.out" -o "${TEST_RESULTS}/coverage.html"
+            # bash <(curl -s https://codecov.io/bash)
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/test-results
           destination: raw-test-output
       - store_test_results: # upload test results for display in Test Summary
           path: /tmp/test-results
-      # - run:
-      #     name: run tests
-      #     command: |
-      #       rm -rf example
-      #       go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
-      #       go tool cover -html=coverage.out -o coverage.html
-      #       # bash <(curl -s https://codecov.io/bash)
-      - store_artifacts:
-          path: /tmp/test-results
-          destination: coverage.html
       - save_cache:
           key: gosum-{{ .Branch }}-{{ checksum "go.sum" }}
           paths:
