@@ -32,8 +32,8 @@ jobs:
           name: Run unit tests
           command: |
             mkdir -p "${TEST_RESULTS}"
-            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-            gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- -coverprofile="${TEST_RESULTS}/coverage.out" $PACKAGE_NAMES
+            PACKAGE_NAMES="$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)"
+            gotestsum --junitfile "${TEST_RESULTS}/gotestsum-report.xml" -- -race -covermode=atomic -coverprofile="${TEST_RESULTS}/coverage.out" $PACKAGE_NAMES
             go tool cover -html="${TEST_RESULTS}/coverage.out" -o "${TEST_RESULTS}/coverage.html"
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/test-results
