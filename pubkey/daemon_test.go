@@ -88,7 +88,7 @@ func TestNew(t *testing.T) {
 				if got != nil {
 					return errors.New("get invalid Daemon")
 				}
-				if err.Error() != "error create pubkeyd: invalid ETag expiry time: time: invalid duration invalid" {
+				if err.Error() != "error create pubkeyd: invalid ETag expiry time: time: invalid duration \"invalid\"" {
 					return errors.Wrap(err, "unexpected error")
 				}
 				return nil
