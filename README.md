@@ -38,7 +38,6 @@ Athenz authorizer is a library to cache the policies of [Athenz](https://github.
 To initialize authorizer.
 
 ```golang
-
 // Initialize authorizerd
 daemon, err := authorizerd.New(
     authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
@@ -52,6 +51,9 @@ if err != nil {
 
 // Start authorizer daemon
 ctx := context.Background() // user can control authorizer daemon lifetime using this context
+if err = daemon.Init(ctx); err != nil {
+    // cannot initialize internal daemon inside authorizer
+}
 errs := daemon.Start(ctx)
 go func() {
     err := <-errs
