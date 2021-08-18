@@ -38,8 +38,11 @@ import (
 
 // Authorizerd represents a daemon for user to verify the role token
 type Authorizerd interface {
+	// Init initializes the child daemons synchronously
 	Init(ctx context.Context) error
+	// Start starts the background updater of the child daemons asynchronously
 	Start(ctx context.Context) <-chan error
+
 	Verify(r *http.Request, act, res string) error
 	Authorize(r *http.Request, act, res string) (Principal, error)
 	VerifyAccessToken(ctx context.Context, tok, act, res string, cert *x509.Certificate) error
