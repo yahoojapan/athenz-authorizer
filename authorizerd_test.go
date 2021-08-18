@@ -946,7 +946,7 @@ func Test_authorizer_authorize(t *testing.T) {
 			pdm := &PolicydMock{
 				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					count++
-					return nil, nil
+					return roles, nil
 				},
 			}
 			rt := &role.Token{}
@@ -1495,7 +1495,7 @@ oFI/
 					if !containRole("readers") {
 						return nil, errors.Errorf("invalid role, got: %s", roles)
 					}
-					return nil, nil
+					return []string{"readers"}, nil
 				},
 			}
 
@@ -1750,11 +1750,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -1767,7 +1768,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
 						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil, nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -1812,11 +1813,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -1829,7 +1831,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
 						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil, nil
+					return []string{"role"}, nil
 				},
 			}
 			cert := &x509.Certificate{
@@ -1894,7 +1896,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
 						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil, nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -1958,7 +1960,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
 						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil, nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -2112,11 +2114,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -2130,7 +2133,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
 						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil, nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -2247,7 +2250,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					return
 				}
 				if !reflect.DeepEqual(p, tt.wantResult) {
-					t.Errorf("authority.AuthorizeAccessToken() results don't match. want %s, result %s", tt.wantResult, p)
+					t.Errorf("authority.AuthorizeAccessToken() results don't match. want %#v, result %#v", tt.wantResult, p)
 					return
 				}
 			}
