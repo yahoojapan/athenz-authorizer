@@ -17,8 +17,6 @@ package authorizerd
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"reflect"
 	"testing"
@@ -760,66 +758,6 @@ func TestWithEnableJwkd(t *testing.T) {
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithEnableJwkd() error = %v", err)
 			}
-		})
-	}
-}
-
-func TestWithPrimeChecks(t *testing.T) {
-	tests := []struct {
-		name      string
-		option    Option
-		checkFunc func(*testing.T, *authority)
-	}{
-		{
-			name:   "WithPrimeJwkd",
-			option: WithPrimeJwkd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.True(t, a.primeJwkd, "primeJwkd not set")
-			},
-		},
-		{
-			name:   "WithNoPrimeJwkd",
-			option: WithNoPrimeJwkd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.False(t, a.primeJwkd, "primeJwkd set")
-			},
-		},
-		{
-			name:   "WithPrimePolicyd",
-			option: WithPrimePolicyd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.True(t, a.primePolicyd, "primePolicyd not set")
-			},
-		},
-		{
-			name:   "WithNoPrimePolicyd",
-			option: WithNoPrimePolicyd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.False(t, a.primePolicyd, "primePolicyd set")
-			},
-		},
-		{
-			name:   "WithPrimePubkeyd",
-			option: WithPrimePubkeyd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.True(t, a.primePubkeyd, "primePubkeyd not set")
-			},
-		},
-		{
-			name:   "WithNoPrimePubkeyd",
-			option: WithNoPrimePubkeyd(),
-			checkFunc: func(t *testing.T, a *authority) {
-				assert.False(t, a.primePubkeyd, "primePubkeyd set")
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.NotNil(t, tt.option)
-			require.NotNil(t, tt.checkFunc)
-			authz := &authority{}
-			require.NoError(t, tt.option(authz))
-			tt.checkFunc(t, authz)
 		})
 	}
 }

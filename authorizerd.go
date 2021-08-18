@@ -75,7 +75,6 @@ type authority struct {
 
 	// pubkeyd parameters
 	disablePubkeyd        bool
-	primePubkeyd          bool
 	pubkeyRefreshPeriod   string
 	pubkeyRetryDelay      string
 	pubkeySysAuthDomain   string
@@ -84,7 +83,6 @@ type authority struct {
 
 	// policyd parameters
 	disablePolicyd      bool
-	primePolicyd        bool
 	athenzDomains       []string
 	policyExpiryMargin  string
 	policyRefreshPeriod string
@@ -94,7 +92,6 @@ type authority struct {
 
 	// jwkd parameters
 	disableJwkd      bool
-	primeJwkd        bool
 	jwkRefreshPeriod string
 	jwkRetryDelay    string
 	jwkURLs          []string
@@ -302,27 +299,12 @@ func (a *authority) Start(ctx context.Context) <-chan error {
 	)
 
 	if !a.disablePubkeyd {
-		if a.primePubkeyd {
-			if err := a.pubkeyd.Update(ctx); err != nil {
-				ech <- errors.Wrap(err, "update pubkey error")
-			}
-		}
 		cech = a.pubkeyd.Start(ctx)
 	}
 	if !a.disablePolicyd {
-		if a.primePolicyd {
-			if err := a.policyd.Update(ctx); err != nil {
-				ech <- errors.Wrap(err, "update policy error")
-			}
-		}
 		pech = a.policyd.Start(ctx)
 	}
 	if !a.disableJwkd {
-		if a.primeJwkd {
-			if err := a.jwkd.Update(ctx); err != nil {
-				ech <- errors.Wrap(err, "update jwk error")
-			}
-		}
 		jech = a.jwkd.Start(ctx)
 	}
 
