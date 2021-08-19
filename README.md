@@ -42,8 +42,8 @@ To initialize authorizer.
 daemon, err := authorizerd.New(
     authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
     authorizerd.WithAthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
-    authorizerd.WithPubkeyRefreshPeriod(time.Hour * 24), // set athenz public key refresh period
-    authorizerd.WithPolicyRefreshPeriod(time.Hour), // set policy refresh period
+    authorizerd.WithPubkeyRefreshPeriod("24h"), // set athenz public key refresh period
+    authorizerd.WithPolicyRefreshPeriod("1h"), // set policy refresh period
 )
 if err != nil {
    // cannot initialize authorizer daemon
