@@ -12,18 +12,17 @@
 
 <!-- TOC insertAnchor:false -->
 
-- [Athenz authorizer](#athenz-authorizer)
-    - [What is Athenz authorizer](#what-is-athenz-authorizer)
-    - [Usage](#usage)
-    - [How it works](#how-it-works)
-        - [Athenz public key daemon](#athenz-public-key-daemon)
-        - [Athenz policy daemon](#athenz-policy-daemon)
-    - [Configuration](#configuration)
-        - [AccessTokenParam](#accesstokenparam)
-    - [License](#license)
-    - [Contributor License Agreement](#contributor-license-agreement)
-    - [About releases](#about-releases)
-    - [Authors](#authors)
+- [What is Athenz authorizer](#what-is-athenz-authorizer)
+- [Usage](#usage)
+- [How it works](#how-it-works)
+    - [Athenz public key daemon](#athenz-public-key-daemon)
+    - [Athenz policy daemon](#athenz-policy-daemon)
+- [Configuration](#configuration)
+    - [AccessTokenParam](#accesstokenparam)
+- [License](#license)
+- [Contributor License Agreement](#contributor-license-agreement)
+- [About releases](#about-releases)
+- [Authors](#authors)
 
 <!-- /TOC -->
 
@@ -68,8 +67,10 @@ if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
 // Verified results are returned
 principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
 if err != nil {
-    name := principal.Name()
+    // token not authorized
 }
+// Inspect the authorized identity
+name := principal.Name()
 ```
 
 ## How it works
