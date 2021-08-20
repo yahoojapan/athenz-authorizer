@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			want: &jwkd{
-				athenzJwksURL: "https://www.dummy.com/oauth2/keys?rfc=true",
+				athenzJwksURL: "https://www.dummy.com/oauth2/keys",
 				refreshPeriod: time.Hour * 24,
 				retryDelay:    time.Minute,
 				client:        http.DefaultClient,

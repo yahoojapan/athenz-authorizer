@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -47,7 +48,27 @@ func WithAthenzJwksURL(url string) Option {
 		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys?rfc=true", u)
+		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys", u)
+		if j.athenzJwksRFC {
+			j.athenzJwksURL += "?rfc=true"
+		}
+		return nil
+	}
+}
+
+// WithAthenzJwksRFC returns an Athenz JWK RFC functional option
+func WithAthenzJwksRFC(rfc bool) Option {
+	return func(j *jwkd) error {
+		j.athenzJwksRFC = rfc
+
+		// If this option is invoked after WithAthenzJwksURL, fix up the athenzJwksURL
+		if j.athenzJwksURL != "" {
+			j.athenzJwksURL = strings.TrimSuffix(j.athenzJwksURL, "?rfc=true")
+			if rfc {
+				j.athenzJwksURL += "?rfc=true"
+			}
+		}
+
 		return nil
 	}
 }

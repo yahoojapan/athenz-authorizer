@@ -63,6 +63,7 @@ type authority struct {
 	authorizers     []authorizer
 
 	// athenz connection parameters
+	athenzRFC bool
 	athenzURL string
 	client    *http.Client
 

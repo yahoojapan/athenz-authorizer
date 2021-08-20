@@ -67,6 +67,14 @@ func WithAthenzURL(url string) Option {
 	}
 }
 
+// WithAthenzRFC returns an AthenzRFC functional option
+func WithAthenzRFC(rfc bool) Option {
+	return func(authz *authority) error {
+		authz.athenzRFC = rfc
+		return nil
+	}
+}
+
 // WithAthenzDomains returns an AthenzDomains functional option
 func WithAthenzDomains(domains ...string) Option {
 	return func(authz *authority) error {
