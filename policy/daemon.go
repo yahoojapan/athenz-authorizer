@@ -256,7 +256,7 @@ func (p *policyd) CheckPolicyRoles(ctx context.Context, domain string, roles []s
 		wg.Wait()
 	}()
 
-	var allowedRoles []string
+	allowedRoles := make([]string, 0, len(roles))
 	for re := range ech {
 		if re.Effect != nil { // denied assertion is prioritize, so return directly
 			glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, re.Effect)
