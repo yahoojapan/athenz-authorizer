@@ -17,8 +17,6 @@ package jwk
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"reflect"
 	"testing"
@@ -26,122 +24,6 @@ import (
 
 	urlutil "github.com/yahoojapan/athenz-authorizer/v5/internal/url"
 )
-
-func TestWithAthenzJwksRFC(t *testing.T) {
-	tests := []struct {
-		options   []Option
-		name      string
-		want      *jwkd
-		wantErr   bool
-		wantError string
-	}{
-		{
-			name: "Given options=[WithAthenzJwksRFC(false)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == false",
-			options: []Option{
-				WithAthenzJwksRFC(false),
-			},
-			want: &jwkd{athenzJwksRFC: false},
-		},
-		{
-			name: "Given options=[WithAthenzJwksRFC(true)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == true",
-			options: []Option{
-				WithAthenzJwksRFC(true),
-			},
-			want: &jwkd{athenzJwksRFC: true},
-		},
-		{
-			name: "Given options=[WithAthenzJwksRFC(false), WithAthenzJwksURL(\"https://dummy.com\")], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == false and the url does not have ?rfc param",
-			options: []Option{
-				WithAthenzJwksRFC(false),
-				WithAthenzJwksURL("https://dummy.com"),
-			},
-			want: &jwkd{athenzJwksRFC: false, athenzJwksURL: "https://dummy.com/oauth2/keys"},
-		},
-		{
-			name: "Given options=[WithAthenzJwksRFC(true), WithAthenzJwksURL(\"https://dummy.com\")], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == true and the url does have ?rfc param set to true",
-			options: []Option{
-				WithAthenzJwksRFC(true),
-				WithAthenzJwksURL("https://dummy.com"),
-			},
-			want: &jwkd{athenzJwksRFC: true, athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
-		},
-		{
-			name: "Given options=[WithAthenzJwksURL(\"https://dummy.com\")," +
-				"WithAthenzJwksRFC(false)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == false and the url does not have ?rfc param",
-			options: []Option{
-				WithAthenzJwksURL("https://dummy.com"),
-				WithAthenzJwksRFC(false),
-			},
-			want: &jwkd{athenzJwksRFC: false, athenzJwksURL: "https://dummy.com/oauth2/keys"},
-		},
-		{
-			name: "Given options=[WithAthenzJwksURL(\"https://dummy.com\")," +
-				"WithAthenzJwksRFC(true)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == true and the url does have ?rfc param set to true",
-			options: []Option{
-				WithAthenzJwksURL("https://dummy.com"),
-				WithAthenzJwksRFC(true),
-			},
-			want: &jwkd{athenzJwksRFC: true, athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
-		},
-		{
-			name: "Given options=[WithAthenzJwksRFC(true), " +
-				"WithAthenzJwksURL(\"https://dummy.com\")," +
-				"WithAthenzJwksRFC(true)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == true and the url does have ?rfc param set to true",
-			options: []Option{
-				WithAthenzJwksRFC(true),
-				WithAthenzJwksURL("https://dummy.com"),
-				WithAthenzJwksRFC(true),
-			},
-			want: &jwkd{athenzJwksRFC: true, athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
-		},
-		{
-			name: "Given options=[WithAthenzJwksRFC(true), " +
-				"WithAthenzJwksURL(\"https://dummy.com\")," +
-				"WithAthenzJwksRFC(false)], " +
-				"When options are applied to a default jwkd, " +
-				"Then jwkd.athenzJwksRFC == false and the url does not have ?rfc param",
-			options: []Option{
-				WithAthenzJwksRFC(true),
-				WithAthenzJwksURL("https://dummy.com"),
-				WithAthenzJwksRFC(false),
-			},
-			want: &jwkd{athenzJwksRFC: false, athenzJwksURL: "https://dummy.com/oauth2/keys"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := &jwkd{}
-			var err error
-			for _, option := range tt.options {
-				if err = option(got); err != nil {
-					break
-				}
-			}
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.wantError)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
 
 func TestWithAthenzJwksURL(t *testing.T) {
 	type args struct {
@@ -166,7 +48,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{
@@ -174,7 +56,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{
@@ -182,7 +64,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{

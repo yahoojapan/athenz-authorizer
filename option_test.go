@@ -17,8 +17,6 @@ package authorizerd
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"reflect"
 	"testing"
@@ -154,47 +152,6 @@ func TestWithPubkeyRetryDelay(t *testing.T) {
 			if err := tt.checkFunc(got); err != nil {
 				t.Errorf("WithPubkeyRetryDelay() error = %v", err)
 			}
-		})
-	}
-}
-
-func TestWithAthenzRFC(t *testing.T) {
-	type args struct {
-		rfc bool
-	}
-	tests := []struct {
-		args
-		name      string
-		want      *authority
-		wantErr   bool
-		wantError string
-	}{
-		{
-			name: "Given rfc=false, " +
-				"When WithAthenzRFC(rfc) is applied to default authority, " +
-				"Then it authority.authenzRFC == false",
-			args: args{rfc: false},
-			want: &authority{athenzRFC: false},
-		},
-		{
-			name: "Given rfc=true, " +
-				"When WithAthenzRFC(rfc) is applied to default authority, " +
-				"Then it authority.authenzRFC == true",
-			args: args{rfc: true},
-			want: &authority{athenzRFC: true},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := &authority{}
-			err := WithAthenzRFC(tt.args.rfc)(got)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.EqualError(t, err, tt.wantError)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
 		})
 	}
 }

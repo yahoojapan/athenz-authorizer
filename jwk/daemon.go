@@ -35,7 +35,6 @@ type Daemon interface {
 }
 
 type jwkd struct {
-	athenzJwksRFC bool
 	athenzJwksURL string
 	urls          []string
 
