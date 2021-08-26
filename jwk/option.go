@@ -47,7 +47,7 @@ func WithAthenzJwksURL(url string) Option {
 		if urlutil.HasScheme(u) {
 			return urlutil.ErrUnsupportedScheme
 		}
-		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys", u)
+		j.athenzJwksURL = fmt.Sprintf("https://%s/oauth2/keys?rfc=true", u)
 		return nil
 	}
 }

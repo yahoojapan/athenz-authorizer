@@ -48,7 +48,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{
@@ -56,7 +56,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"http://dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{
@@ -64,7 +64,7 @@ func TestWithAthenzJwksURL(t *testing.T) {
 			args: args{
 				"https://dummy.com",
 			},
-			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys"},
+			want:    &jwkd{athenzJwksURL: "https://dummy.com/oauth2/keys?rfc=true"},
 			wantErr: nil,
 		},
 		{

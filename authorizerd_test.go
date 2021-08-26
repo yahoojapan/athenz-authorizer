@@ -828,8 +828,8 @@ func Test_authorizer_AuthorizeRoleToken(t *testing.T) {
 				rt: &role.Token{},
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
-					return errors.New("deny")
+				CheckPolicyRoleFunc: func(context.Context, string, []string, string, string) ([]string, error) {
+					return nil, errors.New("deny")
 				},
 			}
 			return test{
@@ -944,9 +944,9 @@ func Test_authorizer_authorize(t *testing.T) {
 			c := gache.New()
 			var count int
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					count++
-					return nil
+					return roles, nil
 				},
 			}
 			rt := &role.Token{}
@@ -988,11 +988,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
-					return nil
-				},
-			}
+			pdm := &PolicydMock{}
 			rt := &role.Token{}
 			p := &principal{
 				name:       rt.Principal,
@@ -1033,11 +1029,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
-					return nil
-				},
-			}
+			pdm := &PolicydMock{}
 			rt := &role.Token{}
 			p := &principal{
 				name:       rt.Principal,
@@ -1078,11 +1070,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
-					return nil
-				},
-			}
+			pdm := &PolicydMock{}
 			rt := &role.Token{
 				Domain: "domain",
 			}
@@ -1135,11 +1123,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
-					return nil
-				},
-			}
+			pdm := &PolicydMock{}
 			rt := &role.Token{
 				Domain: "domain",
 			}
@@ -1192,11 +1176,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		}(),
 		func() test {
 			c := gache.New()
-			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
-					return nil
-				},
-			}
+			pdm := &PolicydMock{}
 			rt := &role.Token{
 				Domain: "domain",
 			}
@@ -1334,7 +1314,7 @@ bu80CwTnWhmdBo36Ig==
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
 			pm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, act, res string) ([]string, error) {
 					containRole := func(r string) bool {
 						for _, role := range roles {
 							if role == r {
@@ -1344,12 +1324,12 @@ bu80CwTnWhmdBo36Ig==
 						return false
 					}
 					if domain != "coretech" {
-						return errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
+						return nil, errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
 					}
 					if !containRole("readers") || !containRole("writers") {
-						return errors.Errorf("invalid role, got: %s", roles)
+						return nil, errors.Errorf("invalid role, got: %s", roles)
 					}
-					return nil
+					return nil, nil
 				},
 			}
 
@@ -1388,11 +1368,7 @@ KSdPh6TRd/kYpv7t6cVm1Orll4O5jh+IdoguGkOCxheMaQ==
 			block, _ := pem.Decode([]byte(crt))
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
-			pm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
-					return nil
-				},
-			}
+			pm := &PolicydMock{}
 
 			return test{
 				name: "invalid athenz role certificate, invalid SAN",
@@ -1430,8 +1406,8 @@ bu80CwTnWhmdBo36Ig==
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
 			pm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
-					return errors.New("dummy")
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, act, res string) ([]string, error) {
+					return nil, errors.New("dummy")
 				},
 			}
 
@@ -1504,7 +1480,7 @@ oFI/
 			cert, _ := x509.ParseCertificate(block.Bytes)
 
 			pm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, act, res string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, act, res string) ([]string, error) {
 					containRole := func(r string) bool {
 						for _, role := range roles {
 							if role == r {
@@ -1514,12 +1490,12 @@ oFI/
 						return false
 					}
 					if domain != "coretech" {
-						return errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
+						return nil, errors.Errorf("invalid domain, got: %s, want: %s", domain, "coretech")
 					}
 					if !containRole("readers") {
-						return errors.Errorf("invalid role, got: %s", roles)
+						return nil, errors.Errorf("invalid role, got: %s", roles)
 					}
-					return nil
+					return []string{"readers"}, nil
 				},
 			}
 
@@ -1774,11 +1750,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -1787,11 +1764,11 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
-						return errors.New("Audience/Scope mismatch")
+						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -1836,11 +1813,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -1849,11 +1827,11 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
-						return errors.New("Audience/Scope mismatch")
+						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil
+					return []string{"role"}, nil
 				},
 			}
 			cert := &x509.Certificate{
@@ -1914,11 +1892,11 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
-						return errors.New("Audience/Scope mismatch")
+						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -1978,11 +1956,11 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
-						return errors.New("Audience/Scope mismatch")
+						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -2094,8 +2072,8 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				atc: &access.OAuth2AccessTokenClaim{},
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(context.Context, string, []string, string, string) error {
-					return errors.New("deny")
+				CheckPolicyRoleFunc: func(context.Context, string, []string, string, string) ([]string, error) {
+					return nil, errors.New("deny")
 				},
 			}
 			return test{
@@ -2136,11 +2114,12 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 			}
 			p := &oAuthAccessToken{
 				principal: principal{
-					name:       at.BaseClaim.Subject,
-					roles:      at.Scope,
-					domain:     at.BaseClaim.Audience,
-					issueTime:  at.IssuedAt,
-					expiryTime: at.ExpiresAt,
+					name:            at.BaseClaim.Subject,
+					roles:           at.Scope,
+					domain:          at.BaseClaim.Audience,
+					issueTime:       at.IssuedAt,
+					expiryTime:      at.ExpiresAt,
+					authorizedRoles: []string{"role"},
 				},
 				clientID: at.ClientID,
 			}
@@ -2150,11 +2129,11 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 				wantErr: nil,
 			}
 			pdm := &PolicydMock{
-				CheckPolicyFunc: func(ctx context.Context, domain string, roles []string, action, resource string) error {
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
 					if domain != "domain" || len(roles) != 1 || roles[0] != "role" {
-						return errors.New("Audience/Scope mismatch")
+						return nil, errors.New("Audience/Scope mismatch")
 					}
-					return nil
+					return []string{"role"}, nil
 				},
 			}
 			return test{
@@ -2271,7 +2250,7 @@ func Test_authorizer_AuthorizeAccessToken(t *testing.T) {
 					return
 				}
 				if !reflect.DeepEqual(p, tt.wantResult) {
-					t.Errorf("authority.AuthorizeAccessToken() results don't match. want %s, result %s", tt.wantResult, p)
+					t.Errorf("authority.AuthorizeAccessToken() results don't match. want %#v, result %#v", tt.wantResult, p)
 					return
 				}
 			}
