@@ -37,40 +37,61 @@ Athenz authorizer is a library to cache the policies of [Athenz](https://github.
 To initialize authorizer.
 
 ```golang
-// Initialize authorizerd
-daemon, err := authorizerd.New(
-    authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
-    authorizerd.WithAthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
-    authorizerd.WithPubkeyRefreshPeriod("24h"), // set athenz public key refresh period
-    authorizerd.WithPolicyRefreshPeriod("1h"), // set policy refresh period
+package main
+
+import (
+    "context"
+    "log"
+
+    authorizerd "github.com/yahoojapan/athenz-authorizer/v5"
 )
-if err != nil {
-   // cannot initialize authorizer daemon
-}
 
-// Start authorizer daemon
-ctx := context.Background() // user can control authorizer daemon lifetime using this context
-if err = daemon.Init(ctx); err != nil {
-    // cannot initialize internal daemon inside authorizer
-}
-errs := daemon.Start(ctx)
-go func() {
-    err := <-errs
-    // user should handle errors return from the daemon
-}()
+func main() {
+    // Initialize authorizerd
+    daemon, err := authorizerd.New(
+        authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
+        authorizerd.WithAthenzDomains("domain1", "domain2", "domain N"), // set athenz domains
+        authorizerd.WithPubkeyRefreshPeriod("12h"), // optional, default: 24h
+        authorizerd.WithPolicyRefreshPeriod("1h"), // optional, default: 30m
+    )
+    if err != nil {
+        // cannot initialize authorizer daemon
+        log.Fatalf("daemon new error: %s\n", err.Error())
+    }
 
-// Verify role token
-if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
-    // token not authorized
-}
+    // Start authorizer daemon
+    ctx := context.Background() // user can control authorizer daemon lifetime using this context
+    if err = daemon.Init(ctx); err != nil { // initialize internal daemons in dependency order (e.g. public keys before signed policies)
+        // cannot initialize internal daemons inside authorizer
+        log.Fatalf("daemon init error: %s\n", err.Error())
+    }
+    errs := daemon.Start(ctx)
+    go func() {
+        err := <-errs
+        // user should handle errors return from the daemon
+        log.Printf("daemon start error: %s\n", err.Error())
+    }()
 
-// Verified results are returned
-principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
-if err != nil {
-    // token not authorized
+    roleTok := "<secret role token>"
+    act := "action"
+    res := "resource"
+
+    // Verify role token
+    if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
+        // token not authorized; take appropriate action
+        log.Fatalf("token not authorized: %s\n", err.Error())
+    }
+
+    // Verified results are returned
+    principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
+    if err != nil {
+        // token not authorized; take appropriate action
+        log.Fatalf("token not authorized: %s\n", err.Error())
+    }
+
+    // Inspect the authorized identity
+    log.Printf("authorized principal: %s\n", principal.Name())
 }
-// Inspect the authorized identity
-name := principal.Name()
 ```
 
 ## How it works
