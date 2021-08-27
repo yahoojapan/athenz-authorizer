@@ -67,9 +67,10 @@ func main() {
     }
     errs := daemon.Start(ctx)
     go func() {
-        err := <-errs
-        // user should handle errors return from the daemon
-        log.Printf("daemon start error: %s\n", err.Error())
+        for err := range <-errs {
+            // user should handle errors return from the daemon
+            log.Printf("daemon start error: %s\n", err.Error())
+        }
     }()
 
     roleTok := "<secret role token>"
