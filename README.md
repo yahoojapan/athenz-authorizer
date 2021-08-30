@@ -56,20 +56,20 @@ func main() {
     )
     if err != nil {
         // cannot initialize authorizer daemon
-        log.Fatalf("daemon new error: %s\n", err.Error())
+        log.Fatalf("daemon new error: %v", err)
     }
 
     // Start authorizer daemon
     ctx := context.Background() // user can control authorizer daemon lifetime using this context
     if err = daemon.Init(ctx); err != nil { // initialize internal daemons in dependency order (e.g. public keys before signed policies)
         // cannot initialize internal daemons inside authorizer
-        log.Fatalf("daemon init error: %s\n", err.Error())
+        log.Fatalf("daemon init error: %v", err)
     }
     errs := daemon.Start(ctx)
     go func() {
         for err := range <-errs {
             // user should handle errors return from the daemon
-            log.Printf("daemon start error: %s\n", err.Error())
+            log.Printf("daemon start error: %v", err)
         }
     }()
 
@@ -80,18 +80,18 @@ func main() {
     // Verify role token
     if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
         // token not authorized; take appropriate action
-        log.Fatalf("token not authorized: %s\n", err.Error())
+        log.Fatalf("token not authorized: %v", err)
     }
 
     // Verified results are returned
     principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
     if err != nil {
         // token not authorized; take appropriate action
-        log.Fatalf("token not authorized: %s\n", err.Error())
+        log.Fatalf("token not authorized: %v", err)
     }
 
     // Inspect the authorized identity
-    log.Printf("authorized principal: %s\n", principal.Name())
+    log.Printf("authorized principal: %#v", principal)
 }
 ```
 
