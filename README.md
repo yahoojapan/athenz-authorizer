@@ -41,6 +41,8 @@ package main
 
 import (
     "context"
+    "crypto/x509"
+    "encoding/pem"
     "log"
 
     authorizerd "github.com/yahoojapan/athenz-authorizer/v5"
@@ -67,31 +69,41 @@ func main() {
     }
     errs := daemon.Start(ctx)
     go func() {
-        for err := range <-errs {
+        for err := range errs {
             // user should handle errors return from the daemon
             log.Printf("daemon start error: %v", err)
         }
     }()
 
-    roleTok := "<secret role token>"
     act := "action"
     res := "resource"
 
-    // Verify role token
-    if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
-        // token not authorized; take appropriate action
-        log.Fatalf("token not authorized: %v", err)
+    // Authorize with access token
+    at := "<certificate bound access token>"
+    certPEM := "<binding certificate>"
+    block, _ := pem.Decode([]byte(certPEM))
+    if block == nil {
+        log.Fatalln("failed to parse certificate PEM")
     }
-
-    // Verified results are returned
-    principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
+    cert, err := x509.ParseCertificate(block.Bytes)
     if err != nil {
-        // token not authorized; take appropriate action
-        log.Fatalf("token not authorized: %v", err)
+        log.Fatalf("invalid x509 certificate: %v", err)
     }
+    atp, err := daemon.AuthorizeAccessToken(ctx, at, act, res, cert)
+    if err != nil {
+        // NOT authorized, please take appropriate action
+        log.Fatalf("access token not authorized: %v", err)
+    }
+    log.Printf("authorized principal in access token: %#v", atp)
 
-    // Inspect the authorized identity
-    log.Printf("authorized principal: %#v", principal)
+    // Authorize with role token
+    rt := "<role token>"
+    rtp, err := daemon.AuthorizeRoleToken(ctx, rt, act, res)
+    if err != nil {
+        // NOT authorized, please take appropriate action
+        log.Fatalf("role token not authorized: %v", err)
+    }
+    log.Printf("authorized principal in role token: %#v", rtp)
 }
 ```
 
