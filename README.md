@@ -12,18 +12,17 @@
 
 <!-- TOC insertAnchor:false -->
 
-- [Athenz authorizer](#athenz-authorizer)
-    - [What is Athenz authorizer](#what-is-athenz-authorizer)
-    - [Usage](#usage)
-    - [How it works](#how-it-works)
-        - [Athenz public key daemon](#athenz-public-key-daemon)
-        - [Athenz policy daemon](#athenz-policy-daemon)
-    - [Configuration](#configuration)
-        - [AccessTokenParam](#accesstokenparam)
-    - [License](#license)
-    - [Contributor License Agreement](#contributor-license-agreement)
-    - [About releases](#about-releases)
-    - [Authors](#authors)
+- [What is Athenz authorizer](#what-is-athenz-authorizer)
+- [Usage](#usage)
+- [How it works](#how-it-works)
+    - [Athenz public key daemon](#athenz-public-key-daemon)
+    - [Athenz policy daemon](#athenz-policy-daemon)
+- [Configuration](#configuration)
+    - [AccessTokenParam](#accesstokenparam)
+- [License](#license)
+- [Contributor License Agreement](#contributor-license-agreement)
+- [About releases](#about-releases)
+- [Authors](#authors)
 
 <!-- /TOC -->
 
@@ -38,35 +37,73 @@ Athenz authorizer is a library to cache the policies of [Athenz](https://github.
 To initialize authorizer.
 
 ```golang
+package main
 
-// Initialize authorizerd
-daemon, err := authorizerd.New(
-    authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
-    authorizerd.WithAthenzDomains("domain1", "domain2" ... "domain N"), // set athenz domains
-    authorizerd.WithPubkeyRefreshPeriod(time.Hour * 24), // set athenz public key refresh period
-    authorizerd.WithPolicyRefreshPeriod(time.Hour), // set policy refresh period
+import (
+    "context"
+    "crypto/x509"
+    "encoding/pem"
+    "log"
+
+    authorizerd "github.com/yahoojapan/athenz-authorizer/v5"
 )
-if err != nil {
-   // cannot initialize authorizer daemon
-}
 
-// Start authorizer daemon
-ctx := context.Background() // user can control authorizer daemon lifetime using this context
-errs := daemon.Start(ctx)
-go func() {
-    err := <-errs
-    // user should handle errors return from the daemon
-}()
+func main() {
+    // Initialize authorizerd
+    daemon, err := authorizerd.New(
+        authorizerd.WithAthenzURL("www.athenz.io"), // set athenz URL
+        authorizerd.WithAthenzDomains("domain1", "domain2", "domain N"), // set athenz domains
+        authorizerd.WithPubkeyRefreshPeriod("12h"), // optional, default: 24h
+        authorizerd.WithPolicyRefreshPeriod("1h"), // optional, default: 30m
+    )
+    if err != nil {
+        // cannot initialize authorizer daemon
+        log.Fatalf("daemon new error: %v", err)
+    }
 
-// Verify role token
-if err := daemon.VerifyRoleToken(ctx, roleTok, act, res); err != nil {
-    // token not authorized
-}
+    // Start authorizer daemon
+    ctx := context.Background() // user can control authorizer daemon lifetime using this context
+    if err = daemon.Init(ctx); err != nil { // initialize internal daemons in dependency order (e.g. public keys before signed policies)
+        // cannot initialize internal daemons inside authorizer
+        log.Fatalf("daemon init error: %v", err)
+    }
+    errs := daemon.Start(ctx)
+    go func() {
+        for err := range errs {
+            // user should handle errors return from the daemon
+            log.Printf("daemon start error: %v", err)
+        }
+    }()
 
-// Verified results are returned
-principal, err := daemon.AuthorizeRoleToken(ctx, roleTok, act, res)
-if err != nil {
-    name := principal.GetName()
+    act := "action"
+    res := "resource"
+
+    // Authorize with access token
+    at := "<certificate bound access token>"
+    certPEM := "<binding certificate>"
+    block, _ := pem.Decode([]byte(certPEM))
+    if block == nil {
+        log.Fatalln("failed to parse certificate PEM")
+    }
+    cert, err := x509.ParseCertificate(block.Bytes)
+    if err != nil {
+        log.Fatalf("invalid x509 certificate: %v", err)
+    }
+    atp, err := daemon.AuthorizeAccessToken(ctx, at, act, res, cert)
+    if err != nil {
+        // NOT authorized, please take appropriate action
+        log.Fatalf("access token not authorized: %v", err)
+    }
+    log.Printf("authorized principal in access token: %#v", atp)
+
+    // Authorize with role token
+    rt := "<role token>"
+    rtp, err := daemon.AuthorizeRoleToken(ctx, rt, act, res)
+    if err != nil {
+        // NOT authorized, please take appropriate action
+        log.Fatalf("role token not authorized: %v", err)
+    }
+    log.Printf("authorized principal in role token: %#v", rtp)
 }
 ```
 
