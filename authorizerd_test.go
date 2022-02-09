@@ -115,7 +115,7 @@ func TestNew(t *testing.T) {
 				[]Option{WithPubkeyRefreshPeriod("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create pubkeyd: invalid refresh period: time: invalid duration \"dummy\""
+				wantErr := "error create pubkeyd: invalid refresh period: time: invalid duration dummy"
 				if err.Error() != wantErr {
 					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
@@ -128,7 +128,7 @@ func TestNew(t *testing.T) {
 				[]Option{WithPolicyRefreshPeriod("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create policyd: invalid refresh period: time: invalid duration \"dummy\""
+				wantErr := "error create policyd: invalid refresh period: time: invalid duration dummy"
 				if err.Error() != wantErr {
 					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
@@ -141,7 +141,7 @@ func TestNew(t *testing.T) {
 				[]Option{WithJwkRefreshPeriod("dummy")},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create jwkd: invalid refresh period: time: invalid duration \"dummy\""
+				wantErr := "error create jwkd: invalid refresh period: time: invalid duration dummy"
 				if err.Error() != wantErr {
 					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}
@@ -156,7 +156,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			checkFunc: func(prov Authorizerd, err error) error {
-				wantErr := "error create access token processor: invalid refresh period: time: invalid duration \"dummy\""
+				wantErr := "error create access token processor: invalid refresh period: time: invalid duration dummy"
 				if err.Error() != wantErr {
 					return errors.Errorf("Unexpected error: %s, wantErr: %s", err, wantErr)
 				}

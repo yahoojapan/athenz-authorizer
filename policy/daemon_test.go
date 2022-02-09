@@ -37,6 +37,11 @@ import (
 	"github.com/yahoojapan/athenz-authorizer/v5/pubkey"
 )
 
+func newGache() *gache.Gache {
+	g := gache.New()
+	return &g
+}
+
 func TestNew(t *testing.T) {
 	gacheCmp := cmp.Comparer(func(x, y gache.Gache) bool {
 		ctx := context.Background()
@@ -60,7 +65,7 @@ func TestNew(t *testing.T) {
 				opts: []Option{},
 			},
 			want: &policyd{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				expiryMargin:  3 * time.Hour,
 				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
@@ -76,7 +81,7 @@ func TestNew(t *testing.T) {
 				opts: []Option{WithExpiryMargin("5s")},
 			},
 			want: &policyd{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				expiryMargin:  5 * time.Second,
 				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
@@ -92,7 +97,7 @@ func TestNew(t *testing.T) {
 				opts: []Option{WithAthenzDomains("dom1", "dom2")},
 			},
 			want: &policyd{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				expiryMargin:  3 * time.Hour,
 				purgePeriod:   1 * time.Hour,
 				refreshPeriod: 30 * time.Minute,
@@ -136,7 +141,7 @@ func TestNew(t *testing.T) {
 func Test_policyd_Start(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		rolePolicies  gache.Gache
+		rolePolicies  *gache.Gache
 		purgePeriod   time.Duration
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
@@ -200,7 +205,7 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start success",
 				fields: fields{
-					rolePolicies:  gache.New(),
+					rolePolicies:  newGache(),
 					purgePeriod:   time.Minute * 30,
 					refreshPeriod: time.Millisecond * 30,
 					expiryMargin:  time.Hour,
@@ -213,7 +218,7 @@ func Test_policyd_Start(t *testing.T) {
 				checkFunc: func(p *policyd, ch <-chan error) error {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
-					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					asss, ok := (*p.rolePolicies).Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
 					}
@@ -276,7 +281,7 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start can update cache",
 				fields: fields{
-					rolePolicies:  gache.New(),
+					rolePolicies:  newGache(),
 					purgePeriod:   time.Minute * 30,
 					refreshPeriod: time.Millisecond * 30,
 					expiryMargin:  time.Hour,
@@ -290,7 +295,7 @@ func Test_policyd_Start(t *testing.T) {
 					time.Sleep(time.Millisecond * 100)
 					cancel()
 					time.Sleep(time.Millisecond * 50)
-					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					asss, ok := (*p.rolePolicies).Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
 					}
@@ -365,7 +370,7 @@ func Test_policyd_Start(t *testing.T) {
 			return test{
 				name: "Start retry update",
 				fields: fields{
-					rolePolicies:  gache.New(),
+					rolePolicies:  newGache(),
 					purgePeriod:   time.Minute * 30,
 					refreshPeriod: time.Millisecond * 30,
 					retryDelay:    time.Millisecond * 5,
@@ -380,7 +385,7 @@ func Test_policyd_Start(t *testing.T) {
 					time.Sleep(time.Millisecond * 120)
 					cancel()
 					time.Sleep(time.Millisecond * 30)
-					asss, ok := p.rolePolicies.Get("dummyDom:role.dummyRole")
+					asss, ok := (*p.rolePolicies).Get("dummyDom:role.dummyRole")
 					if !ok {
 						return errors.New("rolePolicies is empty")
 					}
@@ -434,7 +439,7 @@ func Test_policyd_Start(t *testing.T) {
 func Test_policyd_Update(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		rolePolicies  gache.Gache
+		rolePolicies  *gache.Gache
 		purgePeriod   time.Duration
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
@@ -472,7 +477,7 @@ func Test_policyd_Update(t *testing.T) {
 			// prepare test
 			cancel()
 			t.fields = fields{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				athenzDomains: []string{domain},
 				fetchers:      fetchers,
 			}
@@ -530,7 +535,7 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				purgePeriod:   time.Hour,
 				athenzDomains: []string{domain},
 				fetchers:      fetchers,
@@ -597,7 +602,7 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				purgePeriod:   time.Hour,
 				athenzDomains: domains,
 				fetchers:      fetchers,
@@ -681,7 +686,7 @@ func Test_policyd_Update(t *testing.T) {
 
 			// prepare test
 			t.fields = fields{
-				rolePolicies:  gache.New(),
+				rolePolicies:  newGache(),
 				purgePeriod:   time.Hour,
 				athenzDomains: domains,
 				fetchers:      fetchers,
@@ -727,7 +732,7 @@ func Test_policyd_Update(t *testing.T) {
 func Test_policyd_CheckPolicy(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		rolePolicies  gache.Gache
+		rolePolicies  *gache.Gache
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		pkp           pubkey.Provider
@@ -752,7 +757,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy allow success",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -768,7 +773,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -783,7 +788,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -791,7 +796,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -806,7 +811,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy not found",
 			fields: fields{
-				rolePolicies: gache.New(),
+				rolePolicies: newGache(),
 			},
 			args: args{
 				ctx:      context.Background(),
@@ -820,7 +825,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy allow success with multiple roles",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -836,7 +841,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -851,7 +856,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy no match with assertion resource domain mismatch",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -859,7 +864,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -874,7 +879,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy, canceled context",
 			fields: fields{
-				rolePolicies: gache.New(),
+				rolePolicies: newGache(),
 			},
 			args: args{
 				ctx: func() context.Context {
@@ -892,7 +897,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy deny with multiple roles with allow and deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					asss := make([]*Assertion, 0, 200)
 					a, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "allow")
@@ -906,7 +911,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -921,7 +926,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check policy deny with single role with allow and deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					asss := make([]*Assertion, 0, 200)
 					da, _ := NewAssertion("dummyAct", "dummyDom:dummyRes", "deny")
@@ -932,7 +937,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 						asss = append(asss, a)
 					}
 					g.Set("dummyDom:role.dummyRole", asss)
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -947,7 +952,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check that action and resource do not affect each other",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -955,7 +960,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -970,7 +975,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can't use regexp on action",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -979,7 +984,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -994,7 +999,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can't use regexp on resource",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1003,7 +1008,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1018,7 +1023,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can't use regexp on action and resource",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1027,7 +1032,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1042,7 +1047,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on action",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1050,7 +1055,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1065,7 +1070,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on action, deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1073,7 +1078,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1089,7 +1094,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on resource",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1097,7 +1102,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1112,7 +1117,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on resource, deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1120,7 +1125,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1136,7 +1141,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on action and resource",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1144,7 +1149,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1159,7 +1164,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can use wildcard on action and resource, deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1167,7 +1172,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1183,7 +1188,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can not use wildcard escaping, allow",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1191,7 +1196,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1206,7 +1211,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 		{
 			name: "check can not use wildcard escaping, deny",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("dummyDom:role.dummyRole", []*Assertion{
 						func() *Assertion {
@@ -1214,7 +1219,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1258,7 +1263,7 @@ func Test_policyd_CheckPolicy(t *testing.T) {
 func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		rolePolicies  gache.Gache
+		rolePolicies  *gache.Gache
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
 		pkp           pubkey.Provider
@@ -1283,7 +1288,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 		{
 			name: "check policy: control test",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("domain:role.role1", []*Assertion{
 						func() *Assertion {
@@ -1291,7 +1296,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1306,7 +1311,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 		{
 			name: "check policy multiple deny deadlock",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("domain:role.role1", []*Assertion{
 						func() *Assertion {
@@ -1332,7 +1337,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 							return a
 						}(),
 					})
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -1390,7 +1395,7 @@ func Test_policyd_CheckPolicy_goroutine(t *testing.T) {
 func Test_fetchAndCachePolicy(t *testing.T) {
 	type args struct {
 		ctx context.Context
-		g   gache.Gache
+		g   *gache.Gache
 		f   Fetcher
 	}
 	type test struct {
@@ -1448,7 +1453,7 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g:   gache.New(),
+				g:   newGache(),
 				f:   fetcher,
 			}
 
@@ -1475,7 +1480,7 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g:   gache.New(),
+				g:   newGache(),
 				f:   fetcher,
 			}
 
@@ -1501,7 +1506,7 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			// prepare test
 			t.args = args{
 				ctx: ctx,
-				g:   gache.New(),
+				g:   newGache(),
 				f:   fetcher,
 			}
 
@@ -1530,7 +1535,7 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 			sp.SignedPolicyData.PolicyData.Policies[0].Assertions[0].Resource = "invalid-resource"
 			t.args = args{
 				ctx: ctx,
-				g:   gache.New(),
+				g:   newGache(),
 				f:   fetcher,
 			}
 
@@ -1542,12 +1547,12 @@ func Test_fetchAndCachePolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := fetchAndCachePolicy(tt.args.ctx, tt.args.g, tt.args.f)
+			err := fetchAndCachePolicy(tt.args.ctx, *tt.args.g, tt.args.f)
 			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
 				t.Errorf("fetchAndCachePolicy() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			gotRps := tt.args.g.ToRawMap(context.Background())
+			gotRps := (*tt.args.g).ToRawMap(context.Background())
 			if !cmp.Equal(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "ActionRegexp", "ResourceRegexp")) {
 				t.Errorf("fetchAndCachePolicy() g = %v, want %v", gotRps, tt.wantRps)
 				t.Errorf("fetchAndCachePolicy() g diff = %s", cmp.Diff(gotRps, tt.wantRps, cmpopts.IgnoreFields(Assertion{}, "ActionRegexp", "ResourceRegexp")))
@@ -2235,7 +2240,7 @@ func Test_simplifyAndCachePolicy(t *testing.T) {
 func Test_policyd_GetPolicyCache(t *testing.T) {
 	type fields struct {
 		expiryMargin  time.Duration
-		rolePolicies  gache.Gache
+		rolePolicies  *gache.Gache
 		purgePeriod   time.Duration
 		refreshPeriod time.Duration
 		retryDelay    time.Duration
@@ -2256,10 +2261,7 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		{
 			name: "get empty policy cache success",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
-					g := gache.New()
-					return g
-				}(),
+				rolePolicies: newGache(),
 			},
 			args: args{
 				ctx: context.Background(),
@@ -2269,10 +2271,10 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		{
 			name: "get policy cache success",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.Set("key", "value")
-					return g
+					return &g
 				}(),
 			},
 			args: args{
@@ -2285,12 +2287,12 @@ func Test_policyd_GetPolicyCache(t *testing.T) {
 		{
 			name: "get policy cache without expired success",
 			fields: fields{
-				rolePolicies: func() gache.Gache {
+				rolePolicies: func() *gache.Gache {
 					g := gache.New()
 					g.SetWithExpire("key", "value", 1*time.Nanosecond)
 					time.Sleep(5 * time.Millisecond)
 					g.DeleteExpired(context.Background())
-					return g
+					return &g
 				}(),
 			},
 			args: args{
