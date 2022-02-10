@@ -170,7 +170,7 @@ func Test_jwkd_Start(t *testing.T) {
 					ctx: ctx,
 				},
 				checkFunc: func(j *jwkd, ch <-chan error) error {
-					time.Sleep(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 200)
 					cancel()
 					if k, _ := j.keys.Load(j.athenzJwksURL); k == nil {
 						return errors.New("cannot update keys")
