@@ -1171,7 +1171,7 @@ func Test_pubkeyd_Start(t *testing.T) {
 							<-ch
 						}
 					}()
-					time.Sleep(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 200)
 					cancel()
 					time.Sleep(time.Millisecond * 100)
 					ind := 0
