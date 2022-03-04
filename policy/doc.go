@@ -14,6 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package policy represents the athenz policy updater fetching and verify logic and provide an interface to verify the policy data. 
+// Package policy represents the athenz policy updater fetching and verify logic and provide an interface to verify the policy data.
 package policy
-

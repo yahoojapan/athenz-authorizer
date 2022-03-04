@@ -21,7 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 	"github.com/yahoojapan/athenz-authorizer/v5/jwk"
