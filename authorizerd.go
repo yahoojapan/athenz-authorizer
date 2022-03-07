@@ -391,7 +391,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 	cached, ok := a.cache.Get(key.String())
 	if ok {
 		glg.DebugFunc(func() string {
-			return fmt.Sprintf("use cached result. tok: %s, key: %s", maskToken(m, tok), maskCacheKey(key.String(), tok))
+			return fmt.Sprintf("use cached result. masked tok: %s, masked key: %s", maskToken(m, tok), maskCacheKey(key.String(), tok))
 		})
 		return cached.(Principal), nil
 	}
@@ -460,7 +460,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 	}
 
 	glg.DebugFunc(func() string {
-		return fmt.Sprintf("set token result. tok: %s, key: %s, act: %s, res: %s", maskToken(m, tok), maskCacheKey(key.String(), tok), act, res)
+		return fmt.Sprintf("set token result. masked tok: %s, masked key: %s, act: %s, res: %s", maskToken(m, tok), maskCacheKey(key.String(), tok), act, res)
 	})
 	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
