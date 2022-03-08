@@ -19,11 +19,12 @@ package authorizerd
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/request"
+	"github.com/golang-jwt/jwt/v4/request"
 	"github.com/kpango/gache"
 	"github.com/kpango/glg"
 	"github.com/pkg/errors"
@@ -389,7 +390,9 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 	// check if exists in verification success cache
 	cached, ok := a.cache.Get(key.String())
 	if ok {
-		glg.Debugf("use cached result. tok: %s, key: %s", tok, key.String())
+		glg.DebugFunc(func() string {
+			return fmt.Sprintf("use cached result. masked tok: %s, masked key: %s", maskToken(m, tok), maskCacheKey(key.String(), tok))
+		})
 		return cached.(Principal), nil
 	}
 
@@ -455,7 +458,10 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 			typedP.authorizedRoles = authorizedRoles
 		}
 	}
-	glg.Debugf("set token result. tok: %s, key: %s, act: %s, res: %s", tok, key.String(), act, res)
+
+	glg.DebugFunc(func() string {
+		return fmt.Sprintf("set token result. masked tok: %s, masked key: %s, act: %s, res: %s", maskToken(m, tok), maskCacheKey(key.String(), tok), act, res)
+	})
 	a.cache.SetWithExpire(key.String(), p, a.cacheExp)
 	return p, nil
 }

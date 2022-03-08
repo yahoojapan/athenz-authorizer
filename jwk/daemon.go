@@ -130,7 +130,7 @@ func (j *jwkd) Update(ctx context.Context) (err error) {
 	var failedTargets []string
 	for _, target := range targets {
 		glg.Debugf("Fetching JWK Set from %s", target)
-		keys, err := jwk.FetchHTTP(target, jwk.WithHTTPClient(j.client))
+		keys, err := jwk.Fetch(ctx, target, jwk.WithHTTPClient(j.client))
 		if err != nil {
 			glg.Errorf("Fetch JWK Set error: %v", err)
 			failedTargets = append(failedTargets, target)
@@ -170,7 +170,8 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 		return nil
 	}
 
-	for _, key := range keys.(*jwk.Set).LookupKeyID(keyID) {
+	key, found := keys.(jwk.Set).LookupKeyID(keyID)
+	if found {
 		var raw interface{}
 		if err := key.Raw(&raw); err != nil {
 			glg.Warnf("jwkd.getKey: %s", err.Error())
@@ -178,6 +179,7 @@ func (j *jwkd) getKey(keyID string, jwkSetURL string) interface{} {
 			return raw
 		}
 	}
+
 	// Either key for the kid specified in the token was not found or invalid key
 	return nil
 }
