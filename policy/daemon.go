@@ -232,7 +232,9 @@ func (p *policyd) CheckPolicyRoles(ctx context.Context, domain string, roles []s
 
 		wg := new(sync.WaitGroup)
 		wg.Add(len(roles))
-		rp := *p.rolePolicies
+
+		curRpPtrPtr := (*unsafe.Pointer)(unsafe.Pointer(&p.rolePolicies))
+		rp := *(*gache.Gache)(atomic.LoadPointer(curRpPtrPtr))
 
 		for _, role := range roles {
 			dr := fmt.Sprintf("%s:role.%s", domain, role)
