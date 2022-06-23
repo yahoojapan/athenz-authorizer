@@ -291,7 +291,9 @@ func (p *policyd) CheckPolicyRoles(ctx context.Context, domain string, roles []s
 
 // GetPolicyCache returns the cached role policy data
 func (p *policyd) GetPolicyCache(ctx context.Context) map[string]interface{} {
-	return (*p.rolePolicies).ToRawMap(ctx)
+	curRpPtrPtr := (*unsafe.Pointer)(unsafe.Pointer(&p.rolePolicies))
+	rp := *(*gache.Gache)(atomic.LoadPointer(curRpPtrPtr))
+	return rp.ToRawMap(ctx)
 }
 
 func fetchAndCachePolicy(ctx context.Context, g gache.Gache, f Fetcher) error {
