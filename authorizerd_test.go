@@ -921,6 +921,7 @@ func Test_authorizer_authorize(t *testing.T) {
 		policyRefreshPeriod   string
 		disablePolicyd        bool
 		translator            Translator
+		resourcePrefix        string
 	}
 	type args struct {
 		ctx   context.Context
@@ -1218,6 +1219,54 @@ func Test_authorizer_authorize(t *testing.T) {
 				},
 			}
 		}(),
+		func() test {
+			c := gache.New()
+			pdm := &PolicydMock{
+				CheckPolicyRoleFunc: func(ctx context.Context, domain string, roles []string, action, resource string) ([]string, error) {
+					if resource != "/public/path" {
+						return nil, errors.New("unexpected resource, got: " + resource)
+					}
+					return roles, nil
+				},
+			}
+			rt := &role.Token{
+				Domain: "domain",
+			}
+			p := &principal{
+				name:       rt.Principal,
+				roles:      rt.Roles,
+				domain:     rt.Domain,
+				issueTime:  rt.TimeStamp.Unix(),
+				expiryTime: rt.ExpiryTime.Unix(),
+			}
+			rpm := &RoleProcessorMock{
+				rt:      rt,
+				wantErr: nil,
+			}
+			return test{
+				name: "test resourcePrefix",
+				fields: fields{
+					cache:          c,
+					policyd:        pdm,
+					disablePolicyd: false,
+					roleProcessor:  rpm,
+					resourcePrefix: "/public",
+				},
+				args: args{
+					m:     roleToken,
+					ctx:   context.Background(),
+					tok:   "dummyTok",
+					act:   "get",
+					res:   "/path",
+					query: "param=value",
+				},
+				wantErr:    false,
+				wantResult: p,
+				checkFunc: func(prov *authority) error {
+					return nil
+				},
+			}
+		}(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1240,6 +1289,7 @@ func Test_authorizer_authorize(t *testing.T) {
 				policyRefreshPeriod:   tt.fields.policyRefreshPeriod,
 				disablePolicyd:        tt.fields.disablePolicyd,
 				translator:            tt.fields.translator,
+				resourcePrefix:        tt.fields.resourcePrefix,
 			}
 			p, err := a.authorize(tt.args.ctx, tt.args.m, tt.args.tok, tt.args.act, tt.args.res, tt.args.query, tt.args.cert)
 			if err != nil {
