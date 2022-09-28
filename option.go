@@ -355,3 +355,11 @@ func WithTranslator(t Translator) Option {
 		return nil
 	}
 }
+
+// WithResourcePrefix returns a ResourcePrefix functional option
+func WithResourcePrefix(p string) Option {
+	return func(authz *authority) error {
+		authz.resourcePrefix = p
+		return nil
+	}
+}

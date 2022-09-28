@@ -1208,3 +1208,39 @@ func TestWithTranslator(t *testing.T) {
 		})
 	}
 }
+
+func TestWithResourcePrefix(t *testing.T) {
+	type args struct {
+		p string
+	}
+	tests := []struct {
+		name      string
+		args      args
+		checkFunc func(Option) error
+	}{
+		{
+			name: "set success",
+			args: args{
+				p: "prefix",
+			},
+			checkFunc: func(opt Option) error {
+				authz := &authority{}
+				if err := opt(authz); err != nil {
+					return err
+				}
+				if authz.resourcePrefix != "prefix" {
+					return fmt.Errorf("invalid param was set")
+				}
+				return nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := WithResourcePrefix(tt.args.p)
+			if err := tt.checkFunc(got); err != nil {
+				t.Errorf("TestWithResourcePrefix() = %v, error %v", got, err)
+			}
+		})
+	}
+}
