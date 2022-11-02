@@ -408,7 +408,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 	case roleToken:
 		rt, err := a.roleProcessor.ParseAndValidateRoleToken(tok)
 		if err != nil {
-			glg.Debugf("error parse and validate role token, err: %v", err)
+			glg.Infof("error parse and validate role token, err: %v", err)
 			return nil, errors.Wrap(err, "error authorize role token")
 		}
 		domain = rt.Domain
@@ -452,7 +452,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 		res = a.resourcePrefix + res
 		authorizedRoles, err := a.policyd.CheckPolicyRoles(ctx, domain, roles, act, res)
 		if err != nil {
-			glg.Debugf("error check, err: %v", err)
+			glg.Infof("error check, err: %v, principal: %v", err, p.Name())
 			return nil, errors.Wrap(err, "token unauthorized")
 		}
 

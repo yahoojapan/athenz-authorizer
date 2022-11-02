@@ -59,7 +59,7 @@ func (r *rtp) ParseAndValidateRoleToken(tok string) (*Token, error) {
 func (r *rtp) parseToken(tok string) (*Token, error) {
 	st := strings.SplitN(tok, ";s=", 2)
 	if len(st) != 2 {
-		return nil, errors.Wrap(ErrRoleTokenInvalid, "no signature found")
+		return nil, errors.Wrapf(ErrRoleTokenInvalid, "no signature found. token %s", st[0])
 	}
 
 	rt := &Token{
@@ -70,7 +70,7 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 	for _, pair := range strings.Split(st[0], ";") {
 		kv := strings.SplitN(pair, "=", 2)
 		if len(kv) != 2 {
-			return nil, errors.Wrap(ErrRoleTokenInvalid, "invalid key value format")
+			return nil, errors.Wrapf(ErrRoleTokenInvalid, "invalid key value format. key %s", kv[0])
 		}
 		if err := rt.SetParams(kv[0], kv[1]); err != nil {
 			return nil, errors.Wrap(err, "error setting value")
@@ -82,11 +82,11 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 
 func (r *rtp) validate(rt *Token) error {
 	if rt.Expired() {
-		return errors.Wrapf(ErrRoleTokenExpired, "token expired")
+		return errors.Wrapf(ErrRoleTokenExpired, "token expired. principal %s", rt.Principal)
 	}
 	ver := r.pkp(pubkey.EnvZTS, rt.KeyID)
 	if ver == nil {
-		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
+		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s. principal %s", rt.KeyID, rt.Principal)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
 }
