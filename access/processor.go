@@ -142,7 +142,7 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	}
 
 	// validate the proxy principal.
-	if proxyPrincipals, ok := claims.Confirm[confirmMethodProxyPrincipals].([]any); ok {
+	if proxyPrincipals, ok := claims.Confirm[confirmMethodProxyPrincipals].([]interface{}); ok {
 		valid := make(map[string]struct{}, len(proxyPrincipals))
 		for _, value := range proxyPrincipals {
 			if spiffe, ok := value.(string); ok {

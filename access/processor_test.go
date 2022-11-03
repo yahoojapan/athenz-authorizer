@@ -403,7 +403,7 @@ func Test_rtp_ParseAndValidateOAuth2AccessToken(t *testing.T) {
 						ClientID: "domain.tenant.service",
 						UserID:   "domain.tenant.service",
 						Scope:    []string{"admin", "user"},
-						Confirm:  map[string]any{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+						Confirm:  map[string]interface{}{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 					}
 					return &c
 				}(),
@@ -821,7 +821,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm:  map[string]any{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+					Confirm:  map[string]interface{}{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 				},
 			},
 			wantErr: false,
@@ -856,7 +856,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm:  map[string]any{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+					Confirm:  map[string]interface{}{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 				},
 			},
 			wantErr: false,
@@ -900,9 +900,9 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm: map[string]any{
+					Confirm: map[string]interface{}{
 						"x5t#S256": "invalid",
-						"proxy-principals#spiffe": []any{
+						"proxy-principals#spiffe": []interface{}{
 							"spiffe://domain/sa/service",
 						},
 					},
@@ -932,7 +932,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm:  map[string]any{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
+					Confirm:  map[string]interface{}{"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4"},
 				},
 			},
 			wantErr: true,
@@ -972,7 +972,7 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					ClientID: "domain.tenant.service",
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm:  map[string]any{"x5t#S256": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo"},
+					Confirm:  map[string]interface{}{"x5t#S256": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo"},
 				},
 			},
 			wantErr: true,
@@ -1033,9 +1033,9 @@ func Test_rtp_validateCertificateBoundAccessToken(t *testing.T) {
 					Version:  1,
 					UserID:   "domain.tenant.service",
 					Scope:    []string{"admin", "user"},
-					Confirm: map[string]any{
+					Confirm: map[string]interface{}{
 						"x5t#S256": "2jt82f2uM8jE2LMcb4erhhTc-uy1yB1iEyp5MnI5uF4",
-						"proxy-principals#spiffe": []any{
+						"proxy-principals#spiffe": []interface{}{
 							"spiffe://domain/sa/service",
 						},
 					},
@@ -1102,7 +1102,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						},
 					},
 					ClientID: "domain.tenant.service",
-					Confirm:  map[string]any{"x5t#S256": "dummy"},
+					Confirm:  map[string]interface{}{"x5t#S256": "dummy"},
 				},
 			},
 		},
@@ -1132,7 +1132,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						},
 					},
 					ClientID: "domain.tenant.service",
-					Confirm:  map[string]any{"x5t#S256": "dummy"},
+					Confirm:  map[string]interface{}{"x5t#S256": "dummy"},
 				},
 			},
 		},
@@ -1159,7 +1159,7 @@ func Test_rtp_validateCertPrincipal(t *testing.T) {
 						},
 					},
 					ClientID: "domain.tenant.service",
-					Confirm:  map[string]any{"x5t#S256": "dummy"},
+					Confirm:  map[string]interface{}{"x5t#S256": "dummy"},
 				},
 			},
 			wantErr: true,
