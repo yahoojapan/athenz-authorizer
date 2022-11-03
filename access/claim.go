@@ -58,12 +58,12 @@ func (c *BaseClaim) Valid() error {
 // OAuth2AccessTokenClaim represents access token claim data.
 // based on https://github.com/AthenZ/athenz/blob/0e7335dbfa9d41eef0b049c07e7f846bff0f3169/libs/java/auth_core/src/main/java/com/AthenZ/athenz/auth/token/AccessToken.java#L382
 type OAuth2AccessTokenClaim struct {
-	AuthTime       int64             `json:"auth_time"`
-	Version        int               `json:"ver"`
-	ClientID       string            `json:"client_id"`
-	UserID         string            `json:"uid"`
-	ProxyPrincipal string            `json:"proxy,omitempty"`
-	Scope          []string          `json:"scp"`
-	Confirm        map[string]string `json:"cnf"`
+	AuthTime       int64          `json:"auth_time"`
+	Version        int            `json:"ver"`
+	ClientID       string         `json:"client_id"`
+	UserID         string         `json:"uid"`
+	ProxyPrincipal string         `json:"proxy,omitempty"`
+	Scope          []string       `json:"scp"`
+	Confirm        map[string]any `json:"cnf"`
 	BaseClaim
 }
