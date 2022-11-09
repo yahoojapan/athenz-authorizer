@@ -285,7 +285,7 @@ func (p *policyd) CheckPolicyRoles(ctx context.Context, domain string, roles []s
 		return allowedRoles, nil
 	}
 	err := errors.Wrap(ErrNoMatch, "no match")
-	glg.Infof("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
+	glg.Debugf("check policy domain: %s, role: %v, action: %s, resource: %s, result: %v", domain, roles, action, resource, err)
 	return nil, err
 }
 
