@@ -59,7 +59,7 @@ func (r *rtp) ParseAndValidateRoleToken(tok string) (*Token, error) {
 func (r *rtp) parseToken(tok string) (*Token, error) {
 	st := strings.SplitN(tok, ";s=", 2)
 	if len(st) != 2 {
-		return nil, errors.Wrapf(ErrRoleTokenInvalid, "no signature found. token %s", st[0])
+		return nil, errors.Wrap(ErrRoleTokenInvalid, "no signature found")
 	}
 
 	rt := &Token{
@@ -70,7 +70,7 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 	for _, pair := range strings.Split(st[0], ";") {
 		kv := strings.SplitN(pair, "=", 2)
 		if len(kv) != 2 {
-			return nil, errors.Wrapf(ErrRoleTokenInvalid, "invalid key value format. key %s", kv[0])
+			return nil, errors.Wrap(ErrRoleTokenInvalid, "invalid key value format")
 		}
 		if err := rt.SetParams(kv[0], kv[1]); err != nil {
 			return nil, errors.Wrap(err, "error setting value")

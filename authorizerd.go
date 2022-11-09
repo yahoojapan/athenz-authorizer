@@ -423,7 +423,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 	case accessToken:
 		ac, err := a.accessProcessor.ParseAndValidateOAuth2AccessToken(tok, cert)
 		if err != nil {
-			glg.Debugf("error parse and validate access token, err: %v", err)
+			glg.Infof("error parse and validate access token, err: %v", err)
 			return nil, errors.Wrap(err, "error authorize access token")
 		}
 		domain = ac.Audience
@@ -445,6 +445,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 			var err error
 			act, res, err = a.translator.Translate(domain, act, res, query)
 			if err != nil {
+				glg.Infof("translator error, err: %v, principal: %s, action: %s, resource: %s", err, p.Name(), act, res)
 				return nil, err
 			}
 		}
@@ -452,7 +453,7 @@ func (a *authority) authorize(ctx context.Context, m mode, tok, act, res, query 
 		res = a.resourcePrefix + res
 		authorizedRoles, err := a.policyd.CheckPolicyRoles(ctx, domain, roles, act, res)
 		if err != nil {
-			glg.Infof("error check, err: %v, principal: %v", err, p.Name())
+			glg.Infof("check policy error, err: %v, principal: %s, action: %s, resource: %s", err, p.Name(), act, res)
 			return nil, errors.Wrap(err, "token unauthorized")
 		}
 
