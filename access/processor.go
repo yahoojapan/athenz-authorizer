@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"log"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/lestrrat-go/jwx/jws"
@@ -128,7 +127,6 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 	}
 
 	if certThumbprint, ok := claims.Confirm[confirmMethodCertThumbprint].(string); ok {
-		log.Print(certThumbprint)
 		// cnf check
 		sum := sha256.Sum256(cert.Raw)
 		if base64.RawURLEncoding.EncodeToString(sum[:]) == certThumbprint {
