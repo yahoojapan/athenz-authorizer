@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	confirmMethodMember = "x5t#S256"
+	confirmMethodCertThumbprint  = "x5t#S256"
+	confirmMethodProxyPrincipals = "proxy-principals#spiffe"
 )
 
 // errNilHeader is "header is nil"
@@ -125,25 +126,35 @@ func (a *atp) validateCertificateBoundAccessToken(cert *x509.Certificate, claims
 		return errors.New("error claim of access token is nil")
 	}
 
-	certThumbprint, ok := claims.Confirm[confirmMethodMember]
-	if !ok {
-		return errors.New("error token is not certificate bound access token")
+	if certThumbprint, ok := claims.Confirm[confirmMethodCertThumbprint].(string); ok {
+		// cnf check
+		sum := sha256.Sum256(cert.Raw)
+		if base64.RawURLEncoding.EncodeToString(sum[:]) == certThumbprint {
+			return nil
+		}
+
+		// If cnf check fails, check to allow if the certificate has been refresh
+		if err := a.validateCertPrincipal(cert, claims); err == nil {
+			return nil
+		}
 	}
 
-	// cnf check
-	sum := sha256.Sum256(cert.Raw)
-	if base64.RawURLEncoding.EncodeToString(sum[:]) == certThumbprint {
-		return nil
+	// validate the proxy principal.
+	if proxyPrincipals, ok := claims.Confirm[confirmMethodProxyPrincipals].([]interface{}); ok {
+		valid := make(map[string]struct{}, len(proxyPrincipals))
+		for _, value := range proxyPrincipals {
+			if spiffe, ok := value.(string); ok {
+				valid[spiffe] = struct{}{}
+			}
+		}
+		for _, uri := range cert.URIs {
+			if _, ok := valid[uri.String()]; ok {
+				return nil
+			}
+		}
 	}
 
-	// If cnf check fails, check to allow if the certificate has been refresh
-	if err := a.validateCertPrincipal(cert, claims); err != nil {
-		return err
-	}
-
-	// auth_core is validating the proxy principal here.(future work)
-
-	return nil
+	return errors.New("error certificate: no valid bound for the certificate to access token")
 }
 
 func (a *atp) validateCertPrincipal(cert *x509.Certificate, claims *OAuth2AccessTokenClaim) error {
