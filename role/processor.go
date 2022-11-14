@@ -82,11 +82,11 @@ func (r *rtp) parseToken(tok string) (*Token, error) {
 
 func (r *rtp) validate(rt *Token) error {
 	if rt.Expired() {
-		return errors.Wrapf(ErrRoleTokenExpired, "token expired")
+		return errors.Wrapf(ErrRoleTokenExpired, "token expired. principal %s", rt.Principal)
 	}
 	ver := r.pkp(pubkey.EnvZTS, rt.KeyID)
 	if ver == nil {
-		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s", rt.KeyID)
+		return errors.Wrapf(ErrRoleTokenInvalid, "invalid role token key ID %s. principal %s", rt.KeyID, rt.Principal)
 	}
 	return ver.Verify(rt.UnsignedToken, rt.Signature)
 }
